@@ -123,7 +123,18 @@ onBinary(listener)                       —— 需要 host.binary
 
 **在这份公开 API 面中，没有出现 SQL 执行、EXPLAIN、执行计划获取相关的任何方法或权限。**同时 `dbx-plugin dev` 的独立开发运行时也明确说明：native connection actions、query-result contributions、DBX component kit 均未被模拟。
 
-结论（待现场验证）：**"插件通过公开 Host API 请求执行计划"这一前提尚未被证据支持**，这正是 Phase 0 需要优先确认的问题。若确认缺口不可绕过，应向 `t8y2/dbx` 提 Issue / PR 讨论公开能力，而不是在插件侧自行实现数据库执行层。
+### 审计结论（2026-09-18，含真实 DBX `v0.6.16` 宿主实测）
+
+上述文档级判断已被 Phase 0 审计确认，并补上了运行时证据：
+
+- 在真实 DBX `v0.6.16`（browser-static）中安装插件并打开 workbench，`host.getContext` 返回 `{}`；
+- 28 个候选查询/计划/上下文/cancel/timeout 方法名全部返回 `Unsupported plugin host method`；
+- DBX 内部 EXPLAIN（Estimated）在同一宿主中实测可用，但插件不可达；
+- 唯一设计上会向工作台投递 `sql / connectionId / database / result` 的 `result-view` 路径在 `v0.6.16` 与当前 `main` 上无法打开（工作台查找只匹配 `type === "workbench"`）。
+
+完整矩阵、逐项证据与复现步骤见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md)；上游能力缺口与最小 API 提案见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)。
+
+结论：**“插件通过公开 Host API 请求执行计划”在当前 DBX 版本中不可行**。这是明确的 Host API capability gap，不是本插件的开发阻塞 bug，也不应用私有 API、DOM hack、Tauri 内部对象或自建数据库连接绕过。
 
 详细清单与验证状态见 [PROJECT_PLAN.md](PROJECT_PLAN.md)。
 
@@ -154,3 +165,9 @@ include = ["assets", "ui"]
 不实现 Rule Engine、Metrics Engine、Plan Diff、SQL Rewrite、AI、自动调优、自动建索引、自动执行 SQL、PostgreSQL parser、MySQL parser、自定义 Plan Canvas、数据库连接层。
 
 这些需要独立 Issue。DBX 当前已有 Explain Plan 基础能力，相关复用必须先完成审计。
+
+## 9. Audit Harness（开发用）
+
+`src/App.svelte` 当前是 **Phase 0 Host Capability Audit Harness**，页面顶部明确标注 `DEVELOPMENT / AUDIT ONLY`。它只做四件事：打印 `window.dbxPlugin` 的桥接面、打印宿主 `init` 消息、读取 `dbxPlugin.context` 与 `request("host.getContext")`、探测候选宿主方法名并按 `RESOLVED / REJECTED / UNSUPPORTED` 分类。
+
+它**不**包含解析器、指标、规则、Diff、AI，也不建立任何数据库连接；Phase 1 开始时将被真实业务 UI 替换。

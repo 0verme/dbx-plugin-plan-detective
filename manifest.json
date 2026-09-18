@@ -16,6 +16,12 @@
       "label": "DBX Plan Detective",
       "description": "Svelte workbench contributed by DBX Plan Detective.",
       "icon": "assets/plugin.svg"
+    },
+    {
+      "type": "result-view",
+      "id": "io.github.0verme.plan-detective.audit-result-view",
+      "label": "Plan Detective Audit (dev)",
+      "description": "Phase 0 Host Capability Audit harness. Development/diagnostic only; no plan analysis."
     }
   ],
   "localizations": {
@@ -26,6 +32,10 @@
         "io.github.0verme.plan-detective.workbench": {
           "label": "DBX Plan Detective",
           "description": "由插件提供的 Svelte 沙箱工作台。"
+        },
+        "io.github.0verme.plan-detective.audit-result-view": {
+          "label": "Plan Detective 审计（开发用）",
+          "description": "Phase 0 Host Capability Audit 诊断页，仅用于开发/审计，不做任何计划分析。"
         }
       }
     }

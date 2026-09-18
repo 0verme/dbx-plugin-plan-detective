@@ -21,21 +21,28 @@
 
 **这是当前唯一的活动阶段。**在清单未取得证据前，不开始实现 Parser、Metrics 或 Rule Engine。
 
-### 审计清单
+> 审计已于 2026-09-18 完成，结论为 **BLOCKED — Host API capability gap**。
+> 完整证据、矩阵与运行时实测记录见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md)，上游反馈材料见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)。
 
-- [ ] 插件能否获得当前 connectionId
-- [ ] 插件能否获得 database / schema
-- [ ] 插件能否获得当前 SQL
-- [ ] 插件能否通过公开 Host API 请求执行计划
-- [ ] 是否能获取 Raw Plan
-- [ ] 是否支持 Estimated Plan
-- [ ] 是否支持 Actual Plan
-- [ ] 是否能使用 DBX timeout
-- [ ] 是否能使用 DBX cancel
-- [ ] 是否能获得数据库类型
-- [ ] 是否能获得数据库版本
-- [ ] PostgreSQL 能力现状
-- [ ] MySQL 能力现状
+### 审计清单（已完成）
+
+状态取值：`SUPPORTED`（公开 API 可用）/ `INTERNAL_ONLY`（DBX 内部存在但未公开）/ `NOT_AVAILABLE` / `UNKNOWN`。
+
+- [x] 插件能否获得当前 connectionId —— `INTERNAL_ONLY`
+- [x] 插件能否获得 database / schema —— `INTERNAL_ONLY`（`schema` 在 bridge 类型中声明但无任何生产者）
+- [x] 插件能否获得当前 SQL —— `INTERNAL_ONLY`（`result-view` 设计路径存在，但当前版本无法打开）
+- [x] 插件能否通过公开 Host API 请求执行计划 —— `INTERNAL_ONLY`（宿主方法注册表无入口）
+- [x] 是否能获取 Raw Plan —— `INTERNAL_ONLY`
+- [x] 是否支持 Estimated Plan —— `INTERNAL_ONLY`（PG/MySQL 等内部可用）
+- [x] 是否支持 Actual Plan —— `INTERNAL_ONLY`（PG/SQL Server 内部可用）/ `NOT_AVAILABLE`（MySQL 无 analyze 路径）
+- [x] 是否能使用 DBX timeout —— `INTERNAL_ONLY`
+- [x] 是否能使用 DBX cancel —— `INTERNAL_ONLY`
+- [x] 是否能获得数据库类型 —— `INTERNAL_ONLY`
+- [x] 是否能获得数据库版本 —— `INTERNAL_ONLY`
+- [x] PostgreSQL 能力现状 —— 内部 Estimated + Actual 可用，插件不可达
+- [x] MySQL 能力现状 —— 内部 Estimated 可用、Actual 不存在，插件不可达；本机无 MySQL，仅源码级证据
+
+**插件侧可达项：0 / 14。**
 
 ### 审计纪律
 
@@ -53,9 +60,9 @@ Plugin Host public capability
 - 每个勾选项必须附带可复现证据：调用方法名、参数、返回样例、来源文档链接，或真实宿主中的实测输出。
 - 结论分三档记录：**已公开 API 支持** / **内部存在但未公开** / **不存在或未知**。
 
-### 已获得的文档级线索
+### 已获得的文档级线索（已现场验证）
 
-以下为公开文档取证（`t8y2/dbx` `main` 分支），用作审计起点，**不能替代现场验证**：
+以下为公开文档取证（`t8y2/dbx` `main` 分支），已完成真实 DBX `v0.6.16` 宿主实测确认（详见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md) 第 6 节）：
 
 - 前端沙箱公开桥接方法不包含 SQL 执行或 EXPLAIN 相关入口（详见 [ARCHITECTURE.md](ARCHITECTURE.md) 第 5 节）。
 - 公开的插件可回调宿主方法仅有 `host/requestUserInput`（Host API 1.1）。
@@ -71,15 +78,27 @@ Plugin Host public capability
 
 ### Phase 0 出口条件
 
-- 至少完成 connection 上下文、数据库类型/版本、执行计划获取三项的**明确结论**（支持 / 未公开）。
-- 明确记录 Estimated 与 Actual 两条路径各自是否可行。
-- 若关键能力未公开：形成 Issue 并暂停相关实现，不自行设计替代架构。
+- 至少完成 connection 上下文、数据库类型/版本、执行计划获取三项的**明确结论**（支持 / 未公开）。—— ✅ 已完成
+- 明确记录 Estimated 与 Actual 两条路径各自是否可行。—— ✅ 已完成（两条路径插件侧均不可行；DBX 内部可行）
+- 若关键能力未公开：形成 Issue 并暂停相关实现，不自行设计替代架构。—— ✅ 已形成
+  [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)（含上游 Issue 草稿），**暂停 Phase 1 及以后实现**。
+
+### Phase 0 结论（2026-09-18）
+
+```text
+Phase 0: BLOCKED — DBX internal capability exists, Plugin Host API does not expose it.
+```
+
+- 出口条件中的「至少三项明确结论」已满足，但**关键能力未公开**，因此不能判定 Phase 0 PASS。
+- 按纪律：不实现插件侧数据库执行层、不引入 Driver、不绕过沙箱、不调用 DBX 内部接口。
+- 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。
+- 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 与当前 `main` 上无法打开工作台（见 Gap Proposal 附录 B）。
 
 ## 3. 后续阶段（暂不启动）
 
 | 阶段 | 内容 | 前置条件 |
 | --- | --- | --- |
-| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | Phase 0 出口条件满足 |
+| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **未满足**：Phase 0 判定 BLOCKED，需先解决 Host API 缺口 |
 | Phase 2 | Metrics Engine + Findings/Evidence | Phase 1 模型稳定 |
 | Phase 3 | Rule Engine | Phase 2 指标可复现 |
 | Phase 4 | Plan Diff / History | 上述阶段通过 |
