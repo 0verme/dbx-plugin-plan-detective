@@ -1,0 +1,14 @@
+# 行尾统一为 LF；避免 Windows 贡献者提交 CRLF 造成 diff 噪音，并保证 CI 与 Shell 脚本行为一致。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.zip binary
+*.dbxp binary
