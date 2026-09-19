@@ -3,9 +3,28 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-18 |
-| 当前阶段 | **Phase 0 · Host Capability Audit** |
+| 当前阶段 | **Phase 0 · Host Capability Audit（已完成，结论 BLOCKED）** |
 | 插件版本 | 0.1.0 |
-| 阶段结论 | 项目骨架已初始化；执行计划分析能力**尚未实现**，且按计划不得在审计完成前开工 |
+| 阶段结论 | **BLOCKED — DBX internal capability exists, Plugin Host API does not expose it.** 执行计划分析能力**尚未实现**，且按计划不得在上游公开能力前开工 |
+
+## 0. Phase 0 审计结论（2026-09-18）
+
+完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与最小 API 提案（含 Issue 草稿）：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
+
+| 能力 | 插件侧可达 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| connectionId / database | ❌ | `INTERNAL_ONLY` | `host.getContext` 实测返回 `{}`；只有插件自有连接与 result-view 路径会带连接信息 |
+| schema | ❌ | `INTERNAL_ONLY` | bridge 类型有 `schema?` 字段，但仓库内无任何生产者 |
+| 当前 SQL | ❌ | `INTERNAL_ONLY` | result-view 设计上会传 `sql`，但该路径当前无法打开 |
+| database type / version | ❌ | `INTERNAL_ONLY` | DBX 内部通过驱动探测或 SQL 获取 |
+| 请求 DBX 执行 EXPLAIN | ❌ | `INTERNAL_ONLY` | 宿主方法注册表中无此方法 |
+| Raw Plan / Estimated Plan | ❌ | `INTERNAL_ONLY` | DBX 内部可用（PG/MySQL 等） |
+| Actual Plan | ❌ | `INTERNAL_ONLY`（PG/SQL Server）/ `NOT_AVAILABLE`（MySQL） | PG 有只读事务 + 回滚；MySQL 无 analyze 路径 |
+| timeout / cancel | ❌ | `INTERNAL_ONLY` | 插件侧只有 sidecar RPC 超时（≤ 120s），与查询超时无关 |
+
+审计环境：DBX `v0.6.16` browser-static（真实宿主实测）+ PostgreSQL 15.19（本地审计库，凭据不入库）+ `t8y2/dbx` `main @ f0342ad3` 源码审计。未验证项（MySQL 运行时、桌面版差异）已在审计文档第 7 节逐项标记。
+
+附带发现：`result-view` 贡献在 `v0.6.16` 与当前 `main` 上无法打开工作台（`Plugin workbench '…' is unavailable`），已作为独立上游缺陷写入 Gap Proposal 附录 B。
 
 ## 1. 完成度速览
 
@@ -16,6 +35,8 @@
 | 打包（`dbx-plugin package`） | ✅ 通过 |
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
 | `manifest.json` 合法性 | ✅ 通过（对上游 `main` 分支真实 schema） |
+| Host Capability Audit（Phase 0） | ✅ 已完成（结论 BLOCKED，见第 0 节） |
+| Audit Harness（开发/审计页） | ✅ 已实现（`src/App.svelte`，明确标注 DEVELOPMENT / AUDIT ONLY） |
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
@@ -51,15 +72,16 @@ error: manifest UI entry 'ui/index.html' does not exist at ...\ui\index.html
 
 因此不要将 `ui/` 加入 `.gitignore`。已在 `.pi-lens.json` 中把 `ui/**`、`dist/**` 排除出静态扫描，避免对压缩产物误报。
 
-## 3. Host API 现状（文档级取证，待现场验证）
+## 3. Host API 现状（文档取证 + 真实宿主实测）
 
-取证时间 2026-09-18，来源 `t8y2/dbx` 的 `main` 分支公开文档：
+取证时间 2026-09-18，来源 `t8y2/dbx` 的 `main` 分支公开文档与源码，并在真实 DBX `v0.6.16` 宿主中现场验证（详见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)）：
 
-- 前端沙箱公开桥接方法为 `ready` / `context` / `locale` / `theme` / `request` / `invoke` / `notify` / `onInit` / `onContext` / `onEvent` / `onBinary` / `sendBinary` / `readAsset` / `readAssetUrl` / `openWorkbench` / `openFilesystem`。
+- 前端沙箱公开桥接方法为 `ready` / `context` / `locale` / `theme` / `request` / `invoke` / `notify` / `onInit` / `onContext` / `onEvent` / `onBinary` / `sendBinary` / `readAsset` / `readAssetUrl` / `openWorkbench` / `openFilesystem` / `saveFile` / `copy` / `stream`（运行时 `Object.keys(window.dbxPlugin)` 实测）。
+- 宿主方法注册表（`apps/desktop/src/lib/plugins/pluginHostBridge.ts`）只有 `host.getContext`、`ui.readAsset`、`host.copy`、`host.saveFile`、`host.openWorkbench`、`host.openFilesystem`、`host.reopenConnection`（仅 `main`，`v0.6.16` 未实现）、`backend.invoke` / `backend.notify` / `backend.sendBinary`。
 - 公开的插件可回调宿主方法仅有 `host/requestUserInput`（Host API 1.1）。
 - 公开 manifest 权限名称为 `host.events`、`host.binary`、`host.workbench`、`host.filesystem`、`host.network:<https origin>`。
-- 上述公开 API 面中**没有** SQL 执行、EXPLAIN 或执行计划获取相关入口。
-- 独立开发主机（`dbx-plugin dev`）明确说明不模拟 native connection actions、query-result contributions 与 DBX component kit。
+- 上述公开 API 面中**没有** SQL 执行、EXPLAIN 或执行计划获取相关入口；28 个候选方法名在真实宿主中全部返回 `Unsupported plugin host method`。
+- 独立开发主机（`dbx-plugin dev`）明确说明不模拟 native connection actions、query-result contributions 与 DBX component kit，不作为结论来源。
 
 **这是当前最重要的未决问题**：`dbx-plugin` 插件能否通过公开 Host API 取得执行计划，尚未得到证据支持。审计清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
 
@@ -127,13 +149,16 @@ Build failed (exit 1)
 
 ## 5. 待办
 
-1. 完成 Phase 0 Host Capability Audit（清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)）。
-2. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
-3. 审计结论明确后再规划 Phase 1。
+1. ✅ Phase 0 Host Capability Audit 已完成（清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)，结论 BLOCKED）。
+2. 决定是否向上游 `t8y2/dbx` 提交插件宿主/能力相关 Issue（草稿见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 附录 A、附录 B）；目前**未经确认不修改上游仓库**。
+3. 在上游公开只读计划 API 之前，**暂停** Phase 1 及以后实现；不设计插件侧替代架构、不引入数据库 Driver。
+4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
 ## 6. 相关文档
 
 - [README.md](README.md) —— 项目定位与开发方式
 - [AGENTS.md](AGENTS.md) —— 仓库约束与红线
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
-- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 决策记录、审计清单、Fixture 策略
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 决策记录、Phase 0 审计清单与结论、Fixture 策略
+- [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 审计矩阵、逐项证据、运行时实测、复现步骤
+- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、最小 API 提案、Issue 草稿

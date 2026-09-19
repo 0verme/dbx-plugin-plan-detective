@@ -55,9 +55,17 @@ DWS 暂时视为 PostgreSQL-family 的后续兼容目标，当前不作为第一
 
 ## 当前进度
 
-项目处于 **Phase 0：Host Capability Audit**。
+项目处于 **Phase 0：Host Capability Audit**，审计已于 2026-09-18 完成，结论为 **BLOCKED — Host API capability gap**：
 
-在审计结论明确之前，本仓库不会开始实现 Plan Parser、Metrics Engine、Rule Engine 或 Plan Diff。审计清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+```text
+DBX 内部有执行计划能力
+≠
+第三方插件可通过公开 Host API 取得执行计划
+```
+
+在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)，上游反馈材料见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
+
+因此本仓库**不会**在上游公开只读计划 API 之前实现 Plan Parser、Metrics Engine、Rule Engine 或 Plan Diff；也不会自行引入数据库 Driver / 连接池 / 凭据管理来绕过。自查清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
 
 ## 开发
 
@@ -102,7 +110,9 @@ dbx-plugin package .
 
 ## 文档
 
-- [STATUS.md](STATUS.md) —— 当前状态、已完成验证、已知问题
+- [STATUS.md](STATUS.md) —— 当前状态、Phase 0 结论、已验证项与已知问题
+- [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 Host Capability Matrix、逐项证据、真实宿主实测
+- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、最小 API 提案、Issue 草稿
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
-- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单、Fixture 策略
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单与结论、Fixture 策略
 - 上游插件开发指南：<https://dbxio.com/en/docs/plugin-development>

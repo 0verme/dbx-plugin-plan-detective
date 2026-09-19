@@ -1,0 +1,460 @@
+{
+  "harness": "phase0-host-capability-audit",
+  "generatedAt": "2026-09-18T15:28:32.234Z",
+  "note": "Real-DBX runtime evidence collected by the Phase 0 audit harness. No credentials, tokens or production SQL are included.",
+  "host": {
+    "product": "DBX v0.6.16 browser-static (DBX_0.6.16_x64-browser-static.tar.gz)",
+    "endpoint": "http://127.0.0.1:4224",
+    "locale": "en",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36"
+  },
+  "plugin": {
+    "id": "io.github.0verme.plan-detective",
+    "version": "0.1.0",
+    "installedPackage": {
+      "sha256": "a4bf7c00920dfdbfa2d84139c7d92d858db298803ad1adc783fbe505f92d54eb",
+      "note": "unsigned local-development install (POST /api/plugins/install?allow_unsigned=true)"
+    },
+    "installedUiMatchesRepo": {
+      "ui/index.html": "a4ac07b63ca3422d1dddca912d9def1ced5b9d7b6fb1a7b4a25cbe4b6da5e5a3",
+      "ui/assets/index-qgttd-mp.js": "52a3189200fd87d437d9751f84f87e540e4c4387bb28862706e6c6458a496cb3",
+      "ui/assets/index-CxyQQWSk.css": "a38335f35a30c0c60a40010f32703658548a3c546e4ef952d2805a643d2bad34"
+    }
+  },
+  "auditPath": "Plugin Center -> Installed -> Open (plain workbench contribution, no connection context)",
+  "initMessage": {
+    "source": "dbx-host",
+    "version": 1,
+    "type": "init",
+    "pluginId": "io.github.0verme.plan-detective",
+    "contributionId": "io.github.0verme.plan-detective.workbench",
+    "locale": "en",
+    "permissions": [],
+    "context": {},
+    "theme": {
+      "appearance": "light",
+      "tokenCount": 168
+    }
+  },
+  "bridgeSurface": [
+    "context",
+    "copy",
+    "decodeBase64",
+    "encodeBase64",
+    "invoke",
+    "locale",
+    "notify",
+    "onBinary",
+    "onContext",
+    "onEvent",
+    "onInit",
+    "openFilesystem",
+    "openWorkbench",
+    "readAsset",
+    "readAssetUrl",
+    "ready",
+    "request",
+    "saveFile",
+    "sendBinary",
+    "stream",
+    "theme"
+  ],
+  "context": {},
+  "hostGetContext": {},
+  "probes": [
+    {
+      "method": "host.getContext",
+      "params": null,
+      "status": "RESOLVED",
+      "outcome": "{}",
+      "ms": 1,
+      "note": "workbench context snapshot"
+    },
+    {
+      "method": "ui.readAsset",
+      "params": {
+        "path": "../escape"
+      },
+      "status": "REJECTED",
+      "outcome": "Plugin asset path is invalid",
+      "ms": 2,
+      "note": "invalid path → validation error proves registration"
+    },
+    {
+      "method": "host.copy",
+      "params": {},
+      "status": "REJECTED",
+      "outcome": "host.copy requires text",
+      "ms": 1,
+      "note": "missing text → validation error"
+    },
+    {
+      "method": "host.saveFile",
+      "params": {},
+      "status": "REJECTED",
+      "outcome": "host.saveFile requires transferred binary data or dataBase64",
+      "ms": 1,
+      "note": "missing payload → validation error"
+    },
+    {
+      "method": "host.openWorkbench",
+      "params": {},
+      "status": "REJECTED",
+      "outcome": "Plugin has not declared permission 'host.workbench'",
+      "ms": 1,
+      "note": "permission gate / validation error"
+    },
+    {
+      "method": "host.openFilesystem",
+      "params": {},
+      "status": "REJECTED",
+      "outcome": "Plugin has not declared permission 'host.filesystem'",
+      "ms": 0,
+      "note": "permission gate / validation error"
+    },
+    {
+      "method": "host.reopenConnection",
+      "params": {},
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.reopenConnection'",
+      "ms": 1,
+      "note": "invalid connectionId → validation error"
+    },
+    {
+      "method": "backend.invoke",
+      "params": {
+        "method": "audit/ping",
+        "timeoutMs": 2000
+      },
+      "status": "REJECTED",
+      "outcome": "Plugin 'io.github.0verme.plan-detective' does not provide a backend entrypoint",
+      "ms": 13,
+      "note": "plugin sidecar RPC (this plugin has no backend)"
+    },
+    {
+      "method": "backend.notify",
+      "params": {
+        "method": "audit/ping"
+      },
+      "status": "REJECTED",
+      "outcome": "Plugin 'io.github.0verme.plan-detective' does not provide a backend entrypoint",
+      "ms": 7,
+      "note": "plugin sidecar notification"
+    },
+    {
+      "method": "host.executeQuery",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.executeQuery'",
+      "ms": 2,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.executeSql",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.executeSql'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.query",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.query'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "query/execute",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'query/execute'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "sql/execute",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'sql/execute'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.explain",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.explain'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "sql/explain",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'sql/explain'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "explain",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'explain'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getExecutionPlan",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getExecutionPlan'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getQueryPlan",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getQueryPlan'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getPlan",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getPlan'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getRawPlan",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getRawPlan'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getQueryContext",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getQueryContext'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getCurrentSql",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getCurrentSql'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getConnection",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getConnection'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getConnections",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getConnections'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getDatabases",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getDatabases'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getSchema",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getSchema'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getDatabaseVersion",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getDatabaseVersion'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.getServerVersion",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.getServerVersion'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "connection/list",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'connection/list'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "connection/get",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'connection/get'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "schema/list",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'schema/list'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "database/list",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'database/list'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.cancelQuery",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.cancelQuery'",
+      "ms": 1,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "query/cancel",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'query/cancel'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    },
+    {
+      "method": "host.timeout",
+      "params": {
+        "connectionId": null,
+        "sql": "SELECT 1"
+      },
+      "status": "UNSUPPORTED",
+      "outcome": "Unsupported plugin host method 'host.timeout'",
+      "ms": 0,
+      "note": "execution-plan capability candidate"
+    }
+  ],
+  "resultViewObservation": {
+    "trigger": "clicked the plugin result-view button in the query result toolbar after a successful query",
+    "renderedError": "Plugin workbench 'io.github.0verme.plan-detective/io.github.0verme.plan-detective.audit-result-view' is unavailable",
+    "note": "See docs/DBX_HOST_API_GAP_PROPOSAL.md appendix B."
+  },
+  "internalExplainObservation": {
+    "trigger": "editor shortcut Mod+E on the same query (DBX-internal Explain, not a plugin API)",
+    "ui": "Explain Plan panel rendered (POSTGRES, 2 nodes; Canvas/Tree/Summary/JSON)",
+    "planNodesObserved": [
+      "Aggregate",
+      "Seq Scan"
+    ]
+  },
+  "notVerified": [
+    "MySQL runtime behaviour (no MySQL server in the audit environment; source-level evidence only)",
+    "DBX desktop (Tauri) specific paths",
+    "plugin-owned connection provider context (requires a sidecar/driver; out of scope for Phase 0)"
+  ]
+}
