@@ -34,6 +34,8 @@ import { validateRawPlanInput } from "../raw-plan-input.js";
  * A structurally unusable payload throws `PlanParseError`; an unknown access
  * type or an unknown structural key is preserved (`nodeType` keeps the raw
  * access type, unknown keys land in `extra`) instead of being silently dropped.
+ * Every structure MySQL reports `message` on keeps it in `mysql.message`; the
+ * field is not dropped just because it is rare.
  */
 
 /**
@@ -302,6 +304,7 @@ function parseTable(raw, path) {
   node.indexCondition = optionalString(table, "index_condition", path);
 
   node.mysql.accessType = accessType;
+  node.mysql.message = optionalString(table, "message", path);
   node.mysql.possibleKeys = optionalStringList(table, "possible_keys", path);
   node.mysql.usedKeyParts = optionalStringList(table, "used_key_parts", path);
   node.mysql.usedColumns = optionalStringList(table, "used_columns", path);
@@ -429,6 +432,7 @@ function parseNestedLoopEntry(entry, path) {
 function parseOperationContainer(raw, key, path) {
   const block = requireObject(raw, path);
   const node = emptyNode(key, STRUCTURE_NODE_TYPE[key]);
+  node.mysql.message = optionalString(block, "message", path);
   node.mysql.usingFilesort = optionalFlag(block, "using_filesort", path);
   node.mysql.usingTemporaryTable = optionalFlag(block, "using_temporary_table", path);
   node.extra = collectExtra(block, [...COMMON_BLOCK_KEYS, ...OPERATION_KEYS]);
@@ -450,6 +454,7 @@ function parseSetOperation(raw, key, path) {
   const block = requireObject(raw, path);
   const node = emptyNode(key, STRUCTURE_NODE_TYPE[key]);
   node.mysql.selectId = optionalNumber(block, "select_id", path);
+  node.mysql.message = optionalString(block, "message", path);
   node.mysql.usingTemporaryTable = optionalFlag(block, "using_temporary_table", path);
   node.mysql.usingFilesort = optionalFlag(block, "using_filesort", path);
   node.relationName = optionalString(block, "table_name", path);
@@ -481,13 +486,26 @@ function parseSetOperation(raw, key, path) {
  */
 function parseQuerySpecification(raw, path) {
   const specification = requireObject(raw, path);
-  if (!Object.hasOwn(specification, "query_block")) {
-    throw malformedNode(path, 'a "query_specifications" entry must contain a "query_block" object.');
+
+  if (Object.hasOwn(specification, "query_block")) {
+    const node = parseQueryBlock(specification.query_block, `${path}.query_block`);
+    node.mysql.dependent = optionalFlag(specification, "dependent", path);
+    node.mysql.cacheable = optionalFlag(specification, "cacheable", path);
+    return preserveWrapperExtras(node, specification, SUBQUERY_ENTRY_KEYS, "query_specification");
   }
-  const node = parseQueryBlock(specification.query_block, `${path}.query_block`);
-  node.mysql.dependent = optionalFlag(specification, "dependent", path);
-  node.mysql.cacheable = optionalFlag(specification, "cacheable", path);
-  return preserveWrapperExtras(node, specification, SUBQUERY_ENTRY_KEYS, "query_specification");
+
+  // MySQL 8.0.31+ parenthesized query expressions put a nested set operation
+  // (`union_result` / `unary_result` / `intersect_result` / `except_result`)
+  // directly in `query_specifications` instead of a
+  // `{ dependent, cacheable, query_block }` entry. That is a valid plan MySQL
+  // really produces, so parse it instead of rejecting it.
+  const setOperationKey = SET_OPERATION_KEYS.find((key) => Object.hasOwn(specification, key));
+  if (setOperationKey !== undefined) {
+    const node = parseSetOperation(specification[setOperationKey], setOperationKey, `${path}.${setOperationKey}`);
+    return preserveWrapperExtras(node, specification, [setOperationKey], "query_specification");
+  }
+
+  throw malformedNode(path, 'a "query_specifications" entry must contain a "query_block" object.');
 }
 
 /**
@@ -501,6 +519,7 @@ function parseQuerySpecification(raw, path) {
 function parseMaterializedSubquery(raw, path) {
   const block = requireObject(raw, path);
   const node = emptyNode("materialized_from_subquery", STRUCTURE_NODE_TYPE.materialized_from_subquery);
+  node.mysql.message = optionalString(block, "message", path);
   node.mysql.usingTemporaryTable = optionalFlag(block, "using_temporary_table", path);
   node.mysql.dependent = optionalFlag(block, "dependent", path);
   node.mysql.cacheable = optionalFlag(block, "cacheable", path);

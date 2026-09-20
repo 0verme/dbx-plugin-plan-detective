@@ -206,6 +206,49 @@ test("parses set operations and their query specifications", () => {
   }
 });
 
+test("parses a nested set operation inside query_specifications", () => {
+  // MySQL 8.0.31+ parenthesized query expressions nest a set operation in
+  // `query_specifications` instead of a `{ dependent, cacheable, query_block }`
+  // wrapper. Shape from MySQL Server 8.0 mysql-test expected output.
+  const parsed = parseMySqlJsonPlan(
+    mysqlInput({
+      query_block: {
+        unary_result: {
+          using_temporary_table: true,
+          select_id: 3,
+          table_name: "<ordered2>",
+          access_type: "ALL",
+          using_filesort: true,
+          query_specifications: [
+            {
+              union_result: {
+                using_temporary_table: true,
+                select_id: 2,
+                table_name: "<union1,2>",
+                access_type: "ALL",
+                query_specifications: [
+                  { dependent: false, cacheable: true, query_block: { select_id: 1, table: table() } },
+                  { dependent: false, cacheable: true, query_block: { select_id: 2, table: table({ table_name: "t2" }) } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    }),
+  );
+
+  const unary = parsed.root.children[0];
+  assert.equal(unary.nodeType, "Unary Result");
+  assert.equal(unary.mysql.usingFilesort, true);
+
+  const union = unary.children[0];
+  assert.equal(union.nodeType, "Union Result");
+  assert.equal(union.relationName, "<union1,2>");
+  assert.equal(union.children.length, 2);
+  assert.equal(union.children[1].children[0].relationName, "t2");
+});
+
 test("parses materialized subqueries nested below a table", () => {
   const parsed = parseMySqlJsonPlan(
     mysqlInput(
@@ -276,6 +319,38 @@ test("keeps an unknown access type and unknown keys instead of failing or droppi
   assert.deepEqual(parsed.root.extra, { windowing: { windows: [] }, cost_info: { future_cost: "1.50" } });
 });
 
+test("keeps `message` wherever MySQL reports it", () => {
+  // Real MySQL shapes: `Deleting all rows` sits on a table, and set operations
+  // carry `Not optimized, outer query is empty` when the outer query is empty.
+  const parsed = parseMySqlJsonPlan(
+    mysqlInput({
+      query_block: {
+        select_id: 1,
+        message: "Impossible WHERE",
+        table: table({ delete: true, message: "Deleting all rows" }),
+      },
+    }),
+  );
+  assert.equal(parsed.root.mysql.message, "Impossible WHERE");
+  assert.equal(parsed.root.children[0].mysql.message, "Deleting all rows");
+  assert.deepEqual(parsed.root.children[0].extra, { delete: true });
+
+  const nested = parseMySqlJsonPlan(
+    mysqlInput({
+      query_block: {
+        intersect_result: {
+          using_temporary_table: true,
+          message: "Not optimized, outer query is empty",
+          query_specifications: [
+            { dependent: false, cacheable: true, query_block: { select_id: 3, message: "Not optimized, outer query is empty" } },
+          ],
+        },
+      },
+    }),
+  );
+  assert.equal(nested.root.children[0].mysql.message, "Not optimized, outer query is empty");
+});
+
 test("declares only estimated mode: MySQL EXPLAIN ANALYZE is not this JSON payload", () => {
   assert.throws(
     () => parseMySqlJsonPlan(createRawPlanInput({ database: "mysql", mode: "actual", format: "json", plan: plan({ table: table() }) })),
@@ -306,6 +381,13 @@ test("rejects payloads whose structure cannot be trusted", () => {
     ["select_id is not a number", { query_block: { select_id: "1", table: table() } }, "MALFORMED_NODE"],
     ["message is not a string", { query_block: { select_id: 1, message: 42, table: table() } }, "MALFORMED_NODE"],
     ["query_specifications is not an array", { query_block: { union_result: { query_specifications: "two" } } }, "MALFORMED_NODE"],
+    ["query_specifications entry is not an object", { query_block: { union_result: { query_specifications: [3] } } }, "MALFORMED_NODE"],
+    [
+      "query_specifications entry has neither query_block nor a known structure",
+      { query_block: { union_result: { query_specifications: [{ dependent: false }] } } },
+      "MALFORMED_NODE",
+    ],
+    ["table message is not a string", plan({ table: table({ message: 42 }) }), "MALFORMED_NODE"],
     ["materialized_from_subquery has no query_block", plan({ table: table({ materialized_from_subquery: { cacheable: true } }) }), "MALFORMED_NODE"],
     ["attached_subqueries entry has no query_block", plan({ table: table(), attached_subqueries: [{ dependent: true }] }), "MALFORMED_NODE"],
     ["attached_subqueries is not an array", plan({ table: table(), attached_subqueries: { query_block: {} } }), "MALFORMED_NODE"],
