@@ -5,9 +5,9 @@
  *
  * The registry is the only place that decides whether a database family has a
  * structured parser. A family without one is not an error: the host can return
- * a perfectly valid estimated plan for MySQL, SQL Server, Oracle, Dameng, Doris
- * or QuestDB, and the UI still shows the Raw Plan and the host warnings. What
- * it must not do is pretend to parse a payload no one has validated against a
+ * a perfectly valid estimated plan for SQL Server, Oracle, Dameng, Doris or
+ * QuestDB, and the UI still shows the Raw Plan and the host warnings. What it
+ * must not do is pretend to parse a payload no one has validated against a
  * real sample.
  *
  * Adding a database means adding one parser module here; the UI, rules and
@@ -18,6 +18,7 @@ import { PlanInputError, PlanParseError } from "../errors.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
+import { mysqlParser } from "./mysql.js";
 import { postgresParser } from "./postgres.js";
 
 /**
@@ -25,7 +26,10 @@ import { postgresParser } from "./postgres.js";
  *
  * @type {Map<string, { id: string, database: string, formats: readonly string[], parse: Function, normalize: Function }>}
  */
-const PARSERS = new Map([[postgresParser.database, postgresParser]]);
+const PARSERS = new Map([
+  [postgresParser.database, postgresParser],
+  [mysqlParser.database, mysqlParser],
+]);
 
 /**
  * Dialects the merged host contract can return that have no structured parser
@@ -35,7 +39,6 @@ const PARSERS = new Map([[postgresParser.database, postgresParser]]);
  * @type {Map<string, string>}
  */
 const PENDING_PARSERS = new Map([
-  ["mysql", "PARSER_NOT_IMPLEMENTED"],
   ["sqlserver", "PARSER_NOT_IMPLEMENTED"],
   ["oracle", "PARSER_NOT_IMPLEMENTED"],
   ["oceanbase-oracle", "PARSER_NOT_IMPLEMENTED"],

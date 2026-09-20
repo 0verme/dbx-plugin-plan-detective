@@ -1,0 +1,29 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "520.50"
+    },
+    "ordering_operation": {
+      "using_filesort": true,
+      "table": {
+        "table_name": "orders",
+        "access_type": "ALL",
+        "used_columns": [
+          "id",
+          "customer_id",
+          "total"
+        ],
+        "rows_examined_per_scan": 800,
+        "rows_produced_per_join": 800,
+        "filtered": "100.00",
+        "cost_info": {
+          "read_cost": "420.50",
+          "eval_cost": "100.00",
+          "prefix_cost": "520.50",
+          "data_read_per_join": "64000"
+        }
+      }
+    }
+  }
+}

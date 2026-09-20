@@ -3,9 +3,9 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-20 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.2.0（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL structured；MySQL / SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.3.0（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
 ## 0. 当前状态
@@ -46,6 +46,35 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 - init 时序：DBX SDK 在 init message 之前就已注入 `window.dbxPlugin`（`capabilities` getter 仍为 `{}`），此时状态为 `initializing`；`App.svelte` 在 `onMount` 监听 `bridge.ready` / `onInit`，init 后按 `{ initialized: true }` 重估。
 - 开发入口收敛：Fixtures（开发）与宿主审计（开发）仅在 `import.meta.env.DEV` 下渲染；生产构建的 bundle 不再包含这两个视图（`HostAudit` 组件与文案整体被 tree-shake）。
 
+### 0.2.2 MySQL Estimated Plan 结构化（Issue #15，2026-09-20）
+
+```text
+DBX Host（dbType: "mysql" / format: "json" / EXPLAIN FORMAT=JSON）
+→ RawPlanInput → parseMySqlJsonPlan → normalizeMySqlPlan → NormalizedPlan
+→ Metrics → 现有 Rules → Plan Tree / Node Inspector / Findings
+```
+
+- 契约来源：`t8y2/dbx/main` `crates/dbx-sql/src/query_execution_sql.rs`（MySQL 默认生成 `EXPLAIN FORMAT=JSON`；
+  `estimated_plan_format(Mysql) == Json`）、`crates/dbx-core/src/query/plugin_plan.rs`（Host 固定
+  `ExplainFormat::Json`、从不设置 `analyze`）、`apps/desktop/src/lib/diagram/explainPlan.ts`（DBX 自身的
+  MySQL JSON 消费者）。
+- 新增：`src/core/mysql/parse-json-plan.js`、`src/core/normalize/normalize-mysql.js`、
+  `src/core/parsers/mysql.js`；registry 变为 `postgresql + json` / `mysql + json` structured；
+  `STRUCTURED_DATABASES = ["postgresql", "mysql"]`。
+- 支持结构：`query_block`、`table`（全部常见 `access_type`）、`nested_loop`（折叠为左深二叉链）、
+  `ordering_operation`、`grouping_operation`、`duplicates_removal`、`union_result` / `unary_result` /
+  `intersect_result` / `except_result`、`materialized_from_subquery`、`*_subqueries`。
+- IR 映射：`rows_examined_per_scan` → `estimatedRows`（表）；`rows_produced_per_join` → join 节点
+  `estimatedRows` + `engineSpecific.mysql`；`attached_condition` → `filter`；`key` → `relation.indexName`。
+- **MySQL cost 不映射到 `startupCost` / `totalCost`**（`cost_info` 全部保留在 `engineSpecific.mysql`），
+  避免 PostgreSQL 绝对代价阈值误触发；`large-sequential-scan` 按行数适用且不伪造 `incremental cost of 0`，
+  `nested-loop-large-inner` 适用，`expensive-sort` 在 MySQL 上不触发。
+- Fixture：`fixtures/mysql/` 11 个 `estimated` synthetic（本机无 MySQL 实例；形状对照 MySQL Server 8.0
+  `mysql-test/r/explain_json_all.result` 与 DBX 自身 consumer，provenance 见
+  [fixtures/mysql/README.md](fixtures/mysql/README.md)）；MySQL 无 `actual/`。
+- 测试：`tests/mysql/**`（parser / normalize / fixture+golden / end-to-end / UI view-model）+ registry /
+  fixture-convention / host-analysis / rules 适配；`npm test` 502/502，`npm run build` 通过。
+
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
 完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
@@ -75,7 +104,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
-| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL structured；其余方言 raw-only） |
+| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL structured；其余方言 raw-only） |
 | **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Findings / Plan Tree / Node Inspector / Raw Plan |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`） |
 | Fixture-driven 开发 UI | ✅ 保留为开发模式（不进入生产路径） |
@@ -83,8 +112,8 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
-| Execution Plan Parsing | ✅ PostgreSQL structured；其余 7 方言 raw-only（不伪造 parser） |
-| Plan Normalization | ✅ 已实现（公共字段 + `engineSpecific`） |
+| Execution Plan Parsing | ✅ PostgreSQL / MySQL structured；其余 6 方言 raw-only（不伪造 parser） |
+| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL；公共字段 + `engineSpecific`） |
 | Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
 | Hotspot Analysis | ⛔ 未实现（属于后续 Issue） |
 | Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
@@ -130,8 +159,8 @@ src/lib/analysis-session.js → UI
 
 | 数据库 | 宿主 format | 本插件 |
 | --- | --- | --- |
-| PostgreSQL | json | structured（parser + rules + tree） |
-| MySQL | json | raw only（`PARSER_NOT_IMPLEMENTED`） |
+| PostgreSQL | json | structured（`EXPLAIN (FORMAT JSON)`） |
+| MySQL | json | structured（`EXPLAIN FORMAT=JSON`；Estimated only） |
 | SQL Server | xml | raw only |
 | Oracle | text | raw only |
 | OceanBase Oracle | json | raw only |
@@ -233,7 +262,7 @@ Build failed (exit 1)
 
 1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
 2. **发布路径**：#9692 已合并但尚未进入 release；在包含 Host API 1.2 的 DBX release 可用前，插件在旧版 DBX 上会因 `engines.host_api ^1.2` 被宿主拒绝加载（这是预期行为）。
-3. 后续增量（独立 Issue）：MySQL parser、SQL Server ShowPlanXML parser、文本计划 parser、Actual Plan（需独立 upstream proposal）、Plan Diff、更多 metrics / rules、UI 扩展。
+3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、更多 metrics / rules、UI 扩展。
 4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
 ## 6. 相关文档

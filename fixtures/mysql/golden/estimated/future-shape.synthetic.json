@@ -1,0 +1,252 @@
+{
+  "parsed": {
+    "database": "mysql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "structure": "query_block",
+      "nodeType": "Query Block",
+      "relationName": null,
+      "indexName": null,
+      "estimatedRows": null,
+      "filter": null,
+      "indexCondition": null,
+      "children": [
+        {
+          "structure": "table",
+          "nodeType": "hypergraph",
+          "relationName": "orders",
+          "indexName": null,
+          "estimatedRows": 10,
+          "filter": null,
+          "indexCondition": null,
+          "children": [],
+          "mysql": {
+            "selectId": null,
+            "message": null,
+            "accessType": "hypergraph",
+            "possibleKeys": null,
+            "usedKeyParts": null,
+            "usedColumns": [
+              "id"
+            ],
+            "keyLength": null,
+            "ref": null,
+            "rowsExaminedPerScan": 10,
+            "rowsProducedPerJoin": 10,
+            "filteredPercent": 100,
+            "usingIndex": null,
+            "usingIndexForGroupBy": null,
+            "usingFilesort": null,
+            "usingTemporaryTable": null,
+            "usingJoinBuffer": null,
+            "firstMatch": null,
+            "dependent": null,
+            "cacheable": null,
+            "queryCost": null,
+            "readCost": 1,
+            "evalCost": 2,
+            "prefixCost": 3,
+            "dataReadPerJoin": 80,
+            "sortCost": null
+          },
+          "extra": {
+            "future_property": {
+              "nested": true
+            }
+          }
+        }
+      ],
+      "mysql": {
+        "selectId": 1,
+        "message": null,
+        "accessType": null,
+        "possibleKeys": null,
+        "usedKeyParts": null,
+        "usedColumns": null,
+        "keyLength": null,
+        "ref": null,
+        "rowsExaminedPerScan": null,
+        "rowsProducedPerJoin": null,
+        "filteredPercent": null,
+        "usingIndex": null,
+        "usingIndexForGroupBy": null,
+        "usingFilesort": null,
+        "usingTemporaryTable": null,
+        "usingJoinBuffer": null,
+        "firstMatch": null,
+        "dependent": null,
+        "cacheable": null,
+        "queryCost": 3,
+        "readCost": null,
+        "evalCost": null,
+        "prefixCost": null,
+        "dataReadPerJoin": null,
+        "sortCost": null
+      },
+      "extra": {
+        "windowing": {
+          "windows": []
+        },
+        "cost_info": {
+          "future_cost": "1.5"
+        }
+      }
+    }
+  },
+  "normalized": {
+    "database": "mysql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "query_block",
+      "nodeType": "Query Block",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "unknown",
+          "nodeType": "hypergraph",
+          "relation": {
+            "name": "orders",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 10,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "mysql",
+            "mysql": {
+              "structure": "table",
+              "selectId": null,
+              "message": null,
+              "accessType": "hypergraph",
+              "possibleKeys": null,
+              "usedKeyParts": null,
+              "usedColumns": [
+                "id"
+              ],
+              "keyLength": null,
+              "ref": null,
+              "rowsExaminedPerScan": 10,
+              "rowsProducedPerJoin": 10,
+              "filteredPercent": 100,
+              "usingIndex": null,
+              "usingIndexForGroupBy": null,
+              "usingFilesort": null,
+              "usingTemporaryTable": null,
+              "usingJoinBuffer": null,
+              "firstMatch": null,
+              "dependent": null,
+              "cacheable": null,
+              "queryCost": null,
+              "readCost": 1,
+              "evalCost": 2,
+              "prefixCost": 3,
+              "dataReadPerJoin": 80,
+              "sortCost": null
+            },
+            "extra": {
+              "future_property": {
+                "nested": true
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "mysql",
+        "mysql": {
+          "structure": "query_block",
+          "selectId": 1,
+          "message": null,
+          "accessType": null,
+          "possibleKeys": null,
+          "usedKeyParts": null,
+          "usedColumns": null,
+          "keyLength": null,
+          "ref": null,
+          "rowsExaminedPerScan": null,
+          "rowsProducedPerJoin": null,
+          "filteredPercent": null,
+          "usingIndex": null,
+          "usingIndexForGroupBy": null,
+          "usingFilesort": null,
+          "usingTemporaryTable": null,
+          "usingJoinBuffer": null,
+          "firstMatch": null,
+          "dependent": null,
+          "cacheable": null,
+          "queryCost": 3,
+          "readCost": null,
+          "evalCost": null,
+          "prefixCost": null,
+          "dataReadPerJoin": null,
+          "sortCost": null
+        },
+        "extra": {
+          "windowing": {
+            "windows": []
+          },
+          "cost_info": {
+            "future_cost": "1.5"
+          }
+        }
+      }
+    },
+    "unknownNodeTypes": [
+      "hypergraph"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "unknown",
+      "nodeType": "hypergraph",
+      "relation": "orders",
+      "estimatedRows": 10
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": []
+}

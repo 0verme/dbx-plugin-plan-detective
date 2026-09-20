@@ -1,0 +1,144 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "900.00"
+    },
+    "ordering_operation": {
+      "using_temporary_table": true,
+      "using_filesort": true,
+      "grouping_operation": {
+        "using_filesort": false,
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ALL",
+              "used_columns": [
+                "id",
+                "customer_id",
+                "status"
+              ],
+              "attached_condition": "(`orders`.`status` <> 'CANCELLED')",
+              "attached_subqueries": [
+                {
+                  "dependent": false,
+                  "cacheable": true,
+                  "query_block": {
+                    "select_id": 6,
+                    "cost_info": {
+                      "query_cost": "2.10"
+                    },
+                    "table": {
+                      "table_name": "regions",
+                      "access_type": "ALL",
+                      "used_columns": [
+                        "id",
+                        "code"
+                      ],
+                      "rows_examined_per_scan": 12,
+                      "rows_produced_per_join": 12,
+                      "filtered": "100.00",
+                      "cost_info": {
+                        "read_cost": "1.10",
+                        "eval_cost": "1.00",
+                        "prefix_cost": "2.10",
+                        "data_read_per_join": "192"
+                      }
+                    }
+                  }
+                }
+              ],
+              "rows_examined_per_scan": 900,
+              "rows_produced_per_join": 450,
+              "filtered": "50.00",
+              "cost_info": {
+                "read_cost": "300.00",
+                "eval_cost": "90.00",
+                "prefix_cost": "390.00",
+                "data_read_per_join": "72000"
+              }
+            }
+          },
+          {
+            "table": {
+              "table_name": "customers",
+              "access_type": "eq_ref",
+              "possible_keys": [
+                "PRIMARY"
+              ],
+              "key": "PRIMARY",
+              "used_key_parts": [
+                "id"
+              ],
+              "key_length": "4",
+              "ref": [
+                "test.orders.customer_id"
+              ],
+              "used_columns": [
+                "id",
+                "country_code"
+              ],
+              "rows_examined_per_scan": 1,
+              "rows_produced_per_join": 450,
+              "filtered": "100.00",
+              "cost_info": {
+                "read_cost": "45.00",
+                "eval_cost": "13.50",
+                "prefix_cost": "448.50",
+                "data_read_per_join": "14400"
+              }
+            }
+          },
+          {
+            "table": {
+              "table_name": "<derived4>",
+              "access_type": "ALL",
+              "rows_examined_per_scan": 900,
+              "rows_produced_per_join": 900,
+              "filtered": "100.00",
+              "cost_info": {
+                "read_cost": "380.00",
+                "eval_cost": "180.00",
+                "prefix_cost": "900.00",
+                "data_read_per_join": "28800"
+              },
+              "used_columns": [
+                "order_id",
+                "total"
+              ],
+              "materialized_from_subquery": {
+                "using_temporary_table": true,
+                "dependent": false,
+                "cacheable": true,
+                "query_block": {
+                  "select_id": 4,
+                  "cost_info": {
+                    "query_cost": "360.00"
+                  },
+                  "table": {
+                    "table_name": "order_items",
+                    "access_type": "ALL",
+                    "used_columns": [
+                      "order_id",
+                      "total"
+                    ],
+                    "rows_examined_per_scan": 900,
+                    "rows_produced_per_join": 900,
+                    "filtered": "100.00",
+                    "cost_info": {
+                      "read_cost": "280.00",
+                      "eval_cost": "80.00",
+                      "prefix_cost": "360.00",
+                      "data_read_per_join": "28800"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

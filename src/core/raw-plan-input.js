@@ -17,7 +17,7 @@ import { PlanInputError } from "./errors.js";
  * @typedef {Object} RawPlanInput
  * @property {string} database Database family the raw plan came from. The
  *   vocabulary is Plan Core's own, not DBX's `dbType`; the adapter maps between
- *   them. Only families with a structured parser are listed in
+ *   them. Families with a structured parser are listed in
  *   `STRUCTURED_DATABASES`; every other supported family is raw-only.
  * @property {"estimated"|"actual"} mode `estimated` for `EXPLAIN` output, `actual`
  *   for `EXPLAIN ANALYZE` output. This flag decides whether actual-execution
@@ -34,7 +34,7 @@ import { PlanInputError } from "./errors.js";
  */
 
 /** Database families with a structured parser today. */
-export const STRUCTURED_DATABASES = ["postgresql"];
+export const STRUCTURED_DATABASES = ["postgresql", "mysql"];
 
 /**
  * Database families this contract accepts. Mirrors the dialects DBX can return

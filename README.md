@@ -6,7 +6,7 @@ DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性
 | --- | --- |
 | 插件 ID | `io.github.0verme.plan-detective` |
 | Publisher | `0verme` |
-| 当前版本 | `0.2.0` |
+| 当前版本 | `0.3.0` |
 | Host API | `^1.2`（`host.plans:read`） |
 | 模板 | DBX 官方 `svelte`（Svelte + Vite，`universal`，frontend-only） |
 
@@ -21,8 +21,8 @@ Plan Detective 负责理解和分析执行计划。
 ## 目标能力
 
 - Host Estimated Plan 接入 ✅（`window.dbxPlugin.getPlanCapabilities` / `explainPlan`，`mode: "estimated"`）
-- Execution Plan Parsing ✅（结构化：PostgreSQL；其余方言 raw-only）
-- Plan Normalization ✅（PostgreSQL）
+- Execution Plan Parsing ✅（结构化：PostgreSQL / MySQL；其余方言 raw-only）
+- Plan Normalization ✅（PostgreSQL / MySQL）
 - Performance Metrics ✅（确定性基础指标，不含综合评分）
 - Hotspot Analysis ⛔
 - Rule-based Diagnosis ✅（3 条确定性规则）
@@ -51,8 +51,8 @@ window.dbxPlugin.explainPlan({ connectionId, database?, schema?, sql, mode: "est
 - `explainPlan` 返回 `{ dbType, dbVersion?, format: "json" | "xml" | "text", rawPlan, truncated, warnings }`。
 
 DBX 支持的 estimated-plan 方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、
-OceanBase Oracle、Doris、Dameng、QuestDB。**本插件当前只有 PostgreSQL 的结构化 parser**；其余方言
-展示 Raw Plan 并明确标注 `structured parser not implemented`。
+OceanBase Oracle、Doris、Dameng、QuestDB。**本插件当前有 PostgreSQL 与 MySQL 的结构化 parser**；
+其余方言展示 Raw Plan 并明确标注 `structured parser not implemented`。
 
 ## 数据链路
 
@@ -69,7 +69,7 @@ Raw Estimated Plan（宿主返回，未修改）
     ↓
 DBX response adapter → RawPlanInput
     ↓
-parser registry（PostgreSQL 结构化；其余 raw-only）
+parser registry（PostgreSQL / MySQL 结构化；其余 raw-only）
     ↓
 NormalizedPlan（Plan IR）
     ↓
@@ -85,6 +85,7 @@ src/host/                    Host Adapter：window.dbxPlugin → HostPlanError /
 src/core/adapter/            DBX response → RawPlanInput（纯函数，fail-closed）
 src/core/parsers/            parser registry：database family → structured parser
 src/core/postgres/           PostgreSQL JSON parser
+src/core/mysql/              MySQL EXPLAIN FORMAT=JSON parser
 src/core/normalize/          NormalizedPlan（Plan IR）
 src/core/metrics/            deterministic metrics
 src/core/rules/              deterministic findings
@@ -126,7 +127,7 @@ src/components/              UI（ConnectionContext / SqlInput / PlanTree / Find
 
 ```text
 PostgreSQL: structured
-MySQL: raw only
+MySQL: structured
 SQL Server: raw only
 Oracle: raw only
 OceanBase Oracle: raw only
@@ -134,6 +135,66 @@ Doris: raw only
 Dameng: raw only
 QuestDB: raw only
 ```
+
+结构化 parser 只解析 DBX Host 真实返回的 Estimated Plan。其余方言不是失败：UI 仍展示 Raw Plan，
+并标注 `structured parser not implemented`。
+
+## MySQL Estimated Plan（structured）
+
+MySQL 的结构化支持基于 DBX Host 实际返回的 **`EXPLAIN FORMAT=JSON`** 计划：
+
+- 上游契约（`t8y2/dbx/main`）：`crates/dbx-sql/src/query_execution_sql.rs` 的 `build_explain_sql`
+  为 MySQL 生成 `EXPLAIN FORMAT=JSON <sql>`（只有显式请求 `FORMAT=TRADITIONAL` 时才不是 JSON），
+  `estimated_plan_format(Mysql) == Json`；`crates/dbx-core/src/query/plugin_plan.rs` 固定
+  `ExplainFormat::Json` 且从不设置 `analyze`。Host API 因此返回 `dbType: "mysql"`、
+  `format: "json"`、`rawPlan` 为 MySQL JSON 对象。
+- 实现：`src/core/mysql/parse-json-plan.js`（parse）、`src/core/normalize/normalize-mysql.js`
+  （normalize）、`src/core/parsers/mysql.js`（registry 声明）。
+
+当前支持的核心结构：
+
+```text
+query_block
+table（access_type：ALL / index / range / ref / eq_ref / ref_or_null / fulltext / index_merge /
+       unique_subquery / index_subquery / const / system）
+nested_loop（折叠为左深二叉 Nested Loop 链，保留 join 顺序）
+ordering_operation / grouping_operation / duplicates_removal
+union_result / unary_result / intersect_result / except_result
+materialized_from_subquery
+attached_subqueries / optimized_away_subqueries / group_by_subqueries /
+having_subqueries / order_by_subqueries / select_list_subqueries
+```
+
+IR 映射规则：
+
+| MySQL | NormalizedPlan |
+| --- | --- |
+| `table.rows_examined_per_scan` | 表访问节点的 `estimatedRows`（每次访问该表的估算行数） |
+| `table.rows_produced_per_join` | `engineSpecific.mysql.rowsProducedPerJoin`；join 节点的 `estimatedRows` |
+| `table.attached_condition` | `filter` |
+| `table.key` | `relation.indexName` |
+| `access_type: ALL` | `kind: seq_scan`（`nodeType` 保留为 `Table Scan`） |
+| `access_type: const / system` | `kind: const_scan` |
+| `nested_loop` | `kind: nested_loop` |
+| `ordering_operation` | `kind: sort` |
+| `grouping_operation` | `kind: aggregate` |
+| `cost_info.*`（字符串数字） | `engineSpecific.mysql`，**不**映射到 `startupCost` / `totalCost` |
+| 未识别的结构与字段 | `engineSpecific.extra`（不丢弃） |
+
+**MySQL cost 与 PostgreSQL cost 不可直接比较。** `query_cost` / `prefix_cost` / `read_cost` / `eval_cost`
+属于 MySQL 自己的 cost model，`prefix_cost` 还是 join prefix 的累计值。本轮不把它们映射到 IR 的
+`totalCost`，因此 PostgreSQL 的绝对代价阈值不会在 MySQL 计划上误触发。规则适用性：
+
+| rule | MySQL 行为 |
+| --- | --- |
+| `large-sequential-scan` | 适用：按 `estimatedRows` 触发；计划没有报告代价时保持 `null`，不伪造 `incremental cost of 0` |
+| `nested-loop-large-inner` | 适用：只用估算行数，明确标注 `estimateOnly`，不声称 runtime loops |
+| `expensive-sort` | 不触发：需要 PostgreSQL 语义的增量代价与计划总代价，MySQL 不满足 |
+
+范围与限制：当前只覆盖 Host 能返回的 Estimated Plan JSON，不支持 `FORMAT=TRADITIONAL` 表格输出、
+`FORMAT=TREE`、MySQL `EXPLAIN ANALYZE`、MariaDB / OceanBase MySQL / ADB MySQL 等兼容方言的自动归入，
+也不对 optimizer estimate 的准确性下结论。MySQL fixture 均为 shape-verified synthetic（本机无 MySQL
+实例），来源与场景见 [fixtures/mysql/README.md](fixtures/mysql/README.md)。
 
 ## 当前不依赖 AI
 
@@ -167,7 +228,7 @@ dbx-plugin dev --path . --port 5190
 ```bash
 npm test                                  # 契约 / Host adapter / parser / rules / golden / UI view-model
 npm run build                             # 构建 ui/ 发布产物
-npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
+npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline（另有 mysql/estimated/...）
 ```
 
 真实 Host 集成测试请使用真实 DBX 宿主：在已打开连接的查询结果页打开 Plan Detective，输入 SQL，
@@ -197,7 +258,7 @@ dbx-plugin package .
 ├── .github/workflows/     # 官方模板生成的发布工作流
 ├── assets/                # 插件图标等静态资源
 ├── docs/                  # 架构 / 计划 / 契约 / Phase 0 审计
-├── fixtures/              # 离线执行计划样本（postgres 已建立 / mysql 占位）
+├── fixtures/              # 离线执行计划样本（postgres 真实采集 + mysql shape-verified synthetic）
 ├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析、UI fixture 虚拟模块）
 ├── src/                   # Svelte 前端源码
 │   ├── components/        # ConnectionContext / SqlInput / PlanSummary / FindingsList / PlanTree / NodeInspector / RawPlanViewer / HostAudit
@@ -205,7 +266,7 @@ dbx-plugin package .
 │   ├── host/              # DBX Host Plan API adapter（唯一接触 window.dbxPlugin 的模块）
 │   ├── lib/               # 纯 UI 逻辑：analysis session、view model、fixture catalog、格式化
 │   └── App.svelte         # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
-├── tests/                 # node:test，离线运行（core / host / lib / ui / postgres）
+├── tests/                 # node:test，离线运行（core / host / lib / ui / postgres / mysql）
 ├── manifest.json          # DBX 插件清单（host_api ^1.2、host.plans:read）
 ├── dbx-plugin.toml        # 打包与开发配置
 └── STATUS.md              # 当前状态与已知问题

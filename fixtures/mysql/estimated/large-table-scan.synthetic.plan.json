@@ -1,0 +1,27 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "24000.00"
+    },
+    "table": {
+      "table_name": "events",
+      "access_type": "ALL",
+      "used_columns": [
+        "id",
+        "kind",
+        "total",
+        "created_at"
+      ],
+      "rows_examined_per_scan": 240000,
+      "rows_produced_per_join": 240000,
+      "filtered": "100.00",
+      "cost_info": {
+        "read_cost": "22000.00",
+        "eval_cost": "2000.00",
+        "prefix_cost": "24000.00",
+        "data_read_per_join": "3840000"
+      }
+    }
+  }
+}

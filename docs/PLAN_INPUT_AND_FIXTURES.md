@@ -22,7 +22,7 @@ RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入
 src/core/parsers/（registry：database family → structured parser）
    │
    ▼
-Parser（PostgreSQL）              → ParsedPlan（引擎专有、字段完整）
+Parser（PostgreSQL / MySQL）       → ParsedPlan（引擎专有、字段完整）
    │
    ▼
 Normalizer                        → NormalizedPlan（数据库无关语义 + engineSpecific）
@@ -42,7 +42,7 @@ src/lib/analysis-session.js（编排） + UI（Host 分析 / Fixtures 开发模�
   不重跑规则、不修改 Core 语义。
 - `window.dbxPlugin` 只在 `src/host/**` 与开发用 HostAudit 视图中出现；依赖方向由测试强制：
   `tests/core-isolation.test.js` 检查「不得引用 `window` / `document` / `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」
-  与「`parsers` / `postgres` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
+  与「`parsers` / `postgres` / `mysql` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
   `password` / `manifest` / `iframe` / `result-view` / `queryTab`」。
 - DBX 的只读契约不包含 credential / connection string；插件拿不到它们。`timeout` 由 Host 执行，
   Host adapter 只做 UI 侧 guard。
@@ -66,7 +66,7 @@ interface RawPlanInput {
 
 | 字段 | 必填 | 为什么需要 |
 | --- | --- | --- |
-| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"`；raw-only：`"mysql"` / `"sqlserver"` / `"oracle"` / `"oceanbase-oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
+| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"`；raw-only：`"sqlserver"` / `"oracle"` / `"oceanbase-oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
 | `mode` | 是 | 决定是否期望 Actual 执行字段。`EXPLAIN` → `estimated`，`EXPLAIN ANALYZE` → `actual`。DBX Host API 只返回 estimated；actual 值保留给离线 fixture / 未来契约。 |
 | `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / Doris / QuestDB）。registry 对 family + format 组合判定是否 structured。 |
 | `plan` | 是 | 原始 payload，原样传递。PostgreSQL 必须保留完整顶层 envelope（单元素数组），而不是内部 `Plan` object；text / xml 为字符串。 |
@@ -109,7 +109,7 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | DBX response | RawPlanInput | 规则 |
 | --- | --- | --- |
 | `dbType: "postgres"` | `database: "postgresql"` | structured |
-| `dbType: "mysql"` | `database: "mysql"` | raw-only（parser 未实现） |
+| `dbType: "mysql"` | `database: "mysql"` | structured（`EXPLAIN FORMAT=JSON`，见 4.2） |
 | `dbType: "sqlserver"` | `database: "sqlserver"` | raw-only |
 | `dbType: "oracle"` | `database: "oracle"` | raw-only |
 | `dbType: "oceanbase-oracle"` | `database: "oceanbase-oracle"` | raw-only |
@@ -147,7 +147,7 @@ analyzeRawPlan(rawInput) -> {
 }
 ```
 
-- `structured`：family 有 parser 且 format 受支持；跑完整 Core pipeline。
+- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`）；跑完整 Core pipeline。
 - `raw-only`：`PARSER_NOT_IMPLEMENTED`（family 已知）/ `UNSUPPORTED_FORMAT`（parser 不支持该 format）/ `UNKNOWN_DATABASE`；
   `parsed` / `normalized` / `metrics` 为 `null`，`findings` 为空。UI 展示 Raw Plan 并标注原因，不伪造 parser。
 - 严格入口 `analyzePlan(rawInput)` 对 raw-only 抛 `PlanParseError`，供 fixture / golden 测试使用；
@@ -168,7 +168,16 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 `Plan Rows`（估计）与 `Actual Rows`（实测）永远是两个独立字段，不允许互相填充。
 规则不得把 estimated 计划渲染成拥有 runtime loop 数据（见第 6 节 nested-loop 规则的措辞）。
 
-## 4. PostgreSQL Parser 输出（ParsedPlan）
+## 4. Parser 输出（ParsedPlan）
+
+每个 structured family 都有自己的 parser，输出形状对齐、语义各自保留：
+
+| family | parser | normalizer | registry 声明 |
+| --- | --- | --- | --- |
+| PostgreSQL | `src/core/postgres/parse-json-plan.js` | `src/core/normalize/normalize-postgres.js` | `src/core/parsers/postgres.js` |
+| MySQL | `src/core/mysql/parse-json-plan.js` | `src/core/normalize/normalize-mysql.js` | `src/core/parsers/mysql.js` |
+
+### 4.1 PostgreSQL
 
 实现：`src/core/postgres/parse-json-plan.js`。输入是 `RawPlanInput`，输出：
 
@@ -201,13 +210,47 @@ ParsedPlan { database, format, mode, root: ParsedPlanNode }
 - 未单独建 fixture 的节点类型仍由通用映射覆盖；`normalize` 中未登记的节点类型映射为 `kind: "unknown"`，
   并记录在 `NormalizedPlan.unknownNodeTypes`。
 
+### 4.2 MySQL
+
+实现：`src/core/mysql/parse-json-plan.js`。契约来源是 DBX Host 实际返回的
+`EXPLAIN FORMAT=JSON`（`t8y2/dbx/main` `crates/dbx-sql/src/query_execution_sql.rs` 生成该语句，
+`estimated_plan_format(Mysql) == Json`；`plugin_plan.rs` 固定 `ExplainFormat::Json` 且从不 `analyze`）。
+
+| MySQL JSON | ParsedMySqlNode | 说明 |
+| --- | --- | --- |
+| `query_block` | `structure: "query_block"` / `nodeType: "Query Block"` | 根与嵌套 query block |
+| `table.access_type` | `nodeType` | `ALL` → `Table Scan`、`ref` → `Index Lookup`、`eq_ref` → `Unique Index Lookup`、`range` → `Index Range Scan`、`const/system` → `Const Row Lookup` / `System Row Lookup` 等；未知 access type 原样保留并进入 `unknownNodeTypes` |
+| `table.table_name` / `key` | `relationName` / `indexName` | MySQL JSON 没有 alias |
+| `table.rows_examined_per_scan` | `estimatedRows` | 每次访问该表的估算行数 |
+| `table.rows_produced_per_join` | `mysql.rowsProducedPerJoin`；join 节点的 `estimatedRows` | MySQL 定义为 join prefix 累计输出行数 |
+| `table.attached_condition` / `index_condition` | `filter` / `indexCondition` | |
+| `table.filtered` | `mysql.filteredPercent` | MySQL 输出为 `"14.29"` 形式，严格解析为数字 |
+| `table.possible_keys` / `used_key_parts` / `key_length` / `ref` / `used_columns` | `mysql.*` | 原样保留 |
+| `table.using_index` / `using_index_for_group_by` / `using_join_buffer` / `first_match` | `mysql.*` | |
+| `nested_loop[]` | 左深二叉 `Nested Loop` 链 | join 顺序保留：`NL(NL(A,B),C)`；join 节点 `estimatedRows` 取内层表的 `rows_produced_per_join` |
+| `ordering_operation` | `nodeType: "Ordering Operation"`，`using_filesort` 进入 `mysql.*` | 单子节点包装 |
+| `grouping_operation` | `nodeType: "Grouping Operation"`，`using_temporary_table` / `using_filesort` 进入 `mysql.*` | 单子节点包装 |
+| `duplicates_removal` | `nodeType: "Duplicates Removal"` | DISTINCT 去重步骤 |
+| `union_result` / `unary_result` / `intersect_result` / `except_result` | 对应 `* Result` 节点 + `query_specifications` 子 query block | `dependent` / `cacheable` 保留在子节点上 |
+| `materialized_from_subquery` | `nodeType: "Materialized Subquery"` | 可出现在 query block 或 table 下 |
+| `attached_subqueries` / `optimized_away_subqueries` / `group_by_subqueries` / `having_subqueries` / `order_by_subqueries` / `select_list_subqueries` | `nodeType: "Subquery"` | 数组元素形状统一为 `{ dependent, cacheable, query_block }` |
+| `cost_info.*` | `mysql.queryCost` / `readCost` / `evalCost` / `prefixCost` / `dataReadPerJoin` / `sortCost` | MySQL cost 是 numeric string，严格解析；未知子键进入 `extra.cost_info` |
+| 其余原生键 | `extra` | 不丢弃；未知结构不会生成假节点 |
+
+- 结构不可信时抛 `PlanParseError`：缺 `query_block`、`nested_loop` 非数组/为空、元素不是对象、
+  数值字段类型不符、`query_specifications` / `*_subqueries` 形状错误等。
+- `mode` 只支持 `estimated`：MySQL `EXPLAIN ANALYZE` 返回 TREE 文本而不是该 JSON，
+  声明 `actual` 时抛 `MODE_MISMATCH`。
+- **不把 MySQL cost 映射到 PostgreSQL 语义的 `startupCost` / `totalCost`**，原因见第 5 节。
+
 ## 5. NormalizedPlan
 
-实现：`src/core/normalize/normalize-postgres.js`。NormalizedPlan 不是字段改名，而是稳定语义层：
+实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）与
+`src/core/normalize/normalize-mysql.js`（MySQL）。NormalizedPlan 不是字段改名，而是稳定语义层：
 
 ```text
 NormalizedPlan {
-  database: "postgresql",
+  database: "postgresql" | "mysql",
   mode, format,
   root: NormalizedNode,
   unknownNodeTypes: string[]   // 排序去重，便于测试与 UI 提示
@@ -220,11 +263,11 @@ NormalizedPlan {
 | --- | --- | --- |
 | `id` | `string` | 稳定路径 id：根为 `"0"`，第 n 个子节点为 `"<parent>.<n>"` |
 | `kind` | `string` | 数据库无关语义（见下表），未知类型为 `"unknown"` |
-| `nodeType` | `string` | 原始 PostgreSQL 节点类型，始终保留 |
+| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值） |
 | `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null` |
-| `estimatedRows` | `number \| null` | Plan Rows |
+| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点） |
 | `actualRows` / `actualStartupTime` / `actualTotalTime` / `loops` | `number \| null` | Actual 字段 |
-| `startupCost` / `totalCost` | `number \| null` | 估计代价 |
+| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL 恒为 `null`（MySQL cost 在 `engineSpecific.mysql`，语义不可直接比较） |
 | `width` | `number \| null` | Plan Width |
 | `filter` | `string \| null` | 过滤谓词 |
 | `joinType` | `string \| null` | Inner / Left / … |
@@ -234,9 +277,16 @@ NormalizedPlan {
 | `children` | `NormalizedNode[]` | |
 | `engineSpecific` | `object` | 见下 |
 
-`engineSpecific`：`database`、`parentRelationship`、`subplanName`、`strategy`、`partialMode`、
+`engineSpecific`（PostgreSQL）：`database`、`parentRelationship`、`subplanName`、`strategy`、`partialMode`、
 `parallelAware`、`asyncCapable`、`hashCondition`、`mergeCondition`、`joinFilter`、`recheckCondition`、
-`presortedKeys`、`extra`（parser 未映射的原生属性）。**不为了"统一"丢弃数据库专有信息。**
+`presortedKeys`、`extra`（parser 未映射的原生属性）。
+
+`engineSpecific`（MySQL）：`database`、`mysql`（`structure`、`selectId`、`message`、`accessType`、
+`possibleKeys`、`usedKeyParts`、`usedColumns`、`keyLength`、`ref`、`rowsExaminedPerScan`、
+`rowsProducedPerJoin`、`filteredPercent`、`usingIndex`、`usingIndexForGroupBy`、`usingFilesort`、
+`usingTemporaryTable`、`usingJoinBuffer`、`firstMatch`、`dependent`、`cacheable`、`queryCost`、
+`readCost`、`evalCost`、`prefixCost`、`dataReadPerJoin`、`sortCost`）、`extra`。
+**不为了"统一"丢弃数据库专有信息。**
 
 `kind` 主要映射：
 
@@ -251,6 +301,19 @@ NormalizedPlan {
 | `memoize` / `materialize` / `gather` / `gather_merge` | 对应节点 |
 | `append` / `result` / `subquery_scan` / `values_scan` / `function_scan` / `cte_scan` / `modify_table` / … | 常见辅助节点 |
 | `unknown` | 未登记类型；`nodeType` 与 `unknownNodeTypes` 记录原始值 |
+
+MySQL 侧追加的 kind（现有 metrics / rules 不依赖）：
+
+| kind | MySQL 结构 |
+| --- | --- |
+| `query_block` | `query_block` 容器（根与嵌套子查询） |
+| `seq_scan` | `access_type: ALL`（`nodeType` 为 `Table Scan`） |
+| `index_scan` | `index` / `range` / `ref` / `eq_ref` / `ref_or_null` / `fulltext` / `index_merge` / `*_subquery` |
+| `const_scan` | `access_type: const` / `system`（单行查找，不计入 scan metrics） |
+| `nested_loop` | 折叠后的 `nested_loop` 链 |
+| `sort` / `aggregate` / `unique` | `ordering_operation` / `grouping_operation` / `duplicates_removal` |
+| `append` / `setop` / `result` | `union_result` / `intersect_result` + `except_result` / `unary_result` |
+| `materialize` / `subquery` | `materialized_from_subquery` / `*_subqueries` 数组 |
 
 NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测试，且不依赖 UI。
 
@@ -292,6 +355,14 @@ node.totalCost 缺失 → null（不猜）
 | `nested-loop-large-inner` | `nested_loop` | 外层估算行数 ≥ 10 且内层估算行数 ≥ 10 000 | `warning` |
 | | | 内层估算行数 ≥ 100 000 | `high` |
 
+MySQL 适用性（cost 语义见上）：
+
+| rule | MySQL |
+| --- | --- |
+| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） |
+| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） |
+| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） |
+
 规则措辞纪律：
 
 - 以 observation 陈述（"值得检查…"），不使用"必须加索引"/"必须改写"；
@@ -330,7 +401,7 @@ interface Finding {
 ## 7. Fixture Convention
 
 ```text
-fixtures/postgres/
+fixtures/postgres/                  # 真实采集 + synthetic
 ├── README.md
 ├── setup.sql
 ├── estimated/
@@ -341,6 +412,14 @@ fixtures/postgres/
 └── golden/
     ├── estimated/<name>.json     # 期望的 parsed / normalized / metrics / findings
     └── actual/<name>.json
+
+fixtures/mysql/                     # 仅 estimated；全部为 shape-verified synthetic
+├── README.md
+├── estimated/
+│   ├── <name>.synthetic.plan.json
+│   └── <name>.synthetic.meta.json
+└── golden/
+    └── estimated/<name>.synthetic.json
 ```
 
 - `.plan.json` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
@@ -349,11 +428,11 @@ fixtures/postgres/
   没有触发则为 `[]`）。
 - 一个 fixture 只验证一个主要行为，优先小而可人工核对。
 - 合成 fixture 必须在文件名中标记 `.synthetic`。
-- `fixtures/mysql/` 保持占位；MySQL 属于 Adapter Roadmap。
-- 测试侧 loader：`tests/helpers/fixtures.js`（发现 fixture、校验 metadata、生成 `RawPlanInput`）。
+- MySQL 只有 `estimated/`：Host API 不提供 MySQL actual plan，MySQL `EXPLAIN ANALYZE` 也不是该 JSON 形状。
+- 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
-当前 PostgreSQL fixture：19 个（17 个真实采集 + 2 个 synthetic 未知节点/未知属性；明细见
-`fixtures/postgres/README.md`）。
+当前 fixture：PostgreSQL 19 个（17 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
+MySQL 11 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）。
 
 ## 8. Fixture Provenance
 
@@ -400,7 +479,7 @@ npm run test:update-goldens   # 有意变更 pipeline 后重新生成 golden
 npm run analyze -- estimated/seq-scan   # 开发用：对单个 fixture 跑完整 pipeline
 ```
 
-覆盖范围：契约校验、parser 字段映射与错误路径、estimated / actual 不混淆、未知节点与未知字段、
+覆盖范围：契约校验、PostgreSQL / MySQL parser 字段映射与错误路径、estimated / actual 不混淆、未知节点与未知字段、
 NormalizedPlan 语义与 id、Metrics 计数与增量代价、3 条规则的正反例与阈值边界、
 Findings 契约、golden 四 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
 
@@ -409,8 +488,8 @@ Findings 契约、golden 四 stage、determinism 与 JSON 可序列化、Plan Co
 本轮（Offline Core vertical slice）不实现：`dbx-adapter` 的真实 Host wiring（仅 `DBX response → RawPlanInput`
 离线契约已实现，见第 2.1 节）、Execution Plan 扩展点集成、
 DBX Host API 调用、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
-MySQL parser、DWS 适配、文本计划 parser、Plan Diff、History、UI Tree、Plan Canvas、
-AI / LLM、SQL Rewrite、自动建索引、性能评分。
+SQL Server / Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
+文本计划 parser、Plan Diff、History、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
 以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
 落地后只需把 Host 返回值交给第 2.1 节的 Adapter，将 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。

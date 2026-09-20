@@ -1,0 +1,32 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "1520.85"
+    },
+    "table": {
+      "table_name": "orders",
+      "access_type": "ALL",
+      "possible_keys": [
+        "idx_orders_status"
+      ],
+      "used_columns": [
+        "id",
+        "customer_id",
+        "status",
+        "total",
+        "created_at"
+      ],
+      "attached_condition": "(`orders`.`status` = 'OPEN')",
+      "rows_examined_per_scan": 1500,
+      "rows_produced_per_join": 150,
+      "filtered": "10.00",
+      "cost_info": {
+        "read_cost": "130.85",
+        "eval_cost": "15.00",
+        "prefix_cost": "1520.85",
+        "data_read_per_join": "24000"
+      }
+    }
+  }
+}

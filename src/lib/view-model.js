@@ -390,19 +390,7 @@ export function buildNodeInspector(node) {
     {
       key: "engine",
       label: "Engine-specific",
-      fields: compact([
-        flagField("Parallel Aware", engine.parallelAware),
-        flagField("Async Capable", engine.asyncCapable),
-        field("Strategy", engine.strategy),
-        field("Partial Mode", engine.partialMode),
-        field("Parent Relationship", engine.parentRelationship),
-        field("Subplan Name", engine.subplanName),
-        field("Hash Condition", engine.hashCondition),
-        field("Merge Condition", engine.mergeCondition),
-        field("Join Filter", engine.joinFilter),
-        field("Recheck Condition", engine.recheckCondition),
-        field("Presorted Keys", formatRawValue(engine.presortedKeys)),
-      ]),
+      fields: compact(engineFields(engine)),
     },
     {
       key: "extra",
@@ -417,6 +405,82 @@ export function buildNodeInspector(node) {
     subtitle: [node.kind, node.relation?.alias ? `alias ${node.relation.alias}` : null].filter(Boolean).join(" · "),
     groups: groups.filter((group) => group.fields.length > 0),
   };
+}
+
+/**
+ * Engine-specific fields. PostgreSQL and MySQL keep their own vocabularies:
+ * the panel renders whatever the node's normalizer actually reported and never
+ * renames one engine's fields into the other's.
+ *
+ * @param {Record<string, any>} engine
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function engineFields(engine) {
+  if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
+  return [
+    flagField("Parallel Aware", engine.parallelAware),
+    flagField("Async Capable", engine.asyncCapable),
+    field("Strategy", engine.strategy),
+    field("Partial Mode", engine.partialMode),
+    field("Parent Relationship", engine.parentRelationship),
+    field("Subplan Name", engine.subplanName),
+    field("Hash Condition", engine.hashCondition),
+    field("Merge Condition", engine.mergeCondition),
+    field("Join Filter", engine.joinFilter),
+    field("Recheck Condition", engine.recheckCondition),
+    field("Presorted Keys", formatRawValue(engine.presortedKeys)),
+  ];
+}
+
+/**
+ * MySQL `EXPLAIN FORMAT=JSON` fields. MySQL costs are shown here, not as
+ * PostgreSQL-style costs: they belong to MySQL's own cost model and are not
+ * comparable with PostgreSQL cost units.
+ *
+ * @param {Record<string, unknown>} mysql
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function mysqlEngineFields(mysql) {
+  return [
+    field("Structure", mysql.structure),
+    field("Select ID", formatNumber(mysql.selectId)),
+    field("Message", mysql.message),
+    field("Access Type", mysql.accessType),
+    field("Possible Keys", formatRawValue(mysql.possibleKeys)),
+    field("Used Key Parts", formatRawValue(mysql.usedKeyParts)),
+    field("Key Length", mysql.keyLength),
+    field("Ref", formatRawValue(mysql.ref)),
+    field("Rows Examined Per Scan", formatNumber(mysql.rowsExaminedPerScan)),
+    field("Rows Produced Per Join", formatNumber(mysql.rowsProducedPerJoin)),
+    percentField("Filtered", mysql.filteredPercent),
+    flagField("Using Index", mysql.usingIndex),
+    flagField("Using Index For Group By", mysql.usingIndexForGroupBy),
+    flagField("Using Filesort", mysql.usingFilesort),
+    flagField("Using Temporary Table", mysql.usingTemporaryTable),
+    field("Using Join Buffer", mysql.usingJoinBuffer),
+    field("First Match", mysql.firstMatch),
+    // dependent / cacheable are meaningful in both states, so neither is hidden.
+    field("Dependent", mysql.dependent),
+    field("Cacheable", mysql.cacheable),
+    field("Query Cost", formatNumber(mysql.queryCost)),
+    field("Read Cost", formatNumber(mysql.readCost)),
+    field("Eval Cost", formatNumber(mysql.evalCost)),
+    field("Prefix Cost", formatNumber(mysql.prefixCost)),
+    field("Data Read Per Join", formatNumber(mysql.dataReadPerJoin)),
+    field("Sort Cost", formatNumber(mysql.sortCost)),
+  ];
+}
+
+/**
+ * MySQL `filtered` is already a percentage (14.29 means 14.29%), so it must not
+ * go through `formatPercent` (which expects a fraction).
+ *
+ * @param {string} label
+ * @param {unknown} value
+ */
+function percentField(label, value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return { label, value: `${formatNumber(value)}%` };
 }
 
 /**

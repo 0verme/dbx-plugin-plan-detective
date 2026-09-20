@@ -43,7 +43,7 @@ Plan Diff / UI
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
-已实现：parser registry + PostgreSQL 结构化 parser；其余 7 个方言 raw-only
+已实现：parser registry + PostgreSQL / MySQL 结构化 parser；其余 6 个方言 raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
@@ -62,7 +62,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码）
    ↓
 src/core/adapter/dbx-plan-response.js（dbType → database family，format → RawPlanInput）
    ↓
-src/core/parsers/index.js（registry：postgres structured / 其余 raw-only）
+src/core/parsers/index.js（registry：postgres / mysql structured，其余 raw-only）
    ↓
 src/core/normalize → metrics → rules
    ↓
@@ -82,7 +82,7 @@ Svelte components
 ### Offline / Fixture 数据链路（开发用）
 
 ```text
-fixture（fixtures/postgres/**）
+fixture（fixtures/postgres/**；MySQL fixture 由核心测试直接加载）
    ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
 RawPlanInput
    ↓ analyzePlan()
@@ -97,8 +97,8 @@ Fixture / mock 只服务测试、离线 UI 开发与 golden sample，**不进入
 
 | 数据库 | 阶段 | 说明 |
 | --- | --- | --- |
-| PostgreSQL | 结构化 | 当前唯一 structured parser（`EXPLAIN (FORMAT JSON)`） |
-| MySQL | raw only | 宿主可返回 JSON 计划；structured parser 未实现，不伪造 |
+| PostgreSQL | 结构化 | `EXPLAIN (FORMAT JSON)`（`src/core/postgres/**`） |
+| MySQL | 结构化 | `EXPLAIN FORMAT=JSON`（`src/core/mysql/**`；只解析 Estimated JSON，不含 `FORMAT=TRADITIONAL` / `FORMAT=TREE` / MariaDB 方言） |
 | SQL Server | raw only | 宿主返回 ShowPlanXML（format `xml`） |
 | Oracle / OceanBase Oracle | raw only | 宿主返回文本计划（format `text`） |
 | Doris / Dameng / QuestDB | raw only | 宿主返回文本计划（format `text`） |
@@ -231,7 +231,9 @@ include = ["assets", "ui"]
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
 - Plan Diff / History / 自定义 Plan Canvas / 大型可视化（当前只做嵌套行计划树）
 - AI / LLM
-- MySQL / SQL Server / Oracle / Doris / Dameng / QuestDB 的结构化 parser（需要真实 sample 后再实现）
+- SQL Server / Oracle / Doris / Dameng / QuestDB 的结构化 parser（需要真实 sample 后再实现）
+- MariaDB / OceanBase MySQL / ADB MySQL 等 MySQL 兼容方言的自动归入（没有 contract 证据，不自动兼容）
+- MySQL `EXPLAIN ANALYZE` / `FORMAT=TREE` / `FORMAT=TRADITIONAL` 文本计划 parser
 
 ## 9. UI 模式
 

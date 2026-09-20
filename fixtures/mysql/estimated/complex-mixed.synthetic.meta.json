@@ -1,0 +1,30 @@
+{
+  "database": "mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-assembled MySQL 8.0 EXPLAIN FORMAT=JSON document, not captured from a live server. The shape (query_block / nested_loop / table / ordering_operation / grouping_operation / union_result / materialized_from_subquery / cost_info, numeric cost and filtered strings) was verified against MySQL Server 8.0 mysql-test expected output (explain_json_all.result) and against DBX's own MySQL EXPLAIN JSON consumer (apps/desktop/src/lib/diagram/explainPlan.ts). Table names, row counts and costs are synthetic test data. Scenario: grouped and ordered join over orders / customers / a derived order_items aggregate, with an attached scalar subquery on regions; combines ordering_operation, grouping_operation, nested_loop, attached_subqueries and materialized_from_subquery in one tree.",
+    "reference": "https://raw.githubusercontent.com/mysql/mysql-server/8.0/mysql-test/r/explain_json_all.result"
+  },
+  "features": [
+    "ordering_operation",
+    "grouping_operation",
+    "nested loop",
+    "three join elements",
+    "attached_subqueries",
+    "materialized_from_subquery",
+    "deep mixed tree",
+    "no findings"
+  ],
+  "expect": {
+    "rootNodeType": "Query Block",
+    "hasActualFields": false,
+    "minDepth": 6,
+    "findingRuleIds": []
+  }
+}

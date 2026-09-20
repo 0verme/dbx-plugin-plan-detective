@@ -1,0 +1,31 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "3.00",
+      "future_cost": "1.5"
+    },
+    "table": {
+      "table_name": "orders",
+      "access_type": "hypergraph",
+      "used_columns": [
+        "id"
+      ],
+      "future_property": {
+        "nested": true
+      },
+      "rows_examined_per_scan": 10,
+      "rows_produced_per_join": 10,
+      "filtered": "100.00",
+      "cost_info": {
+        "read_cost": "1.00",
+        "eval_cost": "2.00",
+        "prefix_cost": "3.00",
+        "data_read_per_join": "80"
+      }
+    },
+    "windowing": {
+      "windows": []
+    }
+  }
+}
