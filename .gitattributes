@@ -1,6 +1,10 @@
 # 行尾统一为 LF；避免 Windows 贡献者提交 CRLF 造成 diff 噪音，并保证 CI 与 Shell 脚本行为一致。
 * text=auto eol=lf
 
+# ui/ 是 Vite 压缩后的构建产物（含编译器生成的内联字符串），不参与 whitespace 检查；
+# 手写源码仍由 git diff --check 正常检查。
+ui/** -whitespace
+
 *.png binary
 *.jpg binary
 *.jpeg binary
