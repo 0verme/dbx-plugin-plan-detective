@@ -94,15 +94,35 @@ Phase 0: BLOCKED — DBX internal capability exists, Plugin Host API does not ex
 - 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。
 - 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 中无法打开工作台；已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（尚未进入 release），见 Gap Proposal 附录 B。
 
+### Phase 0B：Offline Core（2026-09-20 启动，已实现）
+
+Phase 0 判定 BLOCKED 的是 **Host 接入**，不是全部内核工作。经项目方明确授权，先以 fixture-first 方式落地与
+DBX 完全解耦的离线分析内核（不等待、不依赖 t8y2/dbx#9675）：
+
+```text
+PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
+```
+
+- 契约与实现：`src/core/**`、`tests/**`、`fixtures/postgres/**`、`scripts/**`；
+  唯一真相来源为 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
+- 已实现：RawPlanInput 契约、PostgreSQL JSON parser（含未知节点/未知字段保留）、NormalizedPlan、
+  确定性 Metrics、3 条确定性规则与 Findings/Evidence、19 个 fixture（17 真实采集 + 2 synthetic）
+  与四 stage golden test。
+- 未实现也不允许顺手实现：`dbx-adapter`、Host API 调用、数据库 Driver / 连接池 / 凭据、
+  Actual Plan 获取、MySQL parser、Plan Diff、UI、AI、SQL Rewrite。
+- 退出条件：本阶段不产出 Host 能力结论；Host 接入仍等待 #9675，落地后只需新增 adapter 将 `rawPlan`
+  映射为 `RawPlanInput`。
+
 ## 3. 后续阶段（暂不启动）
 
-| 阶段 | 内容 | 前置条件 |
+| 阶段 | 内容 | 状态 / 前置条件 |
 | --- | --- | --- |
-| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **未满足**：Phase 0 判定 BLOCKED，需先解决 Host API 缺口 |
-| Phase 2 | Metrics Engine + Findings/Evidence | Phase 1 模型稳定 |
-| Phase 3 | Rule Engine | Phase 2 指标可复现 |
+| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20）；Host 接入仍待 #9675 |
+| Phase 1 | Host 接入：adapter 将 DBX `rawPlan` 映射为 `RawPlanInput` | **未启动**：等待 t8y2/dbx#9675 落地 |
+| Phase 2 | Hotspot Analysis / Estimate Error 等扩展指标 | 独立 Issue；现有 Metrics 已可复用 |
+| Phase 3 | 更多规则与规则分级 | 独立 Issue；现有 Rule Engine 与 Findings 已可复用 |
 | Phase 4 | Plan Diff / History | 上述阶段通过 |
-| Phase 5 | MySQL Adapter | 验证跨数据库抽象 |
+| Phase 5 | MySQL Adapter | 验证跨数据库抽象；边界设计见 `fixtures/mysql/README.md` |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -125,20 +145,21 @@ raw plan → normalized plan → metrics → findings
 
 **本次初始化不放入执行计划样本**，仅建立目录与说明。
 
-## 5. 当前阶段禁止顺手实现
+## 5. Host 接入与其它阶段仍禁止顺手实现
 
-- Rule Engine
-- Metrics Engine
+下面的项目仍然禁止「顺手实现」，需要独立 Issue 与明确的架构授权：
+
+- Host / Adapter 接入（`dbx-adapter`、Host API 调用、Execution Plan 扩展点集成）
 - Plan Diff
-- SQL Rewrite
-- AI
-- 自动调优
-- 自动建索引
-- 自动执行 SQL
-- PostgreSQL parser
+- SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
+- AI / LLM
 - MySQL parser
-- 自定义 Plan Canvas
+- 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
+
+例外：**离线 Plan Core**（PostgreSQL parser、NormalizedPlan、Metrics、Rule Engine、Findings）已由项目方
+在 Phase 0B 中明确授权实现，范围限于 `src/core/**`，且不得依赖任何 DBX Host API。详见
+[PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
 ## 6. 依赖约束
 

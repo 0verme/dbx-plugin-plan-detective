@@ -1,0 +1,37 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Nested Loop",
+      "Join Type": "Inner",
+      "Startup Cost": 1.0,
+      "Total Cost": 120.5,
+      "Plan Rows": 42,
+      "Plan Width": 16,
+      "Future Planner Field": { "introduced-in": "postgresql-19" },
+      "Custom Node Metric": 1.5,
+      "Plans": [
+        {
+          "Node Type": "Index Scan",
+          "Relation Name": "pd_fix_orders",
+          "Index Name": "pd_fix_orders_pkey",
+          "Startup Cost": 0.28,
+          "Total Cost": 8.3,
+          "Plan Rows": 1,
+          "Plan Width": 8,
+          "Unknown Leaf Property": "keep-me"
+        },
+        {
+          "Node Type": "Memoize",
+          "Cache Key": "customer_id",
+          "Future Leaf Property": [1, 2, 3],
+          "Startup Cost": 0.0,
+          "Total Cost": 2.0,
+          "Plan Rows": 1,
+          "Plan Width": 8
+        }
+      ]
+    },
+    "Planning Time": 0.25,
+    "Triggers": []
+  }
+]

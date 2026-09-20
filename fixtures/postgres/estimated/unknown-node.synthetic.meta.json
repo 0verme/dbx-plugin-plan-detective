@@ -1,0 +1,26 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-written minimal plan shaped like a PostgreSQL EXPLAIN (FORMAT JSON) envelope. Not captured from any database and not derived from production SQL. Its only purpose is to assert that an unknown node type keeps its type, its children and its unknown properties instead of failing the parser.",
+    "reference": null
+  },
+  "features": [
+    "unknown node type",
+    "unknown node properties",
+    "child subtree preserved",
+    "synthetic provenance marker"
+  ],
+  "expect": {
+    "rootNodeType": "Future Shuffle Node",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}

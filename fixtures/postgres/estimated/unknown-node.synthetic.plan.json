@@ -1,0 +1,24 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Future Shuffle Node",
+      "Startup Cost": 5,
+      "Total Cost": 12.5,
+      "Plan Rows": 1000,
+      "Plan Width": 16,
+      "Future Metric": 42,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Relation Name": "pd_fix_synthetic_source",
+          "Alias": "s",
+          "Startup Cost": 0,
+          "Total Cost": 5,
+          "Plan Rows": 1000,
+          "Plan Width": 8,
+          "Filter": "(flag = true)"
+        }
+      ]
+    }
+  }
+]

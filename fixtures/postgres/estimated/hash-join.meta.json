@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (FORMAT JSON) SELECT o.id, c.name FROM pd_fix_orders o JOIN pd_fix_customers c ON c.id = o.customer_id WHERE c.city = 'beijing';",
+  "sql": "SELECT o.id, c.name FROM pd_fix_orders o JOIN pd_fix_customers c ON c.id = o.customer_id WHERE c.city = 'beijing';",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "hash-join",
+    "hash node",
+    "multi-node tree"
+  ],
+  "expect": {
+    "rootNodeType": "Hash Join",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

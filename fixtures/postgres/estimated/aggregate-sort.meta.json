@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (FORMAT JSON) SELECT status, count(*) AS order_count, sum(total) AS total_amount FROM pd_fix_orders GROUP BY status ORDER BY order_count DESC;",
+  "sql": "SELECT status, count(*) AS order_count, sum(total) AS total_amount FROM pd_fix_orders GROUP BY status ORDER BY order_count DESC;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "sort-over-aggregate",
+    "group by",
+    "multi-node tree"
+  ],
+  "expect": {
+    "rootNodeType": "Sort",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

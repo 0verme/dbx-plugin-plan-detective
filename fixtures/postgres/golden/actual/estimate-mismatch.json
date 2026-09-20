@@ -1,0 +1,119 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "actual",
+    "root": {
+      "nodeType": "Seq Scan",
+      "relationName": "pd_fix_orders",
+      "alias": "pd_fix_orders",
+      "indexName": null,
+      "startupCost": 0,
+      "totalCost": 90,
+      "planRows": 20,
+      "planWidth": 27,
+      "filter": "(upper(status) = 'PAID'::text)",
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": false,
+      "asyncCapable": false,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": 0.028,
+      "actualTotalTime": 1.098,
+      "actualRows": 3600,
+      "actualLoops": 1,
+      "children": [],
+      "extra": {
+        "Rows Removed by Filter": 400
+      }
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "actual",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": {
+        "name": "pd_fix_orders",
+        "alias": "pd_fix_orders",
+        "indexName": null
+      },
+      "estimatedRows": 20,
+      "actualRows": 3600,
+      "actualStartupTime": 0.028,
+      "actualTotalTime": 1.098,
+      "loops": 1,
+      "startupCost": 0,
+      "totalCost": 90,
+      "width": 27,
+      "filter": "(upper(status) = 'PAID'::text)",
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": false,
+        "asyncCapable": false,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {
+          "Rows Removed by Filter": 400
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": 90,
+    "rootEstimatedRows": 20,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_orders",
+      "estimatedRows": 20
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_orders",
+      "incrementalCost": 90,
+      "totalCost": 90
+    }
+  },
+  "findings": []
+}

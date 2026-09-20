@@ -1,0 +1,281 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Nested Loop",
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "startupCost": 1,
+      "totalCost": 120.5,
+      "planRows": 42,
+      "planWidth": 16,
+      "filter": null,
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": "Inner",
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": null,
+      "asyncCapable": null,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [
+        {
+          "nodeType": "Index Scan",
+          "relationName": "pd_fix_orders",
+          "alias": null,
+          "indexName": "pd_fix_orders_pkey",
+          "startupCost": 0.28,
+          "totalCost": 8.3,
+          "planRows": 1,
+          "planWidth": 8,
+          "filter": null,
+          "indexCondition": null,
+          "recheckCondition": null,
+          "hashCondition": null,
+          "mergeCondition": null,
+          "joinFilter": null,
+          "joinType": null,
+          "parentRelationship": null,
+          "subplanName": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "presortedKeys": null,
+          "parallelAware": null,
+          "asyncCapable": null,
+          "strategy": null,
+          "partialMode": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "actualRows": null,
+          "actualLoops": null,
+          "children": [],
+          "extra": {
+            "Unknown Leaf Property": "keep-me"
+          }
+        },
+        {
+          "nodeType": "Memoize",
+          "relationName": null,
+          "alias": null,
+          "indexName": null,
+          "startupCost": 0,
+          "totalCost": 2,
+          "planRows": 1,
+          "planWidth": 8,
+          "filter": null,
+          "indexCondition": null,
+          "recheckCondition": null,
+          "hashCondition": null,
+          "mergeCondition": null,
+          "joinFilter": null,
+          "joinType": null,
+          "parentRelationship": null,
+          "subplanName": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "presortedKeys": null,
+          "parallelAware": null,
+          "asyncCapable": null,
+          "strategy": null,
+          "partialMode": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "actualRows": null,
+          "actualLoops": null,
+          "children": [],
+          "extra": {
+            "Cache Key": "customer_id",
+            "Future Leaf Property": [
+              1,
+              2,
+              3
+            ]
+          }
+        }
+      ],
+      "extra": {
+        "Future Planner Field": {
+          "introduced-in": "postgresql-19"
+        },
+        "Custom Node Metric": 1.5
+      }
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loop",
+      "relation": null,
+      "estimatedRows": 42,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": 1,
+      "totalCost": 120.5,
+      "width": 16,
+      "filter": null,
+      "joinType": "Inner",
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "Index Scan",
+          "relation": {
+            "name": "pd_fix_orders",
+            "alias": null,
+            "indexName": "pd_fix_orders_pkey"
+          },
+          "estimatedRows": 1,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": 0.28,
+          "totalCost": 8.3,
+          "width": 8,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "postgresql",
+            "parentRelationship": null,
+            "subplanName": null,
+            "strategy": null,
+            "partialMode": null,
+            "parallelAware": null,
+            "asyncCapable": null,
+            "hashCondition": null,
+            "mergeCondition": null,
+            "joinFilter": null,
+            "recheckCondition": null,
+            "presortedKeys": null,
+            "extra": {
+              "Unknown Leaf Property": "keep-me"
+            }
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "memoize",
+          "nodeType": "Memoize",
+          "relation": null,
+          "estimatedRows": 1,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": 0,
+          "totalCost": 2,
+          "width": 8,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "postgresql",
+            "parentRelationship": null,
+            "subplanName": null,
+            "strategy": null,
+            "partialMode": null,
+            "parallelAware": null,
+            "asyncCapable": null,
+            "hashCondition": null,
+            "mergeCondition": null,
+            "joinFilter": null,
+            "recheckCondition": null,
+            "presortedKeys": null,
+            "extra": {
+              "Cache Key": "customer_id",
+              "Future Leaf Property": [
+                1,
+                2,
+                3
+              ]
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": null,
+        "asyncCapable": null,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {
+          "Future Planner Field": {
+            "introduced-in": "postgresql-19"
+          },
+          "Custom Node Metric": 1.5
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 2,
+    "totalEstimatedCost": 120.5,
+    "rootEstimatedRows": 42,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loop",
+      "relation": null,
+      "estimatedRows": 42
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loop",
+      "relation": null,
+      "incrementalCost": 110.2,
+      "totalCost": 120.5
+    }
+  },
+  "findings": []
+}

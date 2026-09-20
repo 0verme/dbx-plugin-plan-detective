@@ -19,15 +19,16 @@ Plan Detective 负责理解和分析执行计划。
 
 ## 目标能力
 
-- Execution Plan Parsing
-- Plan Normalization
-- Performance Metrics
-- Hotspot Analysis
-- Rule-based Diagnosis
-- Findings + Evidence
-- Plan Diff
+- Execution Plan Parsing ✅（离线，PostgreSQL）
+- Plan Normalization ✅（离线，PostgreSQL）
+- Performance Metrics ✅（确定性基础指标，不含综合评分）
+- Hotspot Analysis ⛔
+- Rule-based Diagnosis ✅（3 条确定性规则）
+- Findings + Evidence ✅
+- Plan Diff ⛔
 
-> 以上为**目标能力**，当前版本尚未实现。仓库处于项目初始化 / Phase 0 阶段，实际完成度以 [STATUS.md](STATUS.md) 为准。
+> ✅ 为 **Phase 0B Offline Core**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现。
+> 实际完成度以 [STATUS.md](STATUS.md) 与 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) 为准。
 
 ## 首批目标数据库
 
@@ -65,7 +66,26 @@ DBX 内部有执行计划能力
 
 在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)，上游反馈材料见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
 
-因此本仓库**不会**在上游公开只读计划 API 之前实现 Plan Parser、Metrics Engine、Rule Engine 或 Plan Diff；也不会自行引入数据库 Driver / 连接池 / 凭据管理来绕过。自查清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+因此本仓库**不会**在上游公开只读计划 API 之前接入 Host、获取真实计划或引入数据库 Driver / 连接池 / 凭据。
+自查清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+
+**但这不阻止离线内核开发。** 经明确授权，Phase 0B 已落地与 DBX 完全解耦的 fixture-first 分析内核：
+
+```text
+PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
+```
+
+- 实现：`src/core/`；契约与阈值：[docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)
+- fixture：`fixtures/postgres/`（19 个：17 真实采集 + 2 synthetic），带四 stage golden test
+- 与 DBX 的衔接点只有未来的 `dbx-adapter`：将 `rawPlan` 映射为 `RawPlanInput`，内核不感知
+  connectionId / credential / Host API。等待 t8y2/dbx#9675 落地后再启动。
+
+离线验证（无需 DBX、无需数据库、无需 `npm install`）：
+
+```bash
+npm test                                  # 契约 / parser / normalize / metrics / rules / golden
+npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
+```
 
 ## 开发
 
@@ -94,9 +114,13 @@ dbx-plugin package .
 .
 ├── .github/workflows/     # 官方模板生成的发布工作流
 ├── assets/                # 插件图标等静态资源
-├── docs/                  # ARCHITECTURE.md / PROJECT_PLAN.md
-├── fixtures/              # 离线执行计划样本（postgres / mysql）
+├── docs/                  # 架构 / 计划 / 契约 / Phase 0 审计
+├── fixtures/              # 离线执行计划样本（postgres 已建立 / mysql 占位）
+├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析）
 ├── src/                   # Svelte 前端源码
+│   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖
+│   └── App.svelte         # Phase 0 Audit Harness（开发用）
+├── tests/                 # node:test，离线运行
 ├── manifest.json          # DBX 插件清单
 ├── dbx-plugin.toml        # 打包与开发配置
 └── STATUS.md              # 当前状态与已知问题
@@ -117,4 +141,5 @@ dbx-plugin package .
 - [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、最小 API 提案、Issue 草稿
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单与结论、Fixture 策略
+- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
 - 上游插件开发指南：<https://dbxio.com/en/docs/plugin-development>

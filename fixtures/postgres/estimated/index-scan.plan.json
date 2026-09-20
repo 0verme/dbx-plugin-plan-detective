@@ -1,0 +1,18 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Scan Direction": "Forward",
+      "Index Name": "pd_fix_orders_pkey",
+      "Relation Name": "pd_fix_orders",
+      "Alias": "pd_fix_orders",
+      "Startup Cost": 0.28,
+      "Total Cost": 8.30,
+      "Plan Rows": 1,
+      "Plan Width": 27,
+      "Index Cond": "(id = 42)"
+    }
+  }
+]

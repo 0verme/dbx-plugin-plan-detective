@@ -1,0 +1,26 @@
+{
+  "database": "postgresql",
+  "mode": "actual",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (ANALYZE, FORMAT JSON) SELECT c.city, count(*) AS order_count, sum(o.total) AS amount FROM pd_fix_customers c JOIN pd_fix_orders o ON o.customer_id = c.id WHERE o.total > 100 GROUP BY c.city ORDER BY amount DESC;",
+  "sql": "SELECT c.city, count(*) AS order_count, sum(o.total) AS amount FROM pd_fix_customers c JOIN pd_fix_orders o ON o.customer_id = c.id WHERE o.total > 100 GROUP BY c.city ORDER BY amount DESC;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "sort-over-aggregate",
+    "hash-join",
+    "five-level tree",
+    "actual fields on every node"
+  ],
+  "expect": {
+    "rootNodeType": "Sort",
+    "hasActualFields": true,
+    "minDepth": 5,
+    "findingRuleIds": []
+  }
+}

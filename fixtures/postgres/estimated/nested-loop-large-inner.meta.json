@@ -1,0 +1,30 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-20",
+  "captureCommand": "psql -h <host> -U <user> -d <test-db> -At -c \"EXPLAIN (FORMAT JSON) SELECT c.id FROM pd_fix_customers c JOIN LATERAL (SELECT e.id FROM pd_fix_events e WHERE e.total > c.id OFFSET 0) x ON true;\"",
+  "sql": "SELECT c.id FROM pd_fix_customers c JOIN LATERAL (SELECT e.id FROM pd_fix_events e WHERE e.total > c.id OFFSET 0) x ON true;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "nested loop",
+    "inequality join",
+    "inner side estimated at 66667 rows per outer row",
+    "nested-loop-large-inner rule",
+    "inner seq scan also triggers large-sequential-scan"
+  ],
+  "expect": {
+    "rootNodeType": "Nested Loop",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [
+      "large-sequential-scan",
+      "nested-loop-large-inner"
+    ]
+  }
+}
