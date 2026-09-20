@@ -1,15 +1,18 @@
 /**
  * Error types shared by Plan Core.
  *
- * Plan Core has no dependency on any host, browser or database API; these two
+ * Plan Core has no dependency on any host, browser or database API; these
  * classes are the only way core signals that an input cannot be processed.
  *
- * - `PlanInputError`  — the caller did not satisfy the RawPlanInput contract.
- * - `PlanParseError`  — the contract was satisfied, but the plan payload itself
- *                       is malformed or contradicts the declared mode.
+ * - `PlanInputError`      — the caller did not satisfy the RawPlanInput contract.
+ * - `PlanParseError`      — the contract was satisfied, but the plan payload itself
+ *                           is malformed or contradicts the declared mode.
+ * - `DbxPlanAdapterError` — a DBX plan response could not be mapped to a
+ *                           RawPlanInput by the adapter boundary (see
+ *                           `adapter/dbx-plan-response.js`).
  *
- * Both carry a stable `code` so tests and callers can branch on the failure
- * kind without matching message text.
+ * All of them carry a stable `code` so tests and callers can branch on the
+ * failure kind without matching message text.
  */
 
 export class PlanInputError extends Error {
@@ -32,6 +35,18 @@ export class PlanParseError extends Error {
   constructor(code, message) {
     super(message);
     this.name = "PlanParseError";
+    this.code = code;
+  }
+}
+
+export class DbxPlanAdapterError extends Error {
+  /**
+   * @param {string} code stable machine-readable code
+   * @param {string} message human-readable description
+   */
+  constructor(code, message) {
+    super(message);
+    this.name = "DbxPlanAdapterError";
     this.code = code;
   }
 }

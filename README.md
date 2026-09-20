@@ -79,7 +79,8 @@ PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics �
 
 - 实现：`src/core/`；契约与阈值：[docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)
 - fixture：`fixtures/postgres/`（19 个：17 真实采集 + 2 synthetic），带四 stage golden test
-- 与 DBX 的衔接点只有未来的 `dbx-adapter`：将 #9675 的 `rawPlan` 映射为 `RawPlanInput`，
+- 与 DBX 的衔接点只有 `dbx-adapter`：其 `DBX Estimated Plan Response → RawPlanInput` 契约已离线实现
+  （`src/core/adapter/dbx-plan-response.js`，mock response 即可全链路测试，不依赖 #9692 合并），
   内核不感知 connectionId / credential / Host API
 
 离线验证（无需 DBX、无需数据库、无需 `npm install`）：
@@ -119,7 +120,8 @@ fixture 通过构建期 Vite 虚拟模块（`scripts/vite-plugin-fixtures.mjs`�
 
 边界（本轮严格不变）：不调用 `window.dbxPlugin.explainPlan()` / `host.getPlanCapabilities()`，
 不修改 `manifest.json` 的 `engines.host_api`，不新增 `host.plans:read`，不引入数据库 Driver、
-不执行 EXPLAIN。未来 Host 接入只需新增极薄的 `dbx-adapter`：
+不执行 EXPLAIN。`DBX Estimated Plan Response → RawPlanInput` 的 adapter 契约已离线实现；
+未来真实 Host 接入只需把 Host 返回值交给极薄的 `dbx-adapter`：
 
 ```text
 DBX Host Response  →  dbx-adapter  →  RawPlanInput  →  同一套 Core 与 UI
