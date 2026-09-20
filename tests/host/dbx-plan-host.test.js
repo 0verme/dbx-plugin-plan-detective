@@ -3,12 +3,14 @@ import test from "node:test";
 import {
   HostPlanError,
   MAX_PLUGIN_PLAN_TIMEOUT_MS,
+  PLAN_API_STATES,
   classifyHostMessage,
   describePlanApi,
   explainEstimatedPlan,
   getPlanCapabilities,
   resolvePlanBridge,
 } from "../../src/host/index.js";
+import { createSdkBridge } from "../helpers/sdk-bridge.js";
 
 /**
  * The host boundary is the only place that talks to `window.dbxPlugin`. These
@@ -80,29 +82,77 @@ test("resolvePlanBridge only accepts the injected dbxPlugin object", () => {
   assert.equal(resolvePlanBridge({ dbxPlugin: bridge }), bridge);
 });
 
-test("describePlanApi reports method presence and the advertised capability", () => {
+test("describePlanApi gates on capabilities.planApi instead of method presence", () => {
   assert.deepEqual(describePlanApi(null), {
+    state: PLAN_API_STATES.unavailable,
     available: false,
     advertised: false,
     missing: ["getPlanCapabilities", "explainPlan"],
     reason: "当前不在 DBX 宿主中：window.dbxPlugin 不存在。",
   });
 
+  // An old host with no init surface left to wait for: fail closed.
   const oldHost = describePlanApi({ capabilities: { planApi: false }, request: () => {} });
+  assert.equal(oldHost.state, PLAN_API_STATES.unavailable);
   assert.equal(oldHost.available, false);
   assert.equal(oldHost.advertised, false);
   assert.deepEqual(oldHost.missing, ["getPlanCapabilities", "explainPlan"]);
 
+  // capability false with both methods present is still unavailable.
+  const disabled = describePlanApi({
+    capabilities: { downloadFile: true, planApi: false },
+    getPlanCapabilities: () => {},
+    explainPlan: () => {},
+  });
+  assert.equal(disabled.state, PLAN_API_STATES.unavailable);
+  assert.equal(disabled.available, false);
+  assert.deepEqual(disabled.missing, []);
+
+  // capability absent with both methods present is unavailable too.
+  const absent = describePlanApi({
+    capabilities: { downloadFile: true },
+    getPlanCapabilities: () => {},
+    explainPlan: () => {},
+  });
+  assert.equal(absent.state, PLAN_API_STATES.unavailable);
+  assert.equal(absent.available, false);
+
+  // capability true with a missing method fails closed.
   const halfHost = describePlanApi({ capabilities: { planApi: true }, getPlanCapabilities: () => {} });
-  assert.equal(halfHost.available, false);
+  assert.equal(halfHost.state, PLAN_API_STATES.unavailable);
   assert.equal(halfHost.advertised, true);
   assert.deepEqual(halfHost.missing, ["explainPlan"]);
 
+  // capability true with both methods is the only available combination.
   const full = describePlanApi(fakeBridge());
+  assert.equal(full.state, PLAN_API_STATES.available);
   assert.equal(full.available, true);
   assert.equal(full.advertised, true);
   assert.deepEqual(full.missing, []);
   assert.equal(full.reason, null);
+});
+
+test("a pre-init bridge is initializing, not unavailable", () => {
+  const bridge = createSdkBridge();
+
+  const api = describePlanApi(bridge);
+  assert.equal(api.state, PLAN_API_STATES.initializing);
+  assert.equal(api.available, false);
+  assert.equal(api.advertised, false);
+  assert.match(api.reason, /初始化/);
+
+  bridge.sendInit(true);
+  assert.equal(describePlanApi(bridge, { initialized: true }).state, PLAN_API_STATES.available);
+});
+
+test("init without a planApi advertisement is unavailable, not initializing", () => {
+  const bridge = createSdkBridge();
+  bridge.sendInit(false);
+
+  const api = describePlanApi(bridge, { initialized: true });
+  assert.equal(api.state, PLAN_API_STATES.unavailable);
+  assert.equal(api.available, false);
+  assert.equal(api.advertised, false);
 });
 
 test("getPlanCapabilities passes the trimmed connectionId and normalizes the answer", async () => {
@@ -276,10 +326,75 @@ test("explainEstimatedPlan returns the host payload untouched", async () => {
   assert.deepEqual(result.warnings, []);
 });
 
-test("a host that does not advertise the plan API fails closed before any call", async () => {
+test("a host with no plan surface fails closed before any call", async () => {
   const bridge = { request: () => {} };
   await assertRejectsHostError("capabilities", getPlanCapabilities(bridge, "c"), "PLAN_API_UNAVAILABLE");
   await assertRejectsHostError("explain", explainEstimatedPlan(bridge, { connectionId: "c", sql: "SELECT 1" }), "PLAN_API_UNAVAILABLE");
+});
+
+test("capability false with both methods present fails closed with zero host calls", async () => {
+  let called = 0;
+  const bridge = {
+    capabilities: { downloadFile: true, planApi: false },
+    getPlanCapabilities: async () => {
+      called += 1;
+      return capabilities();
+    },
+    explainPlan: async () => {
+      called += 1;
+      return planResult();
+    },
+  };
+
+  assert.equal(describePlanApi(bridge).state, PLAN_API_STATES.unavailable);
+  await assertRejectsHostError("capabilities", getPlanCapabilities(bridge, "conn-1"), "PLAN_API_UNAVAILABLE");
+  await assertRejectsHostError("plan", explainEstimatedPlan(bridge, { connectionId: "conn-1", sql: "SELECT 1" }), "PLAN_API_UNAVAILABLE");
+  assert.equal(called, 0, "the capability gate must not probe the host");
+});
+
+test("capability absent with both methods present fails closed with zero host calls", async () => {
+  let called = 0;
+  const bridge = {
+    capabilities: { downloadFile: true },
+    getPlanCapabilities: async () => {
+      called += 1;
+      return capabilities();
+    },
+    explainPlan: async () => {
+      called += 1;
+      return planResult();
+    },
+  };
+
+  assert.equal(describePlanApi(bridge).state, PLAN_API_STATES.unavailable);
+  await assertRejectsHostError("capabilities", getPlanCapabilities(bridge, "conn-1"), "PLAN_API_UNAVAILABLE");
+  await assertRejectsHostError("plan", explainEstimatedPlan(bridge, { connectionId: "conn-1", sql: "SELECT 1" }), "PLAN_API_UNAVAILABLE");
+  assert.equal(called, 0, "the capability gate must not probe the host");
+});
+
+test("a pre-init bridge fails closed, then serves calls after init", async () => {
+  let called = 0;
+  const bridge = createSdkBridge({
+    getPlanCapabilities: async () => {
+      called += 1;
+      return capabilities();
+    },
+    explainPlan: async () => {
+      called += 1;
+      return planResult();
+    },
+  });
+
+  assert.equal(describePlanApi(bridge).state, PLAN_API_STATES.initializing);
+  await assertRejectsHostError("capabilities before init", getPlanCapabilities(bridge, "conn-1"), "PLAN_API_UNAVAILABLE");
+  await assertRejectsHostError("plan before init", explainEstimatedPlan(bridge, { connectionId: "conn-1", sql: "SELECT 1" }), "PLAN_API_UNAVAILABLE");
+  assert.equal(called, 0, "nothing may be called before the host init message");
+
+  bridge.sendInit(true);
+  assert.equal(describePlanApi(bridge, { initialized: true }).state, PLAN_API_STATES.available);
+  const answer = await getPlanCapabilities(bridge, "conn-1");
+  assert.equal(answer.dbType, "postgres");
+  assert.equal(called, 1);
 });
 
 test("the UI-side guard turns a hanging host into TIMEOUT", async () => {

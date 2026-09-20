@@ -56,19 +56,48 @@ export function resolvePlanBridge(target = globalThis) {
 }
 
 /**
+ * Runtime states of the plan API gate.
+ *
+ *   initializing - the bridge object exists, but the host `init` message that
+ *                  fills `capabilities` has not been observed yet
+ *   available    - the host advertised `capabilities.planApi === true` and both
+ *                  methods are present
+ *   unavailable  - no bridge, no `planApi` advertisement after init, or an
+ *                  advertisement that disagrees with the method surface
+ */
+export const PLAN_API_STATES = Object.freeze({
+  initializing: "initializing",
+  available: "available",
+  unavailable: "unavailable",
+});
+
+/**
  * Describe the plan API surface of one bridge without calling anything.
  *
- * `advertised` is the host's own init-time capability flag. `available` is the
- * method-presence check. Both must agree for a call to be attempted; a bridge
- * that advertises the API but is missing a method fails closed instead of
- * producing a half-working call.
+ * The merged contract is capability-first: `capabilities.planApi` is the host's
+ * init-time advertisement, and `planApi !== true` fails closed even when both
+ * methods exist. Method presence alone is not a capability probe.
+ *
+ * The DBX SDK installs `window.dbxPlugin` (with both methods) before the init
+ * message fills `capabilities`, so a pre-init bridge is `initializing`, not
+ * `unavailable`. A caller that observed the init message passes
+ * `{ initialized: true }`; a missing `planApi` then becomes a hard
+ * `unavailable` instead of waiting forever.
  *
  * @param {unknown} bridge
- * @returns {{ available: boolean, advertised: boolean, missing: string[], reason: string | null }}
+ * @param {{ initialized?: boolean }} [options]
+ * @returns {{
+ *   state: "initializing" | "available" | "unavailable",
+ *   available: boolean,
+ *   advertised: boolean,
+ *   missing: string[],
+ *   reason: string | null,
+ * }}
  */
-export function describePlanApi(bridge) {
+export function describePlanApi(bridge, options = {}) {
   if (bridge === null || typeof bridge !== "object") {
     return {
+      state: PLAN_API_STATES.unavailable,
       available: false,
       advertised: false,
       missing: ["getPlanCapabilities", "explainPlan"],
@@ -81,14 +110,53 @@ export function describePlanApi(bridge) {
   if (typeof bridge.explainPlan !== "function") missing.push("explainPlan");
 
   const advertised = bridge.capabilities?.planApi === true;
-  let reason = null;
-  if (missing.length > 0) {
-    reason = advertised
-      ? `宿主声明 planApi，但缺少方法：${missing.join(", ")}。`
-      : "宿主未提供 Plan API（需要 DBX Host API 1.2 / t8y2/dbx#9692 及以上）。";
+
+  if (advertised && missing.length === 0) {
+    return { state: PLAN_API_STATES.available, available: true, advertised: true, missing: [], reason: null };
   }
 
-  return { available: missing.length === 0, advertised, missing, reason };
+  if (advertised) {
+    return {
+      state: PLAN_API_STATES.unavailable,
+      available: false,
+      advertised: true,
+      missing,
+      reason: `宿主声明 planApi，但缺少方法：${missing.join(", ")}。`,
+    };
+  }
+
+  if (options.initialized !== true && canStillInitialize(bridge)) {
+    return {
+      state: PLAN_API_STATES.initializing,
+      available: false,
+      advertised: false,
+      missing,
+      reason: "DBX 宿主尚未完成初始化，暂时无法确认 planApi 能力；不会调用 Host Plan API 探测。",
+    };
+  }
+
+  return {
+    state: PLAN_API_STATES.unavailable,
+    available: false,
+    advertised: false,
+    missing,
+    reason: "宿主未声明 capabilities.planApi（需要 DBX Host API 1.2 / t8y2/dbx#9692 及以上）；不会调用 Host Plan API 探测。",
+  };
+}
+
+/**
+ * Whether the bridge still has a documented way to deliver its init message:
+ * the SDK `ready` promise and/or the `onInit` listener. A bridge without either
+ * cannot leave `initializing`, so the gate fails closed instead of waiting.
+ *
+ * @param {Record<string, unknown>} bridge
+ * @returns {boolean}
+ */
+function canStillInitialize(bridge) {
+  const ready = bridge.ready;
+  const hasReady =
+    ready !== null && (typeof ready === "object" || typeof ready === "function") && typeof ready.then === "function";
+  return hasReady || typeof bridge.onInit === "function";
 }
 
 /**

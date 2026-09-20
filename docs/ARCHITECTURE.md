@@ -147,7 +147,9 @@ explainPlan({ connectionId, database?, schema?, sql, mode: "estimated", timeoutM
 }
 ```
 
-- 权限 `host.plans:read`；`engines.host_api: ^1.2` 是兼容下限，运行时以 `capabilities.planApi` 为准。
+- 权限 `host.plans:read`；`engines.host_api: ^1.2` 是兼容下限，运行时 gate 以 `capabilities.planApi` 为准：
+  必须 `planApi === true` 且两个方法都存在才调用；`false` / 缺失一律 fail closed，不用请求探测宿主。
+  init 到达前为 `initializing`（`ready` / `onInit` 之后重估），此阶段不调用 Host。
 - `mode` 必须显式为 `"estimated"`；宿主拒绝其他值。插件不能传 EXPLAIN 语句。
 - 连接必须已打开；宿主不会为插件建立连接。插件拿不到 credential / connection string。
 - 截断 / 非 JSON 警告由宿主在 `warnings` 中给出，插件不得假装计划完整。
@@ -241,3 +243,8 @@ include = ["assets", "ui"]
 2. **Fixtures（开发）**：仓库内 fixture 经 Offline Core 分析，不访问 DBX / 数据库 / 网络。
 3. **宿主审计（开发）**：只打印 `window.dbxPlugin` 桥接面、`init` 消息与 `host.getContext`，
    探测候选方法名；不含解析器、指标、规则，也不建立连接。
+
+Host gate 生命周期：`src/App.svelte` 在 `onMount` 监听 `bridge.ready` / `onInit`，init 后按
+`capabilities.planApi` 重估；`initializing` / `available` / `unavailable` 三态驱动 UI，
+`initializing` 不调用 Host、也不报 unavailable。视图 2 / 3 仅在 development 构建
+（`import.meta.env.DEV`）出现，生产构建只渲染视图 1。

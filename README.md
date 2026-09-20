@@ -44,7 +44,7 @@ window.dbxPlugin.getPlanCapabilities(connectionId)
 window.dbxPlugin.explainPlan({ connectionId, database?, schema?, sql, mode: "estimated", timeoutMs? })
 ```
 
-- 权限：manifest 声明 `host.plans:read`；`engines.host_api: ^1.2` 是兼容下限，运行时以 `dbxPlugin.capabilities.planApi` 为准。
+- 权限：manifest 声明 `host.plans:read`；`engines.host_api: ^1.2` 是兼容下限，运行时 gate 以 `dbxPlugin.capabilities.planApi` 为准：必须 `planApi === true` 且两个方法都存在才调用；`false` / 缺失一律 fail closed，不用请求探测宿主。宿主 init 到达前为 `initializing`，不调用 Host。
 - 只读 Estimated Plan：EXPLAIN 由宿主构造；插件不能传 EXPLAIN 语句、不能执行用户 SQL、不能请求 Actual Plan。
 - 连接必须已由用户在 DBX 中打开；插件不能建立连接、拿不到 credential / connection string。
 - `getPlanCapabilities` 返回 `{ dbType, dbVersion?, supports: { estimatedPlan }, limits: { maxTimeoutMs, maxPlanBytes } }`。
@@ -173,8 +173,10 @@ npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
 真实 Host 集成测试请使用真实 DBX 宿主：在已打开连接的查询结果页打开 Plan Detective，输入 SQL，
 点击 **Analyze Plan / 分析执行计划**。
 
-UI 从 `src/` 编译到 `ui/`。默认进入 **Host 分析** 模式；无宿主时自动回退到
-**Fixtures（开发）** 模式。Fixture 数据来自 `fixtures/postgres/**`，经构建期 Vite 虚拟模块
+UI 从 `src/` 编译到 `ui/`。默认进入 **Host 分析** 模式；`window.dbxPlugin` 存在但宿主 init
+message 尚未到达时显示 **正在初始化 DBX Host 能力**，不会调用 Host Plan API 探测。
+**Fixtures（开发）** 与 **宿主审计（开发）** 只在 development 构建（`import.meta.env.DEV`）
+可见；生产构建只暴露 Host 分析工作流。Fixture 数据来自 `fixtures/postgres/**`，经构建期 Vite 虚拟模块
 （`scripts/vite-plugin-fixtures.mjs`）嵌入，只包含 `.plan.json` 与展示所需 `.meta.json` 字段。
 mock / fixture 只服务测试与离线开发，不进入 Host 生产路径。
 
