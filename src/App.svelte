@@ -6,6 +6,7 @@
   import FixtureSelector from "./components/FixtureSelector.svelte";
   import FindingsList from "./components/FindingsList.svelte";
   import HostAudit from "./components/HostAudit.svelte";
+  import HotspotsList from "./components/HotspotsList.svelte";
   import NodeInspector from "./components/NodeInspector.svelte";
   import PlanSummary from "./components/PlanSummary.svelte";
   import PlanTree from "./components/PlanTree.svelte";
@@ -25,12 +26,15 @@
   } from "./lib/host-view-model.js";
   import {
     buildFindingViews,
+    buildHotspotViews,
     buildNodeInspector,
     buildPlanSummary,
     buildTreeRows,
     countFindingsBySeverity,
+    countHotspotLevels,
     expandAncestors,
     groupFindingsByNodeRef,
+    groupHotspotsByNodeRef,
     indexNodesById,
     indexRowsById,
     toggleCollapsed,
@@ -207,6 +211,11 @@
   const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById) : []);
   const findingCounts = $derived(countFindingsBySeverity(activeAnalysis?.findings ?? []));
   const findingsByNodeRef = $derived(groupFindingsByNodeRef(activeAnalysis?.findings ?? []));
+  const hotspotViews = $derived(
+    activeAnalysis ? buildHotspotViews(activeAnalysis.hotspots, rowsById, activeAnalysis.findings) : { items: [], costNote: null },
+  );
+  const hotspotCounts = $derived(countHotspotLevels(hotspotViews.items));
+  const hotspotsByNodeRef = $derived(groupHotspotsByNodeRef(hotspotViews.items));
   const inspector = $derived(activeAnalysis ? buildNodeInspector(nodesById.get(selectedNodeId)) : null);
   const selectedNodeFindings = $derived(findingViews.filter((finding) => finding.nodeRef === selectedNodeId));
 
@@ -278,10 +287,13 @@
     {#if fixtureAnalysis?.error}
       <p class="panel error-panel">分析 fixture 失败：{fixtureAnalysis.error}</p>
     {:else if fixtureAnalysis?.result}
+      <div class="overview">
+        <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
+        <HotspotsList view={hotspotViews} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
+      </div>
       <FindingsList views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={selectNode} />
       <div class="workspace">
-        <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-        <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
+        <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} {hotspotsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
         <NodeInspector {inspector} nodeFindings={selectedNodeFindings} />
       </div>
     {:else}
@@ -322,10 +334,13 @@
       <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} />
 
       {#if session.status === "structured" && hostStructured}
+        <div class="overview">
+          <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
+          <HotspotsList view={hotspotViews} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
+        </div>
         <FindingsList views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={selectNode} />
         <div class="workspace">
-          <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-          <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
+          <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} {hotspotsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
           <NodeInspector {inspector} nodeFindings={selectedNodeFindings} />
         </div>
       {/if}
@@ -434,35 +449,37 @@
     margin: 6px 0 0;
   }
 
+  .overview {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    margin-top: 10px;
+  }
+
   .workspace {
     display: grid;
-    grid-template-columns: 250px minmax(0, 1fr) 310px;
+    grid-template-columns: minmax(0, 1fr) 310px;
     gap: 10px;
     align-items: start;
     margin-top: 10px;
   }
 
   @media (max-width: 1180px) {
-    .workspace {
-      grid-template-columns: 240px minmax(0, 1fr);
+    .overview {
+      grid-template-columns: minmax(0, 1fr);
     }
+  }
 
-    .workspace :global(.inspector-panel) {
-      grid-column: 1 / -1;
+  @media (max-width: 900px) {
+    .workspace {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
   @media (max-width: 760px) {
     .host-input {
       grid-template-columns: minmax(0, 1fr);
-    }
-
-    .workspace {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .workspace :global(.inspector-panel) {
-      grid-column: auto;
     }
   }
 </style>

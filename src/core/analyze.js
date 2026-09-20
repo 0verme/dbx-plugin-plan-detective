@@ -5,6 +5,7 @@ import { analyzeRawPlan } from "./parsers/index.js";
  * Offline analysis pipeline:
  *
  *     RawPlanInput -> parsePlan (registry) -> NormalizedPlan -> metrics -> rules -> findings
+ *                                                                       -> hotspots
  *
  * This is the single entry point the adapter and UI call. It never touches a
  * database, a host bridge or the network: everything it needs is in the
@@ -21,6 +22,7 @@ import { analyzeRawPlan } from "./parsers/index.js";
  *   normalized: import("./normalize/normalize-postgres.js").NormalizedPlan,
  *   metrics: import("./metrics/compute-metrics.js").PlanMetrics,
  *   findings: import("./findings/finding.js").Finding[],
+ *   hotspots: import("./hotspots/compute-hotspots.js").HotspotAnalysis,
  * }}
  * @throws {import("./errors.js").PlanInputError|import("./errors.js").PlanParseError}
  */
@@ -38,5 +40,6 @@ export function analyzePlan(rawInput) {
     normalized: result.normalized,
     metrics: result.metrics,
     findings: result.findings,
+    hotspots: result.hotspots,
   };
 }

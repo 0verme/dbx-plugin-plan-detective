@@ -20,6 +20,9 @@
     "rootNodeType": "Nested Loop",
     "hasActualFields": false,
     "minDepth": 3,
-    "findingRuleIds": []
+    "findingRuleIds": [],
+    "hotspotNodeRefs": [
+      "0"
+    ]
   }
 }

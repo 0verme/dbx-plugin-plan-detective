@@ -29,6 +29,7 @@ raw fixture → parser → normalized → metrics → findings → golden expect
 | `estimated/nested-loop-large-inner` | Nested Loop | 内层估算 66 667 行；同时触发 `nested-loop-large-inner` 与 `large-sequential-scan` |
 | `estimated/expensive-sort` | Sort | Sort 增量代价占主导；同时触发 `expensive-sort` 与 `large-sequential-scan` |
 | `estimated/group-by-status` | Group | 并行计划：Group ← Gather Merge ← Sort ← Aggregate ← Seq Scan |
+| `estimated/subplan-initplan` | Result | InitPlan + One-Time Filter；PostgreSQL 代价归因 withheld，两个 200 000 行 Seq Scan 仍产生行数 hotspot |
 | `estimated/future-properties.synthetic` | Nested Loop | `synthetic` provenance + 未知 / 未来**属性**不导致失败 |
 | `estimated/unknown-node.synthetic` | Future Shuffle Node | 未知**节点类型**保留类型、children 与未知属性 |
 
@@ -47,7 +48,7 @@ raw fixture → parser → normalized → metrics → findings → golden expect
 ## Provenance 分类
 
 - `locally-generated` —— 本地 PostgreSQL 15.19 真实 `EXPLAIN` 输出；测试库表由 `setup.sql` 建立，
-  数据是合成的。共 17 个。
+  数据是合成的。共 18 个。
 - `synthetic` —— 人工构造的最小结构，**未**经过任何数据库；文件名以 `.synthetic` 标记。共 2 个。
 
 不得把 synthetic 写成真实采集；不得提交生产 SQL、真实业务表名、用户数据、连接信息或凭据。

@@ -6,7 +6,7 @@ import { MODES, goldenPathFor, loadAllFixtures, relativeToRepo } from "../helper
 
 const fixtures = await loadAllFixtures();
 
-const STAGES = ["parsed", "normalized", "metrics", "findings"];
+const STAGES = ["parsed", "normalized", "metrics", "findings", "hotspots"];
 
 for (const stage of STAGES) {
   test(`pipeline stage "${stage}" matches the committed golden file for every fixture`, async (t) => {
@@ -25,12 +25,12 @@ for (const stage of STAGES) {
   });
 }
 
-test("every golden file pins all four pipeline stages and nothing else", async (t) => {
+test("every golden file pins all five pipeline stages and nothing else", async (t) => {
   for (const fixture of fixtures) {
     await t.test(`${fixture.mode}/${fixture.name}`, async () => {
       const file = goldenPathFor(fixture.mode, fixture.name);
       const golden = JSON.parse(await readFile(file, "utf8"));
-      assert.deepEqual(Object.keys(golden).sort(), [...STAGES].sort(), `${relativeToRepo(file)} must contain the four pipeline stages`);
+      assert.deepEqual(Object.keys(golden).sort(), [...STAGES].sort(), `${relativeToRepo(file)} must contain the five pipeline stages`);
     });
   }
 });

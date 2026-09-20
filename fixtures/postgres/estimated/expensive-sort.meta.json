@@ -24,6 +24,10 @@
     "findingRuleIds": [
       "expensive-sort",
       "large-sequential-scan"
+    ],
+    "hotspotNodeRefs": [
+      "0",
+      "0.0"
     ]
   }
 }

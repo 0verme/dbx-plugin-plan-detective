@@ -435,5 +435,100 @@
         }
       }
     }
-  ]
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.0.0.0",
+        "nodeId": "0.0.0.0.0",
+        "nodeType": "Seq Scan",
+        "kind": "seq_scan",
+        "relation": "pd_fix_events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events accounts for 67.38% of the plan's estimated self cost (2673.47 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 2673.47,
+              "selfCostShare": 0.6738,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          },
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events is estimated to return 117647 rows.",
+            "source": "Plan Rows",
+            "evidence": {
+              "estimatedRows": 117647,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0.0.0",
+          "nodeType": "Seq Scan",
+          "kind": "seq_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 117647,
+          "startupCost": 0,
+          "estimatedTotalCost": 2673.47,
+          "selfCost": 2673.47,
+          "selfCostShare": 0.6738
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "Gather Merge",
+        "kind": "gather_merge",
+        "relation": null,
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "warning",
+            "statement": "Gather Merge accounts for 25.21% of the plan's estimated self cost (1000.35 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 1000.3499999999999,
+              "selfCostShare": 0.2521,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "Gather Merge",
+          "kind": "gather_merge",
+          "estimatedRows": 3,
+          "startupCost": 3967.65,
+          "estimatedTotalCost": 3968,
+          "selfCost": 1000.3499999999999,
+          "selfCostShare": 0.2521
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

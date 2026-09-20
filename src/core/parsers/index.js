@@ -15,6 +15,7 @@
  */
 
 import { PlanInputError, PlanParseError } from "../errors.js";
+import { computeHotspots } from "../hotspots/compute-hotspots.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
@@ -57,6 +58,8 @@ const PENDING_PARSERS = new Map([
  * @property {import("../normalize/normalize-postgres.js").NormalizedPlan|null} normalized
  * @property {import("../metrics/compute-metrics.js").PlanMetrics|null} metrics
  * @property {import("../findings/finding.js").Finding[]} findings
+ * @property {import("../hotspots/compute-hotspots.js").HotspotAnalysis|null} hotspots
+ *   `null` for raw-only: hotspot analysis needs the structured plan
  */
 
 /**
@@ -115,6 +118,7 @@ export function analyzeRawPlan(rawInput) {
       normalized: null,
       metrics: null,
       findings: [],
+      hotspots: null,
     };
   }
 
@@ -138,6 +142,7 @@ export function analyzeRawPlan(rawInput) {
     normalized,
     metrics,
     findings: runRules(normalized, metrics),
+    hotspots: computeHotspots(normalized, metrics),
   };
 }
 

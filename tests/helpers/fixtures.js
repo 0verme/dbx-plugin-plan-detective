@@ -142,7 +142,9 @@ export async function loadAllFixtures(database = "postgresql") {
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;
  * - synthetic fixtures must carry nulls there and be marked in the file name
  *   with `.synthetic`;
- * - `expect` records the behavior the fixture pins down.
+ * - `expect` records the behavior the fixture pins down. `hotspotNodeRefs` is
+ *   optional; when present it is the deterministic attention order of the
+ *   fixture's hotspots, independent of the golden snapshot.
  *
  * @param {unknown} meta
  * @param {{ database?: string, mode?: string, file?: string, name?: string }} [context]
@@ -240,6 +242,14 @@ export function validateFixtureMeta(meta, context = {}) {
     }
     if (!Array.isArray(expect.findingRuleIds) || !expect.findingRuleIds.every((ruleId) => typeof ruleId === "string" && ruleId.length > 0)) {
       problems.push("expect.findingRuleIds must be an array of non-empty rule id strings");
+    }
+    if (Object.hasOwn(expect, "hotspotNodeRefs")) {
+      if (
+        !Array.isArray(expect.hotspotNodeRefs) ||
+        !expect.hotspotNodeRefs.every((nodeRef) => typeof nodeRef === "string" && nodeRef.length > 0)
+      ) {
+        problems.push("expect.hotspotNodeRefs must be an array of non-empty normalized node id strings when present");
+      }
     }
   }
 

@@ -4,13 +4,14 @@
 
   /**
    * Plan Tree: a scannable nested list of rows, no canvas / DAG. Collapse
-   * state and finding markers come from the pure view model.
+   * state, finding and hotspot markers come from the pure view model.
    */
   let {
     rows = [],
     collapsed = new Set(),
     selectedId = null,
     findingsByNodeRef = new Map(),
+    hotspotsByNodeRef = new Map(),
     onSelect = () => {},
     onToggle = () => {},
   } = $props();
@@ -47,6 +48,7 @@
   <div class="tree" role="tree" aria-label="Plan tree">
     {#each visible as row (row.id)}
       {@const finding = findingsByNodeRef.get(row.id)}
+      {@const hotspot = hotspotsByNodeRef.get(row.id)}
       <div
         class="tree-row"
         class:selected={row.id === selectedId}
@@ -78,7 +80,12 @@
           {/if}
         </span>
 
-        <span class="label">{row.label}</span>
+        <span class="label">
+          {#if hotspot}
+            <span class="hotspot-marker {hotspot.level}" title="{hotspot.count} hotspot(s) on this node">◆</span>
+          {/if}
+          {row.label}
+        </span>
 
         {#if finding}
           <span class="badge {finding.severity}" title="{finding.count} finding(s) on this node">
@@ -157,6 +164,23 @@
 
   .label {
     overflow-wrap: anywhere;
+  }
+
+  .hotspot-marker {
+    margin-right: 4px;
+    font-size: 10px;
+  }
+
+  .hotspot-marker.high {
+    color: var(--pd-high-fg);
+  }
+
+  .hotspot-marker.warning {
+    color: var(--pd-warning-fg);
+  }
+
+  .hotspot-marker.info {
+    color: var(--pd-info-fg);
   }
 
   .metric {

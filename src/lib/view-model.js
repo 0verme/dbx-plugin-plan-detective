@@ -2,10 +2,11 @@
  * Pure view-model mapping for the fixture-driven MVP UI.
  *
  * The UI never interprets a plan on its own and never recomputes analysis: it
- * renders what `analyzePlan()` already produced (metrics, findings, normalized
- * tree). This module only reshapes those values for display and owns the small
- * tree state helpers (collapse / selection / evidence flattening), so it stays
- * testable offline, without a browser, and without duplicating core logic.
+ * renders what `analyzePlan()` already produced (metrics, findings, hotspots,
+ * normalized tree). This module only reshapes those values for display and owns
+ * the small tree state helpers (collapse / selection / evidence flattening), so
+ * it stays testable offline, without a browser, and without duplicating core
+ * logic.
  */
 
 import { incrementalCostOf } from "../core/index.js";
@@ -319,6 +320,109 @@ function formatEvidenceValue(path, value) {
   if (typeof value === "boolean") return value ? "true" : "false";
   if (typeof value === "string") return value.length === 0 ? "—" : value;
   return JSON.stringify(value);
+}
+
+/* ---------------------------------------------------------------- hotspots -- */
+
+/**
+ * Why cost-based hotspot signals were withheld. The note is display copy only:
+ * the core already decided, and the UI must not re-derive or soften it.
+ */
+const HOTSPOT_COST_NOTES = Object.freeze({
+  NO_PLAN_COST: "计划未报告根节点 Total Cost，已停用代价占比信号，仅使用行数信号（Estimated Plan）。",
+  MISSING_NODE_COST: "计划存在缺失 Total Cost 的节点，子树代价累加不可靠，已停用代价占比信号。",
+  PLAN_CONTAINS_SUBPLAN:
+    "计划包含 InitPlan / SubPlan / CTE：PostgreSQL 父节点代价不按子节点 Total Cost 累加，已停用代价占比信号。",
+  UNVERIFIED_COST_FLOW: "部分节点缺少可验证的 Parent Relationship，代价归因不可靠，已停用代价占比信号。",
+  NO_QUERY_COST: "MySQL 计划未报告 query_cost，已停用 MySQL 代价占比信号，仅使用行数与操作标记信号。",
+});
+
+/**
+ * Hotspot panel view model. The UI adds no ranking and no advice: reasons and
+ * evidence come from the core, and the finding cross-reference is a lookup, not
+ * a recalculation.
+ *
+ * @param {import("../core/hotspots/compute-hotspots.js").HotspotAnalysis|null|undefined} hotspotAnalysis
+ * @param {Map<string, ReturnType<typeof buildTreeRows>[number]>} [rowsById]
+ * @param {import("../core/findings/finding.js").Finding[]} [findings]
+ * @returns {{
+ *   costNote: string|null,
+ *   items: Array<{
+ *     id: string, rank: number, level: string, nodeId: string, nodeLabel: string,
+ *     nodeType: string, relation: string|null,
+ *     reasons: Array<{ code: string, level: string, statement: string, source: string }>,
+ *     evidence: Array<{ path: string, value: string, depth: number }>,
+ *     findingRuleIds: string[], estimateOnly: boolean,
+ *   }>,
+ * }}
+ */
+export function buildHotspotViews(hotspotAnalysis, rowsById, findings = []) {
+  const items = hotspotAnalysis?.items ?? [];
+  const ruleIdsByNodeRef = new Map();
+  for (const finding of findings) {
+    const ruleIds = ruleIdsByNodeRef.get(finding.nodeRef) ?? [];
+    if (!ruleIds.includes(finding.ruleId)) ruleIds.push(finding.ruleId);
+    ruleIdsByNodeRef.set(finding.nodeRef, ruleIds);
+  }
+
+  return {
+    costNote: describeHotspotCost(hotspotAnalysis?.cost),
+    items: items.map((hotspot, index) => ({
+      id: hotspot.id,
+      rank: index + 1,
+      level: hotspot.level,
+      nodeId: hotspot.nodeId,
+      nodeLabel: rowsById?.get(hotspot.nodeId)?.label ?? hotspot.nodeType,
+      nodeType: hotspot.nodeType,
+      relation: hotspot.relation ?? null,
+      reasons: hotspot.reasons.map((reason) => ({
+        code: reason.code,
+        level: reason.level,
+        statement: reason.statement,
+        source: reason.source,
+      })),
+      evidence: flattenEvidence(hotspot.evidence),
+      findingRuleIds: ruleIdsByNodeRef.get(hotspot.nodeId) ?? [],
+      estimateOnly: hotspot.estimateOnly === true,
+    })),
+  };
+}
+
+/**
+ * @param {{ status: string, reason: string|null }|null|undefined} cost
+ * @returns {string|null} display note, or `null` when cost signals are available
+ */
+export function describeHotspotCost(cost) {
+  if (cost === null || cost === undefined || cost.status !== "withheld") return null;
+  return HOTSPOT_COST_NOTES[cost.reason] ?? "该计划的代价信号不可用，已仅使用行数信号。";
+}
+
+/**
+ * Map node id -> strongest hotspot level, so the plan tree can mark hotspot
+ * nodes without recomputing any signal.
+ *
+ * @param {{ nodeId: string, level: string }[]} hotspots
+ */
+export function groupHotspotsByNodeRef(hotspots) {
+  const map = new Map();
+  for (const hotspot of hotspots) {
+    const current = map.get(hotspot.nodeId) ?? { count: 0, level: "info" };
+    current.count += 1;
+    if (severityRank(hotspot.level) < severityRank(current.level)) current.level = hotspot.level;
+    map.set(hotspot.nodeId, current);
+  }
+  return map;
+}
+
+/**
+ * @param {{ level: string }[]} hotspots
+ */
+export function countHotspotLevels(hotspots) {
+  const counts = { info: 0, warning: 0, high: 0, total: hotspots.length };
+  for (const hotspot of hotspots) {
+    if (hotspot.level in counts) counts[hotspot.level] += 1;
+  }
+  return counts;
 }
 
 /* -------------------------------------------------------------- inspector -- */

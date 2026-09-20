@@ -1396,5 +1396,110 @@
     },
     "highestIncrementalCost": null
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "mysql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.0.0.1",
+        "nodeId": "0.0.0.0.1",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "<derived4>",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "mysql-cost-concentration",
+            "level": "high",
+            "statement": "Table Scan on <derived4> accounts for 62.22% of its query block's estimated MySQL cost (read_cost + eval_cost = 560 of 900).",
+            "source": "table.cost_info.read_cost + eval_cost / query_block.cost_info.query_cost",
+            "evidence": {
+              "readCost": 380,
+              "evalCost": 180,
+              "accessCost": 560,
+              "queryCost": 900,
+              "costShare": 0.6222,
+              "blockNodeRef": "0",
+              "thresholds": {
+                "minAccessCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0.0.1",
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "<derived4>",
+          "estimatedRows": 900,
+          "accessType": "ALL",
+          "rowsExaminedPerScan": 900,
+          "rowsProducedPerJoin": 900,
+          "filteredPercent": 100,
+          "readCost": 380,
+          "evalCost": 180,
+          "prefixCost": 900,
+          "accessCost": 560,
+          "costShare": 0.6222,
+          "blockNodeRef": "0",
+          "queryCost": 900
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.0.0.0.0.0",
+        "nodeId": "0.0.0.0.0.0",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "orders",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "mysql-cost-concentration",
+            "level": "warning",
+            "statement": "Table Scan on orders accounts for 43.33% of its query block's estimated MySQL cost (read_cost + eval_cost = 390 of 900).",
+            "source": "table.cost_info.read_cost + eval_cost / query_block.cost_info.query_cost",
+            "evidence": {
+              "readCost": 300,
+              "evalCost": 90,
+              "accessCost": 390,
+              "queryCost": 900,
+              "costShare": 0.4333,
+              "blockNodeRef": "0",
+              "thresholds": {
+                "minAccessCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0.0.0.0",
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "orders",
+          "estimatedRows": 900,
+          "accessType": "ALL",
+          "rowsExaminedPerScan": 900,
+          "rowsProducedPerJoin": 450,
+          "filteredPercent": 50,
+          "readCost": 300,
+          "evalCost": 90,
+          "prefixCost": 390,
+          "accessCost": 390,
+          "costShare": 0.4333,
+          "blockNodeRef": "0",
+          "queryCost": 900
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

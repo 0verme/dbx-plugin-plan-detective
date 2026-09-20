@@ -248,5 +248,13 @@
     },
     "highestIncrementalCost": null
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "mysql",
+      "status": "available",
+      "reason": null
+    },
+    "items": []
+  }
 }

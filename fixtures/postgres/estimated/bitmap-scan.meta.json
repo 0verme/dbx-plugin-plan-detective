@@ -21,6 +21,9 @@
     "rootNodeType": "Bitmap Heap Scan",
     "hasActualFields": false,
     "minDepth": 2,
-    "findingRuleIds": []
+    "findingRuleIds": [],
+    "hotspotNodeRefs": [
+      "0"
+    ]
   }
 }
