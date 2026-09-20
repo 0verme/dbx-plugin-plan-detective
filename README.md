@@ -160,6 +160,7 @@ table（access_type：ALL / index / range / ref / eq_ref / ref_or_null / fulltex
 nested_loop（折叠为左深二叉 Nested Loop 链，保留 join 顺序）
 ordering_operation / grouping_operation / duplicates_removal
 union_result / unary_result / intersect_result / except_result
+  （query_specifications 元素可为嵌套 set operation：MySQL 8.0.31+ 括号化 query expression）
 materialized_from_subquery
 attached_subqueries / optimized_away_subqueries / group_by_subqueries /
 having_subqueries / order_by_subqueries / select_list_subqueries
@@ -179,6 +180,7 @@ IR 映射规则：
 | `ordering_operation` | `kind: sort` |
 | `grouping_operation` | `kind: aggregate` |
 | `cost_info.*`（字符串数字） | `engineSpecific.mysql`，**不**映射到 `startupCost` / `totalCost` |
+| `query_block.message` / `table.message` / `*_result.message` | `engineSpecific.mysql.message`（如实导出，不丢弃） |
 | 未识别的结构与字段 | `engineSpecific.extra`（不丢弃） |
 
 **MySQL cost 与 PostgreSQL cost 不可直接比较。** `query_cost` / `prefix_cost` / `read_cost` / `eval_cost`

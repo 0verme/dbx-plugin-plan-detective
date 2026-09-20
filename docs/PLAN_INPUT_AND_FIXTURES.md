@@ -231,7 +231,8 @@ ParsedPlan { database, format, mode, root: ParsedPlanNode }
 | `ordering_operation` | `nodeType: "Ordering Operation"`，`using_filesort` 进入 `mysql.*` | 单子节点包装 |
 | `grouping_operation` | `nodeType: "Grouping Operation"`，`using_temporary_table` / `using_filesort` 进入 `mysql.*` | 单子节点包装 |
 | `duplicates_removal` | `nodeType: "Duplicates Removal"` | DISTINCT 去重步骤 |
-| `union_result` / `unary_result` / `intersect_result` / `except_result` | 对应 `* Result` 节点 + `query_specifications` 子 query block | `dependent` / `cacheable` 保留在子节点上 |
+| `union_result` / `unary_result` / `intersect_result` / `except_result` | 对应 `* Result` 节点；`query_specifications` 元素可以是 `{ dependent, cacheable, query_block }`，也可以是嵌套的 set operation（MySQL 8.0.31+ 括号化 query expression） | `dependent` / `cacheable` 保留在子节点上；未消费的 wrapper key 进入 `extra` |
+| `query_block.message` / `table.message` / `*_result.message` | `mysql.message` | MySQL 在这些结构上报告 message（如 `Deleting all rows`、`Not optimized, outer query is empty`），parser 不丢弃 |
 | `materialized_from_subquery` | `nodeType: "Materialized Subquery"` | 可出现在 query block 或 table 下 |
 | `attached_subqueries` / `optimized_away_subqueries` / `group_by_subqueries` / `having_subqueries` / `order_by_subqueries` / `select_list_subqueries` | `nodeType: "Subquery"` | 数组元素形状统一为 `{ dependent, cacheable, query_block }` |
 | `cost_info.*` | `mysql.queryCost` / `readCost` / `evalCost` / `prefixCost` / `dataReadPerJoin` / `sortCost` | MySQL cost 是 numeric string，严格解析；未知子键进入 `extra.cost_info` |
