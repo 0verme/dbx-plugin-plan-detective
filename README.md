@@ -78,6 +78,8 @@ dbx-plugin dev --path . --port 5190
 
 UI 从 `src/` 编译到 `ui/`。前端通过宿主注入的 `window.dbxPlugin` 桥接读取 DBX 上下文、语言、主题并调用宿主方法。最终集成测试请使用真实 DBX 宿主。
 
+> `ui/` 是**必须入库的发布产物**：DBX 官方 release workflow 不执行 `npm install` / `npm run build`，直接运行 `dbx-plugin package .`，因此修改 `src/` 后需要重新构建并提交 `ui/` 变更。`.gitignore` 只忽略 `dist/`、`.dbx-dev/`、`node_modules/` 等本地生成物，不忽略 `ui/`。详见 [AGENTS.md](AGENTS.md) 的 Git 规则。
+
 构建未签名的 universal 候选包：
 
 ```bash
