@@ -3,9 +3,11 @@
   // Phase 0 · Host Capability Audit Harness (development view)
   //
   // Kept next to the fixture-driven analysis UI because it is the tool that
-  // verifies the Host API surface once t8y2/dbx#9692 ships. It intentionally
-  // implements NO Plan Detective business logic: no plan parser, no metrics, no
-  // rules, no database driver, no query execution of its own.
+  // verifies the Host API surface of the DBX build under test. t8y2/dbx#9692
+  // (Host API 1.2) is merged, so the real plan path lives in the Host 分析
+  // view; this harness stays as a raw-bridge inspector. It implements NO Plan
+  // Detective business logic: no plan parser, no metrics, no rules, no database
+  // driver, no query execution of its own.
   //
   // It only:
   //   1. prints the bridge surface injected as `window.dbxPlugin`
@@ -20,11 +22,14 @@
   // ---------------------------------------------------------------------------
 
   const AUDIT_NOTICE =
-    "DEVELOPMENT / AUDIT ONLY — Phase 0 Host Capability Audit. No plan analysis is implemented here.";
+    "DEVELOPMENT / AUDIT ONLY — Phase 0 Host Capability Audit. No plan analysis is implemented here. " +
+    "The real analysis path is the Host 分析 view; this harness only reports the raw bridge surface.";
 
   /** Methods the public plugin-host bridge is documented to dispatch. */
   const DOCUMENTED_PROBES = [
     { method: "host.getContext", params: undefined, note: "workbench context snapshot" },
+    { method: "host.getPlanCapabilities", params: { connectionId: "__audit__" }, note: "Plan API 1.2: capability probe (expects connection error, proves registration)" },
+    { method: "host.explainPlan", params: { connectionId: "__audit__", sql: "SELECT 1", mode: "estimated" }, note: "Plan API 1.2: estimated plan probe (expects connection error, proves registration)" },
     { method: "ui.readAsset", params: { path: "../escape" }, note: "invalid path → validation error proves registration" },
     { method: "host.copy", params: {}, note: "missing text → validation error" },
     { method: "host.saveFile", params: {}, note: "missing payload → validation error" },

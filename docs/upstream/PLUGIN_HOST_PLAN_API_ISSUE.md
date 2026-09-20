@@ -2,9 +2,10 @@
 Downstream implementation / design note for the upstream Plugin Host API contract.
 
 - Canonical upstream issue: https://github.com/t8y2/dbx/issues/9675 （2026-09-20 正式提交，当前唯一 upstream contract）
+- 实现 PR: https://github.com/t8y2/dbx/pull/9692 （**2026-09-20 已 MERGED**，merge `f909f85`）
 - 本文是 downstream implementation / design note，用于指导下游插件实现与兼容性判断，不是 upstream 需求来源。
-- 若本文与 #9675 当前 scope 冲突，以 #9675 为准。
-- 上游复核基线：`t8y2/dbx` `main @ a924285136568c693ad45c455fa0286ee39dca12`（2026-09-20，与 #9675 提交时一致）；早期审计基线为 `main @ d7e1b47`。
+- 若本文与已合并实现冲突，以 `t8y2/dbx/main` 上的 `plugin_plan.rs` / `pluginHostBridge.ts` / `pluginPlan.ts` 为准。
+- 上游复核基线：`t8y2/dbx` `main @ a924285136568c693ad45c455fa0286ee39dca12`（2026-09-20，#9675 提交基线）；实现 PR #9692 merge `f909f85075e12beb78dffe5942f7d039bede25de`。
 - 本文最初是上游 Feature Issue 正文草稿；#9675 提交后只保留为下游设计记录。
 -->
 
@@ -13,8 +14,8 @@ Downstream implementation / design note for the upstream Plugin Host API contrac
 > **Status / 文档定位**
 >
 > - **Canonical upstream issue: [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)** —— 已正式提交，是当前唯一权威的 upstream contract。
+> - **实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已 MERGED**（merge `f909f85`）；实际字段与错误文案以 `t8y2/dbx/main` 为准。
 > - 本文是 **downstream implementation / design note**：描述下游插件如何理解与使用该 contract，不是 upstream 需求的来源。
-> - **若本文与 #9675 当前 scope 冲突，以 #9675 为准。**
 > - 第一阶段只覆盖 **Estimated Plan**（`EXPLAIN ...`）；Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / generic SQL execution 不属于第一阶段，见本文 Future Considerations 一节。
 
 ## Summary

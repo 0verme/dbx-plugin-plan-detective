@@ -3,39 +3,40 @@
   "manifest_version": 1,
   "id": "io.github.0verme.plan-detective",
   "name": "DBX Plan Detective",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "0verme",
-  "description": "为 DBX 提供 SQL 执行计划解析、性能诊断与 Plan Diff 能力。",
+  "description": "为 DBX 提供 Estimated Plan 解析、基础可视化与确定性 Findings。",
   "icon": "assets/plugin.svg",
-  "engines": { "dbx": ">=0.5.68", "host_api": "1" },
+  "engines": { "dbx": ">=0.5.68", "host_api": "^1.2" },
+  "permissions": ["host.plans:read"],
   "entrypoints": { "ui": { "root": "ui", "entry": "ui/index.html" } },
   "contributions": [
     {
       "type": "workbench",
       "id": "io.github.0verme.plan-detective.workbench",
       "label": "DBX Plan Detective",
-      "description": "Svelte workbench contributed by DBX Plan Detective.",
+      "description": "Estimated Plan 分析工作台：通过 DBX Host Plan API 获取计划、解析、展示与确定性 Findings。",
       "icon": "assets/plugin.svg"
     },
     {
       "type": "result-view",
       "id": "io.github.0verme.plan-detective.audit-result-view",
-      "label": "Plan Detective (dev / fixtures)",
-      "description": "Development entry: Phase 0 host capability audit plus the offline fixture-driven analysis UI. No Host API integration."
+      "label": "Plan Detective",
+      "description": "从当前查询结果上下文打开：带入 connectionId / database / SQL，并通过 Host Plan API 获取 Estimated Plan。"
     }
   ],
   "localizations": {
     "zh-CN": {
       "name": "DBX Plan Detective",
-      "description": "为 DBX 提供 SQL 执行计划解析、性能诊断与 Plan Diff 能力。",
+      "description": "为 DBX 提供 Estimated Plan 解析、基础可视化与确定性 Findings。",
       "contributions": {
         "io.github.0verme.plan-detective.workbench": {
           "label": "DBX Plan Detective",
-          "description": "由插件提供的 Svelte 沙箱工作台。"
+          "description": "Estimated Plan 分析工作台：通过 DBX Host Plan API 获取计划、解析、展示与确定性 Findings。"
         },
         "io.github.0verme.plan-detective.audit-result-view": {
-          "label": "Plan Detective（开发 / Fixture）",
-          "description": "开发入口：Phase 0 宿主能力审计 + 离线 fixture 分析界面，不接入 DBX Host API。"
+          "label": "Plan Detective",
+          "description": "从当前查询结果上下文打开：带入 connectionId / database / SQL，并通过 Host Plan API 获取 Estimated Plan。"
         }
       }
     }

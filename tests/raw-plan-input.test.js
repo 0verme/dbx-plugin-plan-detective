@@ -27,7 +27,7 @@ test("drops unknown top-level properties instead of failing", () => {
 
 test("reports every contract violation in a single error", () => {
   assert.throws(
-    () => createRawPlanInput({ database: "mysql", mode: "profiled", format: "text" }),
+    () => createRawPlanInput({ database: "redis", mode: "profiled", format: "yaml" }),
     (error) => {
       assert.ok(error instanceof PlanInputError);
       assert.equal(error.code, "INVALID_RAW_PLAN_INPUT");
@@ -38,6 +38,16 @@ test("reports every contract violation in a single error", () => {
       return true;
     },
   );
+});
+
+test("accepts the dialect families and formats the merged host contract can return", () => {
+  for (const database of ["postgresql", "mysql", "sqlserver", "oracle", "oceanbase-oracle", "doris", "dameng", "questdb"]) {
+    assert.deepEqual(validateRawPlanInput({ database, mode: "estimated", format: "json", plan: [] }), [], database);
+  }
+
+  for (const format of ["json", "text", "xml"]) {
+    assert.deepEqual(validateRawPlanInput({ database: "sqlserver", mode: "estimated", format, plan: "plan" }), [], format);
+  }
 });
 
 test("rejects non-object inputs", () => {
