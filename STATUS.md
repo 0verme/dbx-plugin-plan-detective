@@ -3,13 +3,17 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-20 |
-| 当前阶段 | **Phase 0B · Offline Plan Core（已实现）+ Host 接入 BLOCKED（等待 t8y2/dbx#9675）** |
+| 当前阶段 | **Phase 0B · Offline Plan Core（已实现，PR #6）+ Host 接入 BLOCKED**（`Phase 0 completed · Upstream implementation in progress`；[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 一期 Estimated Plan only） |
 | 插件版本 | 0.1.0 |
-| 阶段结论 | **BLOCKED — DBX internal capability exists, Plugin Host API does not expose it.** 执行计划分析能力**尚未实现**，且按计划不得在上游公开能力前开工 |
+| 阶段结论 | 当前 blocker = **DBX Estimated Plan Host API 尚未实现 / 合并**（“能力是否存在”已无未知）；离线 Plan Core（parser / normalization / metrics / rules）已实现且不依赖 Host API；真实 Host 接入仍暂停 |
 
 ## 0. Phase 0 审计结论（2026-09-18）
 
-完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与最小 API 提案（含 Issue 草稿）：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
+完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
+
+**上游 contract（2026-09-20）**：Estimated Plan Host API 需求已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)（OPEN，已由 `0verme` `/claim`），是当前唯一 canonical upstream contract：一期只请求 Estimated Plan（`EXPLAIN ...`）、权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` / generic SQL execution **不属于一期**，已移入 Future / historical design。下游对齐说明见 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)（PR #4 已合并）。
+
+下表为 2026-09-18 审计快照（历史事实）；其中「当前 SQL / result-view」一项已由上游 #9599 修复，见下方上游状态。
 
 | 能力 | 插件侧可达 | 状态 | 说明 |
 | --- | --- | --- | --- |
@@ -52,7 +56,8 @@
 | Plan Diff | ⛔ 未实现 |
 
 > ⛔ 表示需要独立 Issue（Host 接入类还需等 t8y2/dbx#9675），**不是**待办遗留。
-> Offline Core 的契约、阈值与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)。
+> Offline Core 的契约、阈值与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；
+> 启动条件、一期 / Future 边界见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) §2.1 与 §3。
 
 ## 2. 本次初始化的实测验证记录
 
@@ -87,9 +92,9 @@ error: manifest UI entry 'ui/index.html' does not exist at ...\ui\index.html
 - 上述公开 API 面中**没有** SQL 执行、EXPLAIN 或执行计划获取相关入口；28 个候选方法名在真实宿主中全部返回 `Unsupported plugin host method`。
 - 独立开发主机（`dbx-plugin dev`）明确说明不模拟 native connection actions、query-result contributions 与 DBX component kit，不作为结论来源。
 
-**这是当前最重要的未决问题**：`dbx-plugin` 插件能否通过公开 Host API 取得执行计划，尚未得到证据支持。审计清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+**审计结论（历史事实；2026-09-18）**：公开 Host API 中没有任何 SQL 执行 / EXPLAIN / 执行计划获取入口；"插件能否取得执行计划"已不再有未知，该缺口已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 并认领。当前 blocker 是**上游实现 / 合并进度**。审计清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
 
-按项目纪律，在证据明确前不自行实现数据库连接层或执行层。
+按项目纪律，不自行实现数据库连接层或执行层；真实 Host 接入等待 #9675 落地。
 
 ## 4. 已知上游问题（已取证，未修复）
 
@@ -153,11 +158,10 @@ Build failed (exit 1)
 
 ## 5. 待办
 
-1. ✅ Phase 0 Host Capability Audit 已完成（清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)，结论 BLOCKED）。
-2. 上游反馈状态（2026-09-20 复核）：result-view 缺陷已提交 [#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [#9599](https://github.com/t8y2/dbx/pull/9599) 修复合入上游 `main`（尚未进入 release）。Execution Plan Plugin Host API 尚未发现重复 Issue（相关但不重复：[#9396](https://github.com/t8y2/dbx/issues/9396) 为更宽的插件 SQL 执行诉求；[#5161](https://github.com/t8y2/dbx/issues/5161) / [#5160](https://github.com/t8y2/dbx/pull/5160) 为 DBX 内置 Plan Canvas）；Feature Issue 正文已准备（[docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)），**尚未提交**，等待确认。
-3. Host 接入继续暂停，等待上游公开只读计划 API（t8y2/dbx#9675）或上游 release 包含 #9599 修复；
-   不设计插件侧替代方案。离线 Core 已由 Phase 0B 落地，不受此阻塞（见
-   [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)）。
+1. ✅ Phase 0 Host Capability Audit 已完成（历史结论 BLOCKED，清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)）；能力缺口已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675)。
+2. 上游反馈状态（2026-09-20 复核）：result-view 缺陷已提交 [#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [#9599](https://github.com/t8y2/dbx/pull/9599) 修复合入上游 `main`（尚未进入 release）。Estimated Plan Host API 已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)，已由 `0verme` `/claim`，是当前唯一 canonical upstream contract；下游设计已收敛（[docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)，PR #4 已合并；`docs/DBX_HOST_API_GAP_PROPOSAL.md` 已同步）。
+3. 当前 blocker = #9675 的实现 / 合并。上游落地前**暂停真实 Host 接入**；不设计插件侧替代架构、不引入数据库 Driver。
+4. 离线 Plan Core 已由 Phase 0B 落地（PR #6），不受 Host blocker 影响：契约与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；#9675 落地后只需新增 `src/core/adapter/` 将 `rawPlan` 映射为 `RawPlanInput`。
 4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
 ## 6. 相关文档
@@ -168,4 +172,5 @@ Build failed (exit 1)
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 决策记录、Phase 0 审计清单与结论、Fixture 策略
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 审计矩阵、逐项证据、运行时实测、复现步骤
-- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、最小 API 提案、Issue 草稿
+- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、一期 Estimated Plan API 提案、Future / historical design 记录
+- [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note；canonical upstream contract 为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)

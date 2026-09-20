@@ -2,27 +2,32 @@
 
 **当前只建立项目框架，尚未实现任何执行计划分析能力。**本文件记录已确认决策、当前阶段任务与路线约束。
 
+> 状态（2026-09-20）：Phase 0 已完成；上游 Estimated Plan Host API 需求已正式提交并认领（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)），当前处于 `Phase 0 completed · Upstream implementation in progress`。一期只做 Estimated Plan；Actual Plan 属于 Future。
+
 ## 1. 已确认决策
 
 1. 首批支持 PostgreSQL + MySQL。
 2. PostgreSQL 优先跑通完整 pipeline。
 3. MySQL 紧随其后，用于验证跨数据库抽象。
-4. Estimated Plan 和 Actual Plan 都需要兼容。
+4. 当前一期只做 **Estimated Plan**（`EXPLAIN ...`）。Actual Plan / `EXPLAIN ANALYZE` 属于 Future：不是 Phase 1 blocker，不属于 #9675，未来需要独立 upstream proposal 重新评估授权模型与安全边界。
 5. 默认使用 Estimated。
-6. Actual 必须显式触发，并考虑安全、timeout、cancel。
+6. Actual 若未来推进，必须显式触发，并重新评估安全、timeout、cancel（不属于当前一期）。
 7. 当前不依赖 AI。
 8. AI 未来只能作为 Explain / Rewrite 辅助层，不能成为 Rule Engine 的真相来源。
 9. DBX 已有能力尽量复用。
 10. 当前不重新实现 DBX 已有 Explain 基础设施。
 11. 第一阶段先做 Host Capability Audit。
-12. 确认缺少公开 Host API 后，再考虑向 `t8y2/dbx` 提 Issue / PR。
+12. 确认缺少公开 Host API 后向 `t8y2/dbx` 提交 Feature Issue —— ✅ 已完成：[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)（2026-09-20，OPEN，已由 `0verme` `/claim`，当前唯一 canonical upstream contract）。
 
 ## 2. Phase 0：Host Capability Audit
 
-**这是当前唯一的活动阶段。**在清单未取得证据前，不开始实现 Parser、Metrics 或 Rule Engine。
+Phase 0 已于 2026-09-18 完成，**不再是当前唯一的活动阶段**。当前状态为 `Phase 0 completed · Upstream implementation in progress`：
 
-> 审计已于 2026-09-18 完成，结论为 **BLOCKED — Host API capability gap**。
-> 完整证据、矩阵与运行时实测记录见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md)，上游反馈材料见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)。
+- 上游：等待 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)（Estimated Plan Host API）实现 / 合并，当前 blocker 是**实现与合并进度**，不再是"能力是否存在未知"。
+- 下游：fixture / 离线 parser、normalization core 等不依赖 Host API 的部分可以独立开发；真实 Host 接入继续等待 #9675 落地。
+
+> 审计结论（历史，2026-09-18）：**BLOCKED — DBX internal capability exists, Plugin Host API does not expose it.**
+> 完整证据、矩阵与运行时实测记录见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md)，上游反馈材料与一期 API 提案见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)，downstream design note 见 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
 
 ### 审计清单（已完成）
 
@@ -81,7 +86,7 @@ Plugin Host public capability
 - 至少完成 connection 上下文、数据库类型/版本、执行计划获取三项的**明确结论**（支持 / 未公开）。—— ✅ 已完成
 - 明确记录 Estimated 与 Actual 两条路径各自是否可行。—— ✅ 已完成（两条路径插件侧均不可行；DBX 内部可行）
 - 若关键能力未公开：形成 Issue 并暂停相关实现，不自行设计替代架构。—— ✅ 已形成
-  [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)（含上游 Issue 草稿），**暂停 Phase 1 及以后实现**。
+  [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)（2026-09-20 更新：上游 Issue 已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675) 并已认领）。
 
 ### Phase 0 结论（2026-09-18）
 
@@ -91,7 +96,7 @@ Phase 0: BLOCKED — DBX internal capability exists, Plugin Host API does not ex
 
 - 出口条件中的「至少三项明确结论」已满足，但**关键能力未公开**，因此不能判定 Phase 0 PASS。
 - 按纪律：不实现插件侧数据库执行层、不引入 Driver、不绕过沙箱、不调用 DBX 内部接口。
-- 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。
+- 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。—— 上游路径已推进：需求已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675) 并已认领，当前等待实现 / 合并。
 - 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 中无法打开工作台；已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（尚未进入 release），见 Gap Proposal 附录 B。
 
 ### Phase 0B：Offline Core（2026-09-20 启动，已实现）
@@ -113,14 +118,43 @@ PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics �
 - 退出条件：本阶段不产出 Host 能力结论；Host 接入仍等待 #9675，落地后只需新增 adapter 将 `rawPlan`
   映射为 `RawPlanInput`。
 
-## 3. 后续阶段（暂不启动）
+## 2.1 当前一期目标与 Future 边界
+
+**当前一期（Estimated Plan only）**：
+
+```text
+DBX Host Adapter          ← 依赖上游 #9675 实现；接入前不可用
+→ Estimated Raw Plan（EXPLAIN ...）
+→ Parser
+→ Normalization
+→ Metrics
+→ Rules
+→ Findings
+```
+
+- 只请求 `host.plans:read`、`host.getPlanCapabilities`、`host.explainPlan`，且 `mode=estimated`。
+- `DBX Host Adapter` 之外的下游链路可以基于 fixture 独立开发与验证，不阻塞于上游实现进度。
+  （离线部分已在 Phase 0B 实现，见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。）
+
+**Future（不属于一期，不属于 #9675）**：
+
+```text
+Actual Plan / EXPLAIN ANALYZE
+→ Actual 专用指标 / 运行时统计
+```
+
+- **不是 Phase 1 blocker**；
+- **不属于 #9675**；
+- 未来需要**独立 upstream proposal**，重新评估授权模型与安全边界（会真正执行用户语句）。
+
+## 3. 后续阶段（Phase 1 离线部分进行中，真实 Host 接入暂不启动）
 
 | 阶段 | 内容 | 状态 / 前置条件 |
 | --- | --- | --- |
-| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20）；Host 接入仍待 #9675 |
-| Phase 1 | Host 接入：adapter 将 DBX `rawPlan` 映射为 `RawPlanInput` | **未启动**：等待 t8y2/dbx#9675 落地 |
-| Phase 2 | Hotspot Analysis / Estimate Error 等扩展指标 | 独立 Issue；现有 Metrics 已可复用 |
-| Phase 3 | 更多规则与规则分级 | 独立 Issue；现有 Rule Engine 与 Findings 已可复用 |
+| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20，PR #6）；Host 接入仍待 #9675 |
+| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **离线部分已完成**；真实 Host 接入需等待 #9675 实现、合并并进入 release |
+| Phase 2 | Metrics Engine + Findings/Evidence | ✅ 离线部分已实现（确定性 Metrics + Findings；扩展指标如 Hotspot / Estimate Error 属后续 Issue） |
+| Phase 3 | Rule Engine | ✅ 3 条确定性规则已实现；更多规则与规则分级属后续 Issue |
 | Phase 4 | Plan Diff / History | 上述阶段通过 |
 | Phase 5 | MySQL Adapter | 验证跨数据库抽象；边界设计见 `fixtures/mysql/README.md` |
 
@@ -141,19 +175,21 @@ raw plan → normalized plan → metrics → findings
 - `fixtures/postgres/`、`fixtures/mysql/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
-- 后续引入 Golden Fixture 测试：解析与指标输出与预期快照比对。
+- Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` 四 stage 与预期快照比对；
+  约定见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
-**本次初始化不放入执行计划样本**，仅建立目录与说明。
+PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic）；MySQL 仅占位与 adapter boundary 设计。
 
 ## 5. Host 接入与其它阶段仍禁止顺手实现
 
-下面的项目仍然禁止「顺手实现」，需要独立 Issue 与明确的架构授权：
+以下能力属于后续阶段或 Future，除当前任务明确启动的模块外不得顺手实现（需要单独 Issue / 任务）：
 
 - Host / Adapter 接入（`dbx-adapter`、Host API 调用、Execution Plan 扩展点集成）
 - Plan Diff
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
-- MySQL parser
+- Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
+- MySQL parser（PostgreSQL 优先，不属于一期前置）
 - 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
 

@@ -27,7 +27,8 @@ Plan Detective 负责理解和分析执行计划。
 - Findings + Evidence ✅
 - Plan Diff ⛔
 
-> ✅ 为 **Phase 0B Offline Core**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现。
+> ✅ 为 **Phase 0B Offline Core**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现，
+> 仍需等待上游能力落地（`Phase 0 completed · Upstream implementation in progress`）。
 > 实际完成度以 [STATUS.md](STATUS.md) 与 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) 为准。
 
 ## 首批目标数据库
@@ -56,7 +57,7 @@ DWS 暂时视为 PostgreSQL-family 的后续兼容目标，当前不作为第一
 
 ## 当前进度
 
-项目处于 **Phase 0：Host Capability Audit**，审计已于 2026-09-18 完成，结论为 **BLOCKED — Host API capability gap**：
+当前状态：**Phase 0 completed · Upstream implementation in progress**。Phase 0 Host Capability Audit 已于 2026-09-18 完成（历史结论 **BLOCKED — Host API capability gap**）：
 
 ```text
 DBX 内部有执行计划能力
@@ -64,12 +65,11 @@ DBX 内部有执行计划能力
 第三方插件可通过公开 Host API 取得执行计划
 ```
 
-在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)，上游反馈材料见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
+在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。
 
-因此本仓库**不会**在上游公开只读计划 API 之前接入 Host、获取真实计划或引入数据库 Driver / 连接池 / 凭据。
-自查清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+该能力缺口已正式提交为 upstream Issue **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（OPEN，已由 `0verme` `/claim`），是当前唯一 canonical contract：一期只请求 **Estimated Plan**（`EXPLAIN ...`）—— 权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` 不属于一期。详见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 与 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
 
-**但这不阻止离线内核开发。** 经明确授权，Phase 0B 已落地与 DBX 完全解耦的 fixture-first 分析内核：
+当前 blocker 是 #9675 的实现 / 合并：真实 Host 接入需等待上游落地，本仓库**不会**自行引入数据库 Driver / 连接池 / 凭据管理来绕过。**但这不阻止离线内核开发**：Phase 0B 已落地与 DBX 完全解耦的 fixture-first 分析内核：
 
 ```text
 PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
@@ -77,8 +77,8 @@ PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics �
 
 - 实现：`src/core/`；契约与阈值：[docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)
 - fixture：`fixtures/postgres/`（19 个：17 真实采集 + 2 synthetic），带四 stage golden test
-- 与 DBX 的衔接点只有未来的 `dbx-adapter`：将 `rawPlan` 映射为 `RawPlanInput`，内核不感知
-  connectionId / credential / Host API。等待 t8y2/dbx#9675 落地后再启动。
+- 与 DBX 的衔接点只有未来的 `dbx-adapter`：将 #9675 的 `rawPlan` 映射为 `RawPlanInput`，
+  内核不感知 connectionId / credential / Host API
 
 离线验证（无需 DBX、无需数据库、无需 `npm install`）：
 
@@ -136,10 +136,11 @@ dbx-plugin package .
 
 ## 文档
 
-- [STATUS.md](STATUS.md) —— 当前状态、Phase 0 结论、已验证项与已知问题
+- [STATUS.md](STATUS.md) —— 当前状态、上游 #9675 contract、已验证项与已知问题
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 Host Capability Matrix、逐项证据、真实宿主实测
-- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、最小 API 提案、Issue 草稿
+- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、一期 Estimated Plan API 提案、Future / historical design 记录
+- [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note（canonical upstream contract：[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
-- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单与结论、Fixture 策略
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单与结论、一期 / Future 边界、Fixture 策略
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
 - 上游插件开发指南：<https://dbxio.com/en/docs/plugin-development>

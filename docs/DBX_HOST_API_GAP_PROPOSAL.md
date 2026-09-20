@@ -1,21 +1,34 @@
 # DBX Plugin Host API Gap Proposal
 
 > 关联：[Phase 0 Host Capability Audit](HOST_CAPABILITY_AUDIT.md) · Issue [#1](https://github.com/0verme/dbx-plugin-plan-detective/issues/1)
-> 状态（2026-09-20 复核）：**Host API 提案尚未向上游提交**；可直接提交的 Feature Issue 正文见 [`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。重复性检查未发现重复 Issue；相关但不重复：[#9396](https://github.com/t8y2/dbx/issues/9396)（更宽的插件 SQL 执行诉求）、[#5161](https://github.com/t8y2/dbx/issues/5161) / [#5160](https://github.com/t8y2/dbx/pull/5160)（DBX 内置 Plan Canvas）。附录 B 的 result-view 缺陷已由上游修复（[#9597](https://github.com/t8y2/dbx/issues/9597) → [PR #9599](https://github.com/t8y2/dbx/pull/9599)，已合入 `main`，尚未进入 release）。
-> 本文件不修改 `t8y2/dbx`，仅作为反馈材料与上游 Issue 草稿的依据。
+>
+> **状态（2026-09-20 复核）**
+>
+> - 本文件描述的上游 Host API 需求已正式提交为 **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（2026-09-20，OPEN，已由 `0verme` `/claim`），是**当前唯一 canonical upstream contract**。
+> - 本文件是**下游侧能力缺口说明与设计记录**，不再是"待提交 Issue 草稿"；提交正文见 [`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)，范围以 #9675 为准。
+> - **当前一期范围 = Estimated Plan only**：`EXPLAIN ...`、权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。
+> - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` / generic SQL execution 属于 [Future / historical design](#future--historical-design不属于当前一期-contract)，**不属于当前一期 contract**，未来需要独立 upstream proposal。
+> - 本文件与 #9675 当前 scope 冲突时，一律以 #9675 为准。
+> - 相关但不重复的上游 Issue：[#9396](https://github.com/t8y2/dbx/issues/9396)（更宽的插件 SQL 执行诉求）、[#5161](https://github.com/t8y2/dbx/issues/5161) / [#5160](https://github.com/t8y2/dbx/pull/5160)（DBX 内置 Plan Canvas）。本文件不修改 `t8y2/dbx`。
+>
+> 附录 B 的 result-view 缺陷已由上游修复（[#9597](https://github.com/t8y2/dbx/issues/9597) → [PR #9599](https://github.com/t8y2/dbx/pull/9599)，已合入 `main`，尚未进入 release）。
 
 ## Problem
 
-DBX Core 已经具备连接管理、SQL 执行、EXPLAIN（Estimated / Actual）、timeout 与 cancel 能力，但这些能力**没有通过公开的 Plugin Host API 暴露给第三方插件**。因此一个"只做执行计划智能、不重复实现数据库基础设施"的插件（Plan Detective）无法取得：
+DBX Core 已经具备连接管理、SQL 执行、EXPLAIN（Estimated / Actual）、timeout 与 cancel 能力，但这些能力**没有通过公开的 Plugin Host API 暴露给第三方插件**。因此一个"只做执行计划智能、不重复实现数据库基础设施"的插件（Plan Detective）仍无法取得当前一期真正需要的东西：
 
 ```text
-current SQL
-connection / database / schema
-database type / version
-Estimated Plan（原始计划文本或结构）
-Actual Plan（原始计划文本或结构）
-timeout / cancel 语义
+Estimated Raw Plan（原始计划文本或结构）    ← #9675 请求的唯一一期能力
 ```
+
+一期**不再缺失、也不再作为前置条件**的周边能力：
+
+```text
+current SQL / connectionId / database   ← result-view 路径已提供（#9599 修复，等待 release）
+timeout / cancel 语义                    ← 由宿主在执行层内部完成，插件只消费结果与可区分错误
+```
+
+Actual Plan（`EXPLAIN ANALYZE`）与任意 SQL execution **不属于一期范围**，见 Future / historical design。
 
 审计证据见 [HOST_CAPABILITY_AUDIT.md](HOST_CAPABILITY_AUDIT.md)：14 项能力中插件侧可达项为 0；真实 DBX `v0.6.16` 宿主中 28 个候选方法名全部返回 `Unsupported plugin host method`。
 
@@ -68,179 +81,88 @@ host.events, host.binary, host.workbench, host.filesystem, host.network:<https o
 
 sidecar 可回调宿主的方法只有 `host/requestUserInput`（Host API 1.1，`runtime.rs:26`）；`plugin/initialize` 下发的 `host.features` 目前也只有这一项（`manifest.rs:16`）。
 
-贡献类型（`plugins/manifest.schema.json`）：`connection-provider`、`workbench`、`filesystem-provider`、`context-menu`、`result-view`。其中只有 `result-view` 会把 `connectionId / database / sql / result` 交给插件工作台，而该路径在 `v0.6.16` 与当前 `main` 中无法打开（见附录 B）。
+贡献类型（`plugins/manifest.schema.json`）：`connection-provider`、`workbench`、`filesystem-provider`、`context-menu`、`result-view`。其中只有 `result-view` 会把 `connectionId / database / sql / result` 交给插件工作台；该路径在 `v0.6.16` 与审计时的 `main` 上无法打开（见附录 B），在 #9599 合入后的 `main` 上已修复。
 
 注意：`connection-provider` 是**插件向 DBX 提供驱动**的方向（插件自己实现连接），不是"插件消费 DBX 已管理的连接"。用它来访问用户的 PostgreSQL / MySQL 会迫使插件自带驱动、凭据与连接池，与 DBX 的职责边界重复。
 
-## Missing capability
+## Capability gap（当前一期）
 
-1. 读取当前查询上下文（connectionId、database、schema、SQL）。
-2. 读取连接元信息（database type、database version、read-only / production 标记）。
-3. 请求 DBX Core 对指定连接执行 EXPLAIN（Estimated）。
-4. 请求 DBX Core 执行 EXPLAIN ANALYZE（Actual），并继承 DBX 的安全限制。
-5. 取得**原始**执行计划（JSON / 文本），以便插件自行解析与归一化。
-6. 复用 DBX 的查询 timeout 与 cancel。
+| 需求 | 插件侧状态 | 结论 |
+| --- | --- | --- |
+| Estimated Raw Plan 获取 | ❌ 未公开 | **#9675 请求的唯一一期能力**；DBX 内部可用（PG/MySQL 等），宿主方法注册表无入口 |
+| 计划相关上下文（connectionId / database / sql） | ⚠️ `result-view` 路径提供 | 已由 #9597 / #9599 修复并合入上游 `main`（尚未进入 release）。**不是** #9675 前置条件；#9675 不请求 `host.getQueryContext()` |
+| database type / version | ✅ 宿主可提供 | 由 `host.getPlanCapabilities` 随计划能力一起返回，插件不需要自行探测 |
+| timeout / cancel | ✅ 宿主内部完成 | `timeoutMs` 由宿主 clamp；插件只消费结果与可区分错误，一期不需要独立 cancel API |
+| Actual Plan / `EXPLAIN ANALYZE` | ⛔ 一期不请求 | 会真正执行用户语句，风险显著更高；属于 Future，需要独立 upstream proposal |
+| 任意 SQL execution | ⛔ 一期不请求 | 属于 [#9396](https://github.com/t8y2/dbx/issues/9396) 的讨论范围，不属于本计划 API |
 
-## Minimal API proposal
+## Phase 1 minimal API proposal（canonical: #9675）
 
-> 目标：**只暴露"只读计划获取"这一条窄路径**，不把插件变成通用 SQL 执行通道。所有 SQL 生成、安全校验、事务包装、超时、取消仍由 DBX Core 完成。
+> 目标：只暴露 **Estimated Plan 获取**这一条窄路径，不把插件变成通用 SQL 执行通道。所有 EXPLAIN 生成、安全校验、执行、超时与取消仍由 DBX Core 完成。
 
 ### 1. 新权限
 
 ```text
-host.plans:read          # 读取当前查询上下文 + Estimated Plan
-host.plans:execute       # 额外允许 Actual Plan（会真正执行语句）
+host.plans:read          # 读取计划能力/上下文 + 请求 Estimated Plan（不会执行用户语句）
 ```
 
-- 两个权限都必须在 manifest 中显式声明，并在 Plugin Center 安装页展示给用户与审核者。
-- `host.plans:execute` 默认不授予；用户必须在插件设置中显式开启，且建议对"生产连接"单独二次确认。
+- 必须在 manifest 中显式声明，并在 Plugin Center 安装页展示给用户与审核者，使 Marketplace 审核可以基于 manifest 静态判断插件能做什么。
+- `host.plans:read` **不**包含：Actual Plan / `EXPLAIN ANALYZE`、写语句、DDL、任意 SQL 执行。
 
 ### 2. 新宿主方法
 
 ```text
-host.getQueryContext()                    # 读取当前编辑器/结果 tab 的上下文
-host.getConnectionCapabilities(connectionId?)
-host.explainPlans({ connectionId, database, schema, sql, mode, timeoutMs? })
-host.cancelPlanExecution({ executionId })
+host.getPlanCapabilities({ connectionId })
+host.explainPlan({ connectionId, database, schema?, sql, mode: "estimated", timeoutMs? })
 ```
 
-#### `host.getQueryContext()`
+#### `host.getPlanCapabilities({ connectionId })`
 
-返回当前活动查询标签页的上下文（由宿主决定，不从插件参数接收）：
+返回该连接的计划能力与宿主限制：
 
 ```json
 {
   "connectionId": "…",
-  "database": "app",
-  "schema": "public",
   "dbType": "postgres",
   "dbVersion": "15.19",
-  "sql": "SELECT …",
-  "readOnly": false,
-  "isProduction": false,
-  "supports": { "explain": true, "explainAnalyze": true }
-}
-```
-
-#### `host.getConnectionCapabilities(connectionId?)`
-
-```json
-{
-  "connectionId": "…",
-  "dbType": "mysql",
-  "dbVersion": "8.0.36",
-  "supports": { "explain": true, "explainAnalyze": false },
+  "supports": { "estimatedPlan": true },
   "limits": { "maxTimeoutMs": 60000, "maxPlanBytes": 4194304 }
 }
 ```
 
-用于让插件在 UI 上正确降级（例如 MySQL 不提供 Actual Plan）。
+- 用于让插件在 UI 上正确降级，并复用现有 `host.features` / `hostApiVersion` 机制探测旧宿主。
+- 一期只声明 `estimatedPlan`；`explainAnalyze` 等字段属于 Future（见 historical design）。
 
-#### `host.explainPlans(...)`
+#### `host.explainPlan(...)`
+
+请求示例：
 
 ```json
 {
   "connectionId": "…",
   "database": "app",
   "schema": "public",
-  "sql": "SELECT …",
+  "sql": "SELECT status, count(*) FROM orders GROUP BY status",
   "mode": "estimated",
   "timeoutMs": 15000
 }
 ```
 
-- `mode`：`"estimated"` | `"actual"`。
-- DBX 负责把 `sql` 交给 `build_explain_sql`，沿用现有安全校验；插件不能自定义 EXPLAIN 文本。
+- `mode` 一期只允许 `"estimated"`。
+- DBX Core 负责把 `sql` 交给现有 `build_explain_sql`，沿用现有安全校验；插件不能自定义 EXPLAIN 文本。
 - `timeoutMs` 由宿主 clamp 到连接配置与全局上限，插件不能突破。
-
-#### `host.cancelPlanExecution({ executionId })`
-
-返回 `{ "cancelled": true }`；对已结束的执行幂等。
-
-### 3. 结果事件（可选，建议 v1 先不做）
-
-```text
-host.plan.progress   # { executionId, phase: "planning" | "executing" | "cancelling" }
-```
-
-## Security boundary
-
-- 插件 iframe 仍然是 `sandbox="allow-scripts"` + 严格 CSP：没有 Tauri 对象、没有父级 DOM、没有网络（除非声明 `host.network`）。新方法只是新增宿主侧的执行入口，不放松沙箱。
-- 插件**不能**自带 SQL 执行路径：请求里只允许传 `connectionId / database / schema / sql / mode / timeoutMs`，EXPLAIN 语句由 DBX Core 生成。
-- 复用现有安全校验：`is_safe_explain_sql_for_database`（仅 SELECT/WITH/TABLE/VALUES、拒绝危险关键字、拒绝多语句）。
-- Actual 模式额外约束：仅 `SELECT / WITH / TABLE / VALUES`；PostgreSQL 沿用 `BEGIN READ ONLY` + `ROLLBACK`；失败时保证回滚（沿用现有 `postgres_read_only_transaction_*` 逻辑）。
-- 结果大小上限、返回字段白名单（不返回凭据、不返回连接密码、不返回完整结果集，只返回计划）。
-- 生产连接标记 `is_production` 时默认拒绝 `actual`，除非用户在该连接上显式允许。
-- 审计：每次 plan 请求记录 connectionId、mode、sql 指纹、耗时、结果大小（不记录凭据）。
-
-## Permission model
-
-| 权限 | 允许 | 不允许 |
-| --- | --- | --- |
-| `host.plans:read` | `host.getQueryContext`、`host.getConnectionCapabilities`、`mode=estimated` | `mode=actual`、任意 SQL 执行 |
-| `host.plans:execute` | 追加 `mode=actual`（受连接级与用户级开关限制） | 写语句、DDL、多语句、事务控制 |
-| 未声明权限 | — | 所有 plan 方法返回 `Plugin has not declared permission '…'`（与现有权限错误一致） |
-
-建议把权限写入 `plugins/manifest.schema.json` 的 `permissions` 枚举，使 Marketplace 审核可以基于 manifest 静态判断插件是否会执行 SQL。
-
-## Estimated vs Actual semantics
-
-- 两个模式必须在 API 上**显式区分**，不能用同一个方法"自动升级"。
-- `estimated`：不执行语句；返回原生 `EXPLAIN` 输出。
-- `actual`：会真正执行语句；返回带运行时统计的计划；由 DBX 决定是否允许、是否包只读事务、是否需要用户确认。
-- 能力可用性由 `host.getConnectionCapabilities` 声明：
-  - PostgreSQL：`explain = true`，`explainAnalyze = true`
-  - SQL Server：`explain = true`，`explainAnalyze = true`（STATISTICS XML）
-  - MySQL：`explain = true`，`explainAnalyze = false`（DBX 当前无此路径）
-  - Oracle / Dameng / Doris / QuestDB：`explain = true`，`explainAnalyze = false`（文本计划）
-
-## Timeout / Cancel semantics
-
-- `timeoutMs` 由插件提出、宿主裁定：`min(请求值, 连接 query_timeout, 全局上限)`；超时错误必须可区分（例如 `PLAN_TIMEOUT`）。
-- Cancel 以 `executionId` 为单位，与现有 `cancel_query` 任务注册表一致；取消结果对已结束任务幂等。
-- 宿主负责在 sidecar 停用 / tab 关闭 / 连接断开时清理未完成的 plan 执行（沿用 `RunningTaskMetadata`）。
-- Actual 模式下 timeout / cancel 必须保证"语句确实停止"的语义（PG 沿用只读事务 + 服务端取消）。
-
-## Example request
-
-```json
-// iframe → host
-{
-  "source": "dbx-plugin",
-  "version": 1,
-  "type": "request",
-  "id": "41",
-  "method": "host.explainPlans",
-  "params": {
-    "connectionId": "8f0c…",
-    "database": "app",
-    "schema": "public",
-    "sql": "SELECT status, count(*) FROM orders GROUP BY status",
-    "mode": "estimated",
-    "timeoutMs": 15000
-  }
-}
-```
-
-## Example response
+- 返回**原始**计划与元信息，由插件自行解析与归一化：
 
 ```json
 {
-  "source": "dbx-host",
-  "version": 1,
-  "type": "response",
-  "id": "41",
-  "result": {
-    "executionId": "plan-7b1e…",
-    "mode": "estimated",
-    "dbType": "postgres",
-    "dbVersion": "15.19",
-    "format": "json",
-    "plan": [ { "Plan": { "Node Type": "Aggregate", "Plans": [ { "Node Type": "Seq Scan", "Relation Name": "orders" } ] } } ],
-    "truncated": false,
-    "executed": false,
-    "warnings": []
-  }
+  "executionId": "plan-7b1e…",
+  "mode": "estimated",
+  "dbType": "postgres",
+  "dbVersion": "15.19",
+  "format": "json",
+  "rawPlan": [ { "Plan": { "Node Type": "Aggregate", "Plans": [ { "Node Type": "Seq Scan", "Relation Name": "orders" } ] } } ],
+  "truncated": false,
+  "warnings": []
 }
 ```
 
@@ -248,33 +170,110 @@ host.plan.progress   # { executionId, phase: "planning" | "executing" | "cancell
 
 ```json
 {
-  "source": "dbx-host",
-  "version": 1,
-  "type": "response",
-  "id": "42",
   "error": "PLAN_UNSAFE: statement is not a read-only SELECT/WITH/TABLE/VALUES query"
 }
 ```
+
+方法名与 payload 形状以 #9675 的 API suggestion 为准，不是 #9675 强制项；真正必须成立的契约是：
+
+```text
+插件发送原始 SQL + connection context
+        ↓
+DBX Core 生成 EXPLAIN（build_explain_sql）
+        ↓
+DBX Core 执行安全校验并运行 Estimated Plan
+        ↓
+插件只收到原始计划
+```
+
+### 3. Security boundary
+
+- 插件 iframe 仍然是 `sandbox="allow-scripts"` + 严格 CSP：没有 Tauri 对象、没有父级 DOM、没有网络（除非声明 `host.network`）。新方法只是新增宿主侧的只读执行入口，不放松沙箱。
+- 请求只接受 `connectionId / database / schema / sql / mode / timeoutMs`；插件**不能**自带 EXPLAIN SQL，也没有通用 SQL 执行入口。
+- 复用现有安全校验：`is_safe_explain_sql_for_database`（仅 SELECT/WITH/TABLE/VALUES、拒绝危险关键字、拒绝多语句）。
+- 一期只有 `EXPLAIN`，用户语句不会真正执行——这是与 [#9396](https://github.com/t8y2/dbx/issues/9396) 的关键区别。
+- 结果大小上限、返回字段白名单：不返回凭据、不返回连接密码、不返回完整结果集，只返回计划与元信息；`maxPlanBytes` 控制 payload。
+- timeout 错误必须可区分（例如 `PLAN_TIMEOUT`）。
+- 审计：每次 plan 请求记录 connectionId、mode、sql 指纹、耗时、结果大小（不记录凭据）。
+
+### 4. Permission model（一期）
+
+| 权限 | 允许 | 不允许 |
+| --- | --- | --- |
+| `host.plans:read` | `host.getPlanCapabilities`、`host.explainPlan` 且 `mode=estimated` | `mode=actual`、写语句、DDL、多语句、任意 SQL 执行 |
+| 未声明权限 | — | 所有 plan 方法返回 `Plugin has not declared permission '…'`（与现有权限错误一致） |
+
+### 5. Timeout / cancel semantics（一期）
+
+- `timeoutMs` 由插件提出、宿主裁定：`min(请求值, 连接 query_timeout, 全局上限)`；超时错误必须可区分。
+- 一期不新增专门的 cancel API：超时与取消由宿主在执行层内部完成，插件只消费最终结果与可区分错误。
+- 宿主负责在 sidecar 停用 / tab 关闭 / 连接断开时清理未完成的 plan 执行（沿用 `RunningTaskMetadata`）。
+
+## Future / historical design（不属于当前一期 contract）
+
+> 以下内容**不是** #9675 当前 scope，**不是**当前插件实现依赖。保留这些记录只为保存范围被收窄前的设计信息；任何一项要推进，都需要**独立的 upstream proposal**，并以该 proposal 的授权模型为准。
+
+### Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（historical）
+
+- 早期设计曾把 Estimated 与 Actual 并列提案：新增 `host.plans:execute` 权限（manifest 显式声明、默认不授予、Plugin Center 可见，生产连接需额外显式确认）、`mode=actual`。
+- Actual 模式会真正执行用户语句：仅 `SELECT / WITH / TABLE / VALUES`；PostgreSQL 沿用 `BEGIN READ ONLY` + `ROLLBACK`，失败时保证回滚；SQL Server 走 `STATISTICS XML`；MySQL 当前没有 analyze 路径，应返回 `explainAnalyze: false` 而不是发明路径。
+- 风险显著高于 Estimated Plan，因此 #9675 刻意不包含它。未来若推进，必须重新评估授权模型、只读事务、timeout / cancel 与生产连接确认策略。
+
+### `host.getQueryContext()`（historical，已由 result-view 取代）
+
+- 早期设计把它列为读取当前查询上下文的入口。
+- #9597 / #9599（已合入 `main`）修复 result-view 打开路径后，`result-view` 已向插件投递 `sql` / `connectionId` / `database` / bounded result snapshot，因此它**不是**计划获取的前置需求，也**不是** #9675 的 blocker。
+- 只有出现 `result-view` 之外、确实需要宿主托管查询上下文的新 surface 时，才值得作为独立 proposal 讨论。
+
+### `host.cancelPlanExecution({ executionId })`（historical）
+
+- 早期设计曾为一期准备独立的 cancel 方法；收窄后一期不需要：超时与取消由宿主执行层内部完成。
+- 若未来 Actual Plan 或长计划需要用户主动取消，再随该 proposal 设计以 `executionId` 为单位的幂等 cancel 方法。
+
+### 早期方法命名（historical）
+
+- 本文件早期版本使用 `host.getConnectionCapabilities` / `host.explainPlans` / `host.cancelPlanExecution` 与 `mode=actual`。
+- 当前一期以 #9675 收窄后的 `host.getPlanCapabilities` / `host.explainPlan` / `mode=estimated` 为准，旧名称仅作历史参考。
+
+### `host.plan.progress` 事件（早期可选项，未提案）
+
+```text
+host.plan.progress   # { executionId, phase: "planning" | "executing" | "cancelling" }
+```
+
+- 早期文档建议 v1 先不做；当前一期不包含任何新增事件。
+
+### 明确不提案的方向
+
+- generic SQL execution / 自动执行用户 SQL —— 属于 #9396 的讨论范围，不属于本计划 API。
+- SQL Rewrite、CREATE INDEX、DDL、自动调优 —— 需要各自独立的上游 proposal 与产品决策。
 
 ## Why this belongs in DBX Core instead of plugin
 
 1. **凭据与驱动只在 Core**：插件无法在不引入 Driver / 连接池 / Credential 管理的前提下访问数据库；这是项目与 DBX 双方的安全边界。
 2. **安全校验已经存在**：`build_explain_sql` 的语句类型白名单、危险关键字拒绝、只读事务与回滚逻辑都在 Core；插件侧重写会形成两套不一致的安全语义。
 3. **timeout / cancel 必须与执行层同源**：只有实际执行查询的一侧才能真实取消；插件侧"超时"只能放弃等待，语句仍在数据库上继续跑。
-4. **一致性**：Estimated / Actual 的方言差异（PG JSON、MySQL JSON/TRADITIONAL、SQL Server STATISTICS XML、Oracle/Dameng 文本）由 Core 统一处理，插件只消费原始计划。
-5. **可审核性**：新权限可以静态出现在 manifest 与 Marketplace 审核页，用户能判断插件是否会执行 SQL。
+4. **一致性**：Estimated（一期）与未来 Actual 的方言差异（PG JSON、MySQL JSON/TRADITIONAL、SQL Server STATISTICS XML、Oracle/Dameng 文本）由 Core 统一处理，插件只消费原始计划。
+5. **可审核性**：新权限可以静态出现在 manifest 与 Marketplace 审核页，用户能判断插件会请求计划读取。
 6. **职责划分**：DBX 提供数据库能力，插件提供计划智能；把执行层放进插件会破坏这个边界，并让"Plan Detective"退化为另一个数据库客户端。
 
 ---
 
-## 附录 A：上游 Issue 草稿（可提交到 `t8y2/dbx/issues`）
+## 附录 A：Historical — 早期上游 Issue 草稿（superseded by #9675，not current contract）
 
-> 更新（2026-09-20）：下方中文草稿已整理为英文优先、范围收窄、可直接提交的版本：[`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。提交时以该文件为准。
-> 重复性检查结论：无重复 Issue；#9396 是更宽的“插件执行任意 SQL”诉求，与本提案的只读计划获取不重复，提交时应在正文中交叉引用。
+> **⚠️ 历史材料，不是当前提案。**
 >
+> - 状态：**historical / superseded by [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / not current contract**。
+> - 该草稿在 #9675 提交前使用更宽的范围（Estimated + Actual、`host.plans:execute`、`host.getQueryContext()`、`host.explainPlans`）。
+> - **当前唯一 canonical contract 是 #9675，范围已收窄为 Estimated Plan only。** 请勿依据以下内容实现或判断当前一期范围。
+> - 英文、收窄后的提交正文见 [`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
+
+<details>
+<summary>展开早期中文草稿原文（historical）</summary>
+
 > 建议标题：`[Feature] Plugin Host API: expose read-only execution plan access (host.plans:read / host.plans:execute)`
 >
-> 说明：以下是草稿，**尚未提交**。提交前请确认不与既有 Issue 重复。
+> 说明：以下是 #9675 提交前的草稿，**已由 #9675 取代**，保留仅为历史记录。
 
 ```markdown
 ### 背景
@@ -322,6 +321,8 @@ timeout 预算与取消注册表。
 本条与 result-view 的独立问题无关（见另一条 Issue：result-view 贡献的工作台查找失败）。
 ```
 
+</details>
+
 ## 附录 B：附带发现的上游缺陷（result-view）
 
 > 状态（2026-09-20）：**已修复**。已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597)，并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（`4f3be8cc`）；未进入 `v0.6.16` / `v0.6.17`，需等待后续 release。以下为原始发现记录。
@@ -337,7 +338,7 @@ timeout 预算与取消注册表。
 - 无法用"同时声明同名 workbench 贡献"绕过：manifest 校验会拒绝
   `Duplicate plugin contribution id`（真实宿主实测）。
 - 影响：`plugins/README.md:382-395` 描述的 result-view 能力（向插件工作台传递
-  `sql / connectionId / database / result`）在 `v0.6.16` 与当前 `main` 上不可用。
+  `sql / connectionId / database / result`）在 `v0.6.16` 与审计时的 `main` 上不可用。
 - 建议：`findWorkbench()` 或 result-view 打开流程接受 `result-view` 贡献，
   或让 result-view 显式声明其目标 workbench id。
 - 该缺陷虽然影响 Plan Detective 的 Phase 0 运行时验证，但**不是**宿主能力缺口的
