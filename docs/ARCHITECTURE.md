@@ -1,6 +1,8 @@
 # 架构
 
-本文件记录 DBX Plan Detective 的架构边界与职责划分。**当前仓库只有官方模板生成的 UI 外壳，本文描述的是目标架构，不是已实现架构。**实际完成度见 [../STATUS.md](../STATUS.md)。
+本文件记录 DBX Plan Detective 的架构边界与职责划分。
+**当前仓库已包含 Phase 0B 离线 Plan Core（`src/core/`，见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)），
+其余部分（Host 接入、Plan Diff、UI）仍为目标架构。** 实际完成度见 [../STATUS.md](../STATUS.md)。
 
 ## 1. 目标链路
 
@@ -34,6 +36,19 @@ Plan Diff / UI
 | Rule Engine | 基于指标与计划结构产出诊断规则结论 | Plan Detective |
 | Findings | 结论 + Evidence Level | Plan Detective |
 | Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
+
+### 当前实现状态（2026-09-20，Phase 0B Offline Core）
+
+```text
+已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
+未实现：DBX Host → Raw Execution Plan（等待 t8y2/dbx#9675）
+未实现：Plan Diff / 业务 UI
+```
+
+- `src/core/**` 只接受 `RawPlanInput`，不感知 connectionId / credential / Host API；fixture 即可驱动全链路。
+- Parser 负责 PostgreSQL 原生字段映射（引擎专有），Normalizer 负责数据库无关语义 + `engineSpecific`。
+- 未来 Host 接入只新增一个极薄的 `dbx-adapter`，将 DBX `rawPlan` 映射为 `RawPlanInput`；
+  Parser / Normalizer / Metrics / Rules 不需要修改。
 
 ## 2. 数据库目标
 
@@ -160,11 +175,19 @@ include = ["assets", "ui"]
 
 只有 `assets/` 与 `ui/` 进入 `.dbxp`；`docs/`、`fixtures/`、`src/`、`node_modules/` 不会被打包。
 
-## 8. 非目标（当前阶段）
+## 8. 非目标（Host 接入阶段）
 
-不实现 Rule Engine、Metrics Engine、Plan Diff、SQL Rewrite、AI、自动调优、自动建索引、自动执行 SQL、PostgreSQL parser、MySQL parser、自定义 Plan Canvas、数据库连接层。
+已实现的离线部分（PostgreSQL parser / NormalizedPlan / Metrics / 3 条确定性 Rules / Findings）见
+[PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。以下仍需独立 Issue，不允许顺手实现：
 
-这些需要独立 Issue。DBX 当前已有 Explain Plan 基础能力，相关复用必须先完成审计。
+- DBX Host API 调用 / `dbx-adapter` / Execution Plan 扩展点集成
+- Actual Plan 获取（`EXPLAIN ANALYZE` 执行）
+- MySQL parser / DWS 适配 / 文本计划 parser
+- Plan Diff / History
+- 自定义 Plan Canvas / 大型可视化
+- SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
+- AI / LLM
+- 数据库连接层 / Driver / 连接池 / 凭据 / SSH Tunnel
 
 ## 9. Audit Harness（开发用）
 

@@ -1,0 +1,51 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Nested Loop",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Join Type": "Inner",
+      "Startup Cost": 0.00,
+      "Total Cost": 1166072.00,
+      "Plan Rows": 13333400,
+      "Plan Width": 4,
+      "Inner Unique": false,
+      "Plans": [
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Outer",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Relation Name": "pd_fix_customers",
+          "Alias": "c",
+          "Startup Cost": 0.00,
+          "Total Cost": 4.00,
+          "Plan Rows": 200,
+          "Plan Width": 4
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Inner",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Relation Name": "pd_fix_events",
+          "Alias": "e",
+          "Startup Cost": 0.00,
+          "Total Cost": 4497.00,
+          "Plan Rows": 66667,
+          "Plan Width": 8,
+          "Filter": "(total > (c.id)::numeric)"
+        }
+      ]
+    },
+    "JIT": {
+      "Functions": 5,
+      "Options": {
+        "Inlining": true,
+        "Optimization": true,
+        "Expressions": true,
+        "Deforming": true
+      }
+    }
+  }
+]

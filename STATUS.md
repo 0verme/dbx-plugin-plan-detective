@@ -3,9 +3,9 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-20 |
-| 当前阶段 | **Phase 0 completed · Upstream implementation in progress**（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 已正式提交并由 `0verme` `/claim`；一期 Estimated Plan only） |
+| 当前阶段 | **Phase 0B · Offline Plan Core（已实现，PR #6）+ Host 接入 BLOCKED**（`Phase 0 completed · Upstream implementation in progress`；[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 一期 Estimated Plan only） |
 | 插件版本 | 0.1.0 |
-| 阶段结论 | 当前 blocker = **DBX Estimated Plan Host API 尚未实现 / 合并**（"能力是否存在"已无未知）；执行计划分析能力尚未实现；不依赖 Host API 的 fixture / 离线 core 可并行开发 |
+| 阶段结论 | 当前 blocker = **DBX Estimated Plan Host API 尚未实现 / 合并**（“能力是否存在”已无未知）；离线 Plan Core（parser / normalization / metrics / rules）已实现且不依赖 Host API；真实 Host 接入仍暂停 |
 
 ## 0. Phase 0 审计结论（2026-09-18）
 
@@ -43,18 +43,21 @@
 | `manifest.json` 合法性 | ✅ 通过（对上游 `main` 分支真实 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（结论 BLOCKED，见第 0 节） |
 | Audit Harness（开发/审计页） | ✅ 已实现（`src/App.svelte`，明确标注 DEVELOPMENT / AUDIT ONLY） |
+| Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`，不依赖 DBX Host API） |
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
-| Execution Plan Parsing | ⛔ 未实现 |
-| Plan Normalization | ⛔ 未实现 |
-| Metrics Engine | ⛔ 未实现 |
-| Hotspot Analysis | ⛔ 未实现 |
-| Rule-based Diagnosis | ⛔ 未实现 |
-| Findings + Evidence | ⛔ 未实现 |
+| Execution Plan Parsing | ✅ 已实现（离线，PostgreSQL 15.19 fixture） |
+| Plan Normalization | ✅ 已实现（公共字段 + `engineSpecific`） |
+| Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
+| Hotspot Analysis | ⛔ 未实现（属于后续 Issue） |
+| Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
+| Findings + Evidence | ✅ 已实现（`info` / `warning` / `high`） |
 | Plan Diff | ⛔ 未实现 |
 
-> ⛔ 表示"按计划不应开始"，**不是**待办遗留。启动条件、一期/Future 边界见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) §2.1 与 §3。
+> ⛔ 表示需要独立 Issue（Host 接入类还需等 t8y2/dbx#9675），**不是**待办遗留。
+> Offline Core 的契约、阈值与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；
+> 启动条件、一期 / Future 边界见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) §2.1 与 §3。
 
 ## 2. 本次初始化的实测验证记录
 
@@ -157,7 +160,8 @@ Build failed (exit 1)
 
 1. ✅ Phase 0 Host Capability Audit 已完成（历史结论 BLOCKED，清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)）；能力缺口已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675)。
 2. 上游反馈状态（2026-09-20 复核）：result-view 缺陷已提交 [#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [#9599](https://github.com/t8y2/dbx/pull/9599) 修复合入上游 `main`（尚未进入 release）。Estimated Plan Host API 已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)，已由 `0verme` `/claim`，是当前唯一 canonical upstream contract；下游设计已收敛（[docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)，PR #4 已合并；`docs/DBX_HOST_API_GAP_PROPOSAL.md` 已同步）。
-3. 当前 blocker = #9675 的实现 / 合并。上游落地前**暂停真实 Host 接入**；不设计插件侧替代架构、不引入数据库 Driver。不依赖 Host API 的 fixture / 离线 parser、normalization core 可以独立开发。
+3. 当前 blocker = #9675 的实现 / 合并。上游落地前**暂停真实 Host 接入**；不设计插件侧替代架构、不引入数据库 Driver。
+4. 离线 Plan Core 已由 Phase 0B 落地（PR #6），不受 Host blocker 影响：契约与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；#9675 落地后只需新增 `src/core/adapter/` 将 `rawPlan` 映射为 `RawPlanInput`。
 4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
 ## 6. 相关文档
@@ -166,6 +170,7 @@ Build failed (exit 1)
 - [AGENTS.md](AGENTS.md) —— 仓库约束与红线
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 决策记录、Phase 0 审计清单与结论、Fixture 策略
+- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 审计矩阵、逐项证据、运行时实测、复现步骤
 - [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、一期 Estimated Plan API 提案、Future / historical design 记录
 - [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note；canonical upstream contract 为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)

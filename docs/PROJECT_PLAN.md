@@ -99,6 +99,25 @@ Phase 0: BLOCKED — DBX internal capability exists, Plugin Host API does not ex
 - 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。—— 上游路径已推进：需求已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675) 并已认领，当前等待实现 / 合并。
 - 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 中无法打开工作台；已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（尚未进入 release），见 Gap Proposal 附录 B。
 
+### Phase 0B：Offline Core（2026-09-20 启动，已实现）
+
+Phase 0 判定 BLOCKED 的是 **Host 接入**，不是全部内核工作。经项目方明确授权，先以 fixture-first 方式落地与
+DBX 完全解耦的离线分析内核（不等待、不依赖 t8y2/dbx#9675）：
+
+```text
+PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
+```
+
+- 契约与实现：`src/core/**`、`tests/**`、`fixtures/postgres/**`、`scripts/**`；
+  唯一真相来源为 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
+- 已实现：RawPlanInput 契约、PostgreSQL JSON parser（含未知节点/未知字段保留）、NormalizedPlan、
+  确定性 Metrics、3 条确定性规则与 Findings/Evidence、19 个 fixture（17 真实采集 + 2 synthetic）
+  与四 stage golden test。
+- 未实现也不允许顺手实现：`dbx-adapter`、Host API 调用、数据库 Driver / 连接池 / 凭据、
+  Actual Plan 获取、MySQL parser、Plan Diff、UI、AI、SQL Rewrite。
+- 退出条件：本阶段不产出 Host 能力结论；Host 接入仍等待 #9675，落地后只需新增 adapter 将 `rawPlan`
+  映射为 `RawPlanInput`。
+
 ## 2.1 当前一期目标与 Future 边界
 
 **当前一期（Estimated Plan only）**：
@@ -115,6 +134,7 @@ DBX Host Adapter          ← 依赖上游 #9675 实现；接入前不可用
 
 - 只请求 `host.plans:read`、`host.getPlanCapabilities`、`host.explainPlan`，且 `mode=estimated`。
 - `DBX Host Adapter` 之外的下游链路可以基于 fixture 独立开发与验证，不阻塞于上游实现进度。
+  （离线部分已在 Phase 0B 实现，见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。）
 
 **Future（不属于一期，不属于 #9675）**：
 
@@ -129,13 +149,14 @@ Actual Plan / EXPLAIN ANALYZE
 
 ## 3. 后续阶段（Phase 1 离线部分进行中，真实 Host 接入暂不启动）
 
-| 阶段 | 内容 | 前置条件 |
+| 阶段 | 内容 | 状态 / 前置条件 |
 | --- | --- | --- |
-| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **进行中（离线部分）**：fixture 驱动的 parser / normalization 可独立开发；真实 Host 接入需等待 #9675 实现、合并并进入 release |
-| Phase 2 | Metrics Engine + Findings/Evidence | Phase 1 模型稳定（离线部分可先行） |
-| Phase 3 | Rule Engine | Phase 2 指标可复现 |
+| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20，PR #6）；Host 接入仍待 #9675 |
+| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **离线部分已完成**；真实 Host 接入需等待 #9675 实现、合并并进入 release |
+| Phase 2 | Metrics Engine + Findings/Evidence | ✅ 离线部分已实现（确定性 Metrics + Findings；扩展指标如 Hotspot / Estimate Error 属后续 Issue） |
+| Phase 3 | Rule Engine | ✅ 3 条确定性规则已实现；更多规则与规则分级属后续 Issue |
 | Phase 4 | Plan Diff / History | 上述阶段通过 |
-| Phase 5 | MySQL Adapter | 验证跨数据库抽象 |
+| Phase 5 | MySQL Adapter | 验证跨数据库抽象；边界设计见 `fixtures/mysql/README.md` |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -154,27 +175,27 @@ raw plan → normalized plan → metrics → findings
 - `fixtures/postgres/`、`fixtures/mysql/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
-- 后续引入 Golden Fixture 测试：解析与指标输出与预期快照比对。
+- Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` 四 stage 与预期快照比对；
+  约定见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
-**本次初始化不放入执行计划样本**，仅建立目录与说明。
+PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic）；MySQL 仅占位与 adapter boundary 设计。
 
-## 5. 当前阶段禁止顺手实现
+## 5. Host 接入与其它阶段仍禁止顺手实现
 
 以下能力属于后续阶段或 Future，除当前任务明确启动的模块外不得顺手实现（需要单独 Issue / 任务）：
 
-- Rule Engine
-- Metrics Engine
+- Host / Adapter 接入（`dbx-adapter`、Host API 调用、Execution Plan 扩展点集成）
 - Plan Diff
-- SQL Rewrite
-- AI
-- 自动调优
-- 自动建索引
-- 自动执行 SQL
+- SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
+- AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
-- PostgreSQL parser（仅在任务明确启动离线 parser / normalization 时进行，PostgreSQL 优先）
 - MySQL parser（PostgreSQL 优先，不属于一期前置）
-- 自定义 Plan Canvas
+- 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
+
+例外：**离线 Plan Core**（PostgreSQL parser、NormalizedPlan、Metrics、Rule Engine、Findings）已由项目方
+在 Phase 0B 中明确授权实现，范围限于 `src/core/**`，且不得依赖任何 DBX Host API。详见
+[PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
 ## 6. 依赖约束
 

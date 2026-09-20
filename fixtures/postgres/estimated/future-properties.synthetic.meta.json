@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-written minimal plan shaped like a PostgreSQL EXPLAIN (FORMAT JSON) envelope. Not captured from any database and not derived from production SQL. Its only purpose is to assert that unknown / future node properties (Future Planner Field, Custom Node Metric, Unknown Leaf Property, Future Leaf Property) survive parsing instead of failing it.",
+    "reference": null
+  },
+  "features": [
+    "unknown / future node properties",
+    "two-level tree",
+    "synthetic provenance marker"
+  ],
+  "expect": {
+    "rootNodeType": "Nested Loop",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}

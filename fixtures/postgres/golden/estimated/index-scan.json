@@ -1,0 +1,119 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Index Scan",
+      "relationName": "pd_fix_orders",
+      "alias": "pd_fix_orders",
+      "indexName": "pd_fix_orders_pkey",
+      "startupCost": 0.28,
+      "totalCost": 8.3,
+      "planRows": 1,
+      "planWidth": 27,
+      "filter": null,
+      "indexCondition": "(id = 42)",
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": false,
+      "asyncCapable": false,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [],
+      "extra": {
+        "Scan Direction": "Forward"
+      }
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "index_scan",
+      "nodeType": "Index Scan",
+      "relation": {
+        "name": "pd_fix_orders",
+        "alias": "pd_fix_orders",
+        "indexName": "pd_fix_orders_pkey"
+      },
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": 0.28,
+      "totalCost": 8.3,
+      "width": 27,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": "(id = 42)",
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": false,
+        "asyncCapable": false,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {
+          "Scan Direction": "Forward"
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": 8.3,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "Index Scan",
+      "relation": "pd_fix_orders",
+      "estimatedRows": 1
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "Index Scan",
+      "relation": "pd_fix_orders",
+      "incrementalCost": 8.3,
+      "totalCost": 8.3
+    }
+  },
+  "findings": []
+}

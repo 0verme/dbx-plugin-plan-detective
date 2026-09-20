@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (FORMAT JSON) SELECT * FROM pd_fix_orders WHERE id = 42;",
+  "sql": "SELECT * FROM pd_fix_orders WHERE id = 42;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "index-scan",
+    "single-node tree",
+    "estimated mode: no actual fields"
+  ],
+  "expect": {
+    "rootNodeType": "Index Scan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": []
+  }
+}

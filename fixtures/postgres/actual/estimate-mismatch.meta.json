@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "actual",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (ANALYZE, FORMAT JSON) SELECT * FROM pd_fix_orders WHERE upper(status) = 'PAID';",
+  "sql": "SELECT * FROM pd_fix_orders WHERE upper(status) = 'PAID';",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "estimate error: Plan Rows 20 vs Actual Rows 3600",
+    "filter on expression (upper)",
+    "single-node tree"
+  ],
+  "expect": {
+    "rootNodeType": "Seq Scan",
+    "hasActualFields": true,
+    "minDepth": 1,
+    "findingRuleIds": []
+  }
+}

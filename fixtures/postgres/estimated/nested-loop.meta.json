@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-19",
+  "captureCommand": "EXPLAIN (FORMAT JSON) SELECT c.id, l.id FROM pd_fix_customers c LEFT JOIN LATERAL (SELECT o.id FROM pd_fix_orders o WHERE o.customer_id = c.id ORDER BY o.id LIMIT 1) l ON true WHERE c.city = 'guangzhou';",
+  "sql": "SELECT c.id, l.id FROM pd_fix_customers c LEFT JOIN LATERAL (SELECT o.id FROM pd_fix_orders o WHERE o.customer_id = c.id ORDER BY o.id LIMIT 1) l ON true WHERE c.city = 'guangzhou';",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "nested-loop",
+    "lateral subquery",
+    "three-level tree"
+  ],
+  "expect": {
+    "rootNodeType": "Nested Loop",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

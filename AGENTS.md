@@ -28,7 +28,12 @@
 - 自动 SQL Rewrite、自动调优、自动建索引、自动执行 SQL
 - Rust backend、Go backend
 
-禁止顺手实现（均需独立 Issue）：Rule Engine、Metrics Engine、Plan Diff、Plan Canvas、PostgreSQL parser、MySQL parser、数据库连接层。
+禁止顺手实现（均需独立 Issue）：Host 接入 / `dbx-adapter`、Plan Diff、Plan Canvas、MySQL parser、
+数据库连接层、SQL Rewrite、AI。
+
+例外：**离线 Plan Core**（PostgreSQL parser / NormalizedPlan / Metrics / Rule Engine / Findings）已由
+Phase 0B 明确授权并实现，范围限于 `src/core/**`，必须保持 fixture-first，且不得依赖任何 DBX Host API。
+契约、阈值与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)。
 
 ## 必须区分的能力层级
 
@@ -48,6 +53,9 @@ DBX internal capability      ≠  Plugin Host public capability
 ## 开发与验证
 
 - 安装依赖：`npm install`
+- 离线测试（无需 DBX / 数据库 / 依赖）：`npm test`
+- 单 fixture 分析：`npm run analyze -- estimated/seq-scan`
+- 重建 golden：`npm run test:update-goldens`（仅确认 pipeline 变更是有意的时候）
 - 构建：`npm run build`
 - 本地开发：`dbx-plugin dev --path .`
 - 打包：`dbx-plugin package .`

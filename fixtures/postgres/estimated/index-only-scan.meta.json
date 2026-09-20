@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-20",
+  "captureCommand": "psql -h <host> -U <user> -d <test-db> -At -c \"EXPLAIN (FORMAT JSON) SELECT count(*) FROM pd_fix_events WHERE customer_id = 42;\"",
+  "sql": "SELECT count(*) FROM pd_fix_events WHERE customer_id = 42;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "index only scan",
+    "aggregate over index only scan",
+    "requires the VACUUM in setup.sql"
+  ],
+  "expect": {
+    "rootNodeType": "Aggregate",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}

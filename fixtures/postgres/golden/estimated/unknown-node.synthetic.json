@@ -1,0 +1,191 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Future Shuffle Node",
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "startupCost": 5,
+      "totalCost": 12.5,
+      "planRows": 1000,
+      "planWidth": 16,
+      "filter": null,
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": null,
+      "asyncCapable": null,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [
+        {
+          "nodeType": "Seq Scan",
+          "relationName": "pd_fix_synthetic_source",
+          "alias": "s",
+          "indexName": null,
+          "startupCost": 0,
+          "totalCost": 5,
+          "planRows": 1000,
+          "planWidth": 8,
+          "filter": "(flag = true)",
+          "indexCondition": null,
+          "recheckCondition": null,
+          "hashCondition": null,
+          "mergeCondition": null,
+          "joinFilter": null,
+          "joinType": null,
+          "parentRelationship": null,
+          "subplanName": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "presortedKeys": null,
+          "parallelAware": null,
+          "asyncCapable": null,
+          "strategy": null,
+          "partialMode": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "actualRows": null,
+          "actualLoops": null,
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {
+        "Future Metric": 42
+      }
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "unknown",
+      "nodeType": "Future Shuffle Node",
+      "relation": null,
+      "estimatedRows": 1000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": 5,
+      "totalCost": 12.5,
+      "width": 16,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "Seq Scan",
+          "relation": {
+            "name": "pd_fix_synthetic_source",
+            "alias": "s",
+            "indexName": null
+          },
+          "estimatedRows": 1000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": 0,
+          "totalCost": 5,
+          "width": 8,
+          "filter": "(flag = true)",
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "postgresql",
+            "parentRelationship": null,
+            "subplanName": null,
+            "strategy": null,
+            "partialMode": null,
+            "parallelAware": null,
+            "asyncCapable": null,
+            "hashCondition": null,
+            "mergeCondition": null,
+            "joinFilter": null,
+            "recheckCondition": null,
+            "presortedKeys": null,
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": null,
+        "asyncCapable": null,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {
+          "Future Metric": 42
+        }
+      }
+    },
+    "unknownNodeTypes": [
+      "Future Shuffle Node"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": 12.5,
+    "rootEstimatedRows": 1000,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "unknown",
+      "nodeType": "Future Shuffle Node",
+      "relation": null,
+      "estimatedRows": 1000
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0",
+      "kind": "unknown",
+      "nodeType": "Future Shuffle Node",
+      "relation": null,
+      "incrementalCost": 7.5,
+      "totalCost": 12.5
+    }
+  },
+  "findings": []
+}

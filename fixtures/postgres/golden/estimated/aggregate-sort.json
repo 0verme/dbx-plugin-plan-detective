@@ -1,0 +1,267 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Sort",
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "startupCost": 100.06,
+      "totalCost": 100.07,
+      "planRows": 3,
+      "planWidth": 45,
+      "filter": null,
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": [
+        "(count(*)) DESC"
+      ],
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": false,
+      "asyncCapable": false,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [
+        {
+          "nodeType": "Aggregate",
+          "relationName": null,
+          "alias": null,
+          "indexName": null,
+          "startupCost": 100,
+          "totalCost": 100.04,
+          "planRows": 3,
+          "planWidth": 45,
+          "filter": null,
+          "indexCondition": null,
+          "recheckCondition": null,
+          "hashCondition": null,
+          "mergeCondition": null,
+          "joinFilter": null,
+          "joinType": null,
+          "parentRelationship": "Outer",
+          "subplanName": null,
+          "sortKeys": null,
+          "groupKeys": [
+            "status"
+          ],
+          "presortedKeys": null,
+          "parallelAware": false,
+          "asyncCapable": false,
+          "strategy": "Hashed",
+          "partialMode": "Simple",
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "actualRows": null,
+          "actualLoops": null,
+          "children": [
+            {
+              "nodeType": "Seq Scan",
+              "relationName": "pd_fix_orders",
+              "alias": "pd_fix_orders",
+              "indexName": null,
+              "startupCost": 0,
+              "totalCost": 70,
+              "planRows": 4000,
+              "planWidth": 11,
+              "filter": null,
+              "indexCondition": null,
+              "recheckCondition": null,
+              "hashCondition": null,
+              "mergeCondition": null,
+              "joinFilter": null,
+              "joinType": null,
+              "parentRelationship": "Outer",
+              "subplanName": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "presortedKeys": null,
+              "parallelAware": false,
+              "asyncCapable": false,
+              "strategy": null,
+              "partialMode": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "actualRows": null,
+              "actualLoops": null,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {
+            "Planned Partitions": 0
+          }
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "sort",
+      "nodeType": "Sort",
+      "relation": null,
+      "estimatedRows": 3,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": 100.06,
+      "totalCost": 100.07,
+      "width": 45,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": [
+        "(count(*)) DESC"
+      ],
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "aggregate",
+          "nodeType": "Aggregate",
+          "relation": null,
+          "estimatedRows": 3,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": 100,
+          "totalCost": 100.04,
+          "width": 45,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": [
+            "status"
+          ],
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "Seq Scan",
+              "relation": {
+                "name": "pd_fix_orders",
+                "alias": "pd_fix_orders",
+                "indexName": null
+              },
+              "estimatedRows": 4000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": 0,
+              "totalCost": 70,
+              "width": 11,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "postgresql",
+                "parentRelationship": "Outer",
+                "subplanName": null,
+                "strategy": null,
+                "partialMode": null,
+                "parallelAware": false,
+                "asyncCapable": false,
+                "hashCondition": null,
+                "mergeCondition": null,
+                "joinFilter": null,
+                "recheckCondition": null,
+                "presortedKeys": null,
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "postgresql",
+            "parentRelationship": "Outer",
+            "subplanName": null,
+            "strategy": "Hashed",
+            "partialMode": "Simple",
+            "parallelAware": false,
+            "asyncCapable": false,
+            "hashCondition": null,
+            "mergeCondition": null,
+            "joinFilter": null,
+            "recheckCondition": null,
+            "presortedKeys": null,
+            "extra": {
+              "Planned Partitions": 0
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": false,
+        "asyncCapable": false,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": 100.07,
+    "rootEstimatedRows": 3,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_orders",
+      "estimatedRows": 4000
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_orders",
+      "incrementalCost": 70,
+      "totalCost": 70
+    }
+  },
+  "findings": []
+}

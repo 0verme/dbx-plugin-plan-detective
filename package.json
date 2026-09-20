@@ -4,7 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "build:watch": "vite build --watch"
+    "build:watch": "vite build --watch",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:update-goldens": "node scripts/update-goldens.mjs",
+    "analyze": "node scripts/analyze-fixture.mjs"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",

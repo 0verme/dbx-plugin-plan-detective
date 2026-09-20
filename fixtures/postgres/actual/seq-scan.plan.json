@@ -1,0 +1,25 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Seq Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Relation Name": "pd_fix_orders",
+      "Alias": "pd_fix_orders",
+      "Startup Cost": 0.00,
+      "Total Cost": 80.00,
+      "Plan Rows": 927,
+      "Plan Width": 27,
+      "Actual Startup Time": 0.102,
+      "Actual Total Time": 0.916,
+      "Actual Rows": 928,
+      "Actual Loops": 1,
+      "Filter": "(total > '2500'::numeric)",
+      "Rows Removed by Filter": 3072
+    },
+    "Planning Time": 0.328,
+    "Triggers": [
+    ],
+    "Execution Time": 0.970
+  }
+]

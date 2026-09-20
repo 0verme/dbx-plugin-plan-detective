@@ -1,0 +1,139 @@
+{
+  "parsed": {
+    "database": "postgresql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Seq Scan",
+      "relationName": "pd_fix_events",
+      "alias": "pd_fix_events",
+      "indexName": null,
+      "startupCost": 0,
+      "totalCost": 3997,
+      "planRows": 14093,
+      "planWidth": 31,
+      "filter": "(status = 'pending'::text)",
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": false,
+      "asyncCapable": false,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "postgresql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": {
+        "name": "pd_fix_events",
+        "alias": "pd_fix_events",
+        "indexName": null
+      },
+      "estimatedRows": 14093,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": 0,
+      "totalCost": 3997,
+      "width": 31,
+      "filter": "(status = 'pending'::text)",
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "postgresql",
+        "parentRelationship": null,
+        "subplanName": null,
+        "strategy": null,
+        "partialMode": null,
+        "parallelAware": false,
+        "asyncCapable": false,
+        "hashCondition": null,
+        "mergeCondition": null,
+        "joinFilter": null,
+        "recheckCondition": null,
+        "presortedKeys": null,
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": 3997,
+    "rootEstimatedRows": 14093,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_events",
+      "estimatedRows": 14093
+    },
+    "highestIncrementalCost": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "Seq Scan",
+      "relation": "pd_fix_events",
+      "incrementalCost": 3997,
+      "totalCost": 3997
+    }
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0",
+      "ruleId": "large-sequential-scan",
+      "severity": "warning",
+      "title": "Large sequential scan",
+      "summary": "Seq Scan on pd_fix_events with a filter is estimated to read 14093 rows and accounts for an incremental cost of 3997. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0",
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "Seq Scan",
+        "relation": "pd_fix_events",
+        "estimatedRows": 14093,
+        "estimatedTotalCost": 3997,
+        "incrementalCost": 3997,
+        "filter": "(status = 'pending'::text)",
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ]
+}

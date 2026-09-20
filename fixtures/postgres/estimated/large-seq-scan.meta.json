@@ -1,0 +1,28 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "15.19",
+  "capturedAt": "2026-09-20",
+  "captureCommand": "psql -h <host> -U <user> -d <test-db> -At -c \"EXPLAIN (FORMAT JSON) SELECT * FROM pd_fix_events;\"",
+  "sql": "SELECT * FROM pd_fix_events;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
+    "reference": null
+  },
+  "features": [
+    "seq scan",
+    "single node tree",
+    "200000 estimated rows",
+    "large-sequential-scan rule reaches high severity"
+  ],
+  "expect": {
+    "rootNodeType": "Seq Scan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [
+      "large-sequential-scan"
+    ]
+  }
+}
