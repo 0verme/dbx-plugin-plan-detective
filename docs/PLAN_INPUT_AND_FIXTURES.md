@@ -32,10 +32,15 @@ Metrics（确定性算术）
    │
    ▼
 Rules（确定性阈值）                → Findings（结论 + Evidence）
+   │
+   ▼
+UI（Fixture-driven MVP）            → Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector
 ```
 
 - Plan Core 位于 `src/core/`，不得 import DBX Host 类型、不得访问浏览器全局、不得连接数据库；
   DBX 上游扩展点未落地**不阻塞** Core 开发（fixture-first）。
+- UI 只消费 `analyzePlan()` 的返回值；`src/lib/` 的 view model 只做展示映射，不重算 Metrics、
+  不重跑规则、不修改 Core 语义；UI 同样不感知 Host API。
 - 依赖方向由测试强制：`tests/core-isolation.test.js` 同时检查「不得引用 `window` / `document` /
   `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」与「`postgres` / `normalize` / `metrics` / `rules` /
   `findings` 阶段不得出现 `connectionId` / `credential` / `password` / `manifest` / `iframe` /
@@ -333,5 +338,11 @@ DBX Host API 调用、数据库 Driver / 连接池 / 凭据、Actual Plan 获取
 MySQL parser、DWS 适配、文本计划 parser、Plan Diff、History、UI Tree、Plan Canvas、
 AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
-以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 落地，落地后只需新增 adapter 将
+以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，落地后只需新增 adapter 将
 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
+
+> 更新（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）：
+> Fixture-driven MVP UI 已实现（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector）。
+> 它**消费同一份契约**，没有修改本文的 Parser / NormalizedPlan / Metrics / Rules / Findings 语义、
+> 阈值与 golden；fixture 仍在构建期从 `fixtures/postgres/**` 读取，未复制为代码常量。
+> UI 层禁止事项（Host API、Driver、Plan Canvas、评分、AI）与 Core 一致。

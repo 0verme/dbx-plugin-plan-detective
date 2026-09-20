@@ -37,18 +37,32 @@ Plan Diff / UI
 | Findings | 结论 + Evidence Level | Plan Detective |
 | Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
 
-### 当前实现状态（2026-09-20，Phase 0B Offline Core）
+### 当前实现状态（2026-09-20）
 
 ```text
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
-未实现：DBX Host → Raw Execution Plan（等待 t8y2/dbx#9675）
-未实现：Plan Diff / 业务 UI
+已实现：Fixture-driven MVP UI（fixture → RawPlanInput → analyzePlan() → view model → Svelte）
+未实现：DBX Host → Raw Execution Plan（等待上游 t8y2/dbx#9692 / #9675 合并与 release）
+未实现：dbx-adapter（唯一的 DBX 感知层）
+未实现：Plan Diff / History / Plan Canvas
 ```
 
 - `src/core/**` 只接受 `RawPlanInput`，不感知 connectionId / credential / Host API；fixture 即可驱动全链路。
 - Parser 负责 PostgreSQL 原生字段映射（引擎专有），Normalizer 负责数据库无关语义 + `engineSpecific`。
-- 未来 Host 接入只新增一个极薄的 `dbx-adapter`，将 DBX `rawPlan` 映射为 `RawPlanInput`；
-  Parser / Normalizer / Metrics / Rules 不需要修改。
+- UI 数据链路（Fixture-driven MVP）：
+
+```text
+fixture（fixtures/postgres/**）
+   ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
+RawPlanInput
+   ↓ analyzePlan()
+parsed / normalized / metrics / findings
+   ↓ src/lib/view-model.js（纯映射，不重算 Core 结果）
+Svelte components（FixtureSelector / PlanSummary / FindingsList / PlanTree / NodeInspector）
+```
+
+- 未来 Host 接入只替换第一段：`DBX rawPlan → dbx-adapter → RawPlanInput`；
+  Parser / Normalizer / Metrics / Rules / view model / 组件均不需要重写。
 
 ## 2. 数据库目标
 
@@ -156,6 +170,28 @@ onBinary(listener)                       —— 需要 host.binary
 ## 6. 前端结构约定
 
 ```text
+src/
+├── App.svelte                 # Fixture-driven MVP 分析界面（含开发用宿主审计视图切换）
+├── app.css                    # 设计 tokens 与共享基础样式
+├── components/                # 按业务责任拆分的 Svelte 组件
+│   ├── FixtureSelector.svelte # fixture 选择 + provenance
+│   ├── PlanSummary.svelte     # Core Metrics 展示（不评分）
+│   ├── FindingsList.svelte    # rule findings + evidence
+│   ├── PlanTree.svelte        # 嵌套行计划树
+│   ├── NodeInspector.svelte   # 选中节点字段
+│   └── HostAudit.svelte       # Phase 0 Host Capability Audit（开发视图）
+└── lib/                       # 纯 UI 逻辑，可在 Node 中测试
+    ├── fixture-catalog.js     # fixture catalog / 筛选 / analyzeFixture()
+    ├── view-model.js          # summary / tree / findings / inspector 映射
+    └── format.js              # 展示格式化
+```
+
+- UI 只通过 `analyzePlan()` 消费 Core；不直接解析、不重算 Metrics、不重跑规则。
+- Fixture 来源为构建期 Vite 虚拟模块（`scripts/vite-plugin-fixtures.mjs`），
+  从 `fixtures/postgres/**` 读取 `.plan.json` 与展示字段，不含 golden / `setup.sql`。
+- `window.dbxPlugin` 仅由开发用 Host Audit 视图使用：
+
+```text
 window.dbxPlugin.ready            → 等待宿主桥接初始化
 window.dbxPlugin.locale           → 当前 DBX 界面语言
 window.dbxPlugin.context          → 当前工作台允许访问的上下文
@@ -177,20 +213,32 @@ include = ["assets", "ui"]
 
 ## 8. 非目标（Host 接入阶段）
 
-已实现的离线部分（PostgreSQL parser / NormalizedPlan / Metrics / 3 条确定性 Rules / Findings）见
+已实现的离线部分（PostgreSQL parser / NormalizedPlan / Metrics / 3 条确定性 Rules / Findings /
+Fixture-driven MVP UI：Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector）见
 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。以下仍需独立 Issue，不允许顺手实现：
 
 - DBX Host API 调用 / `dbx-adapter` / Execution Plan 扩展点集成
 - Actual Plan 获取（`EXPLAIN ANALYZE` 执行）
 - MySQL parser / DWS 适配 / 文本计划 parser
 - Plan Diff / History
-- 自定义 Plan Canvas / 大型可视化
+- 自定义 Plan Canvas / 大型可视化（当前只做轻量嵌套行计划树）
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - 数据库连接层 / Driver / 连接池 / 凭据 / SSH Tunnel
 
-## 9. Audit Harness（开发用）
+## 9. UI：Fixture-driven MVP 与开发用 Audit Harness
 
-`src/App.svelte` 当前是 **Phase 0 Host Capability Audit Harness**，页面顶部明确标注 `DEVELOPMENT / AUDIT ONLY`。它只做四件事：打印 `window.dbxPlugin` 的桥接面、打印宿主 `init` 消息、读取 `dbxPlugin.context` 与 `request("host.getContext")`、探测候选宿主方法名并按 `RESOLVED / REJECTED / UNSUPPORTED` 分类。
+`src/App.svelte` 现在是 **Fixture-driven MVP 分析视图**，顶部明确标注 `Offline / Fixture Mode`，
+数据只来自仓库内 fixture（`fixtures/postgres/**` 经构建期虚拟模块嵌入）与 Offline Core，
+不调用任何 DBX Host API、不建立数据库连接。
 
-它**不**包含解析器、指标、规则、Diff、AI，也不建立任何数据库连接；Phase 1 开始时将被真实业务 UI 替换。
+页面结构：Fixture Selector（含 provenance）→ Findings（主要业务区）→ Plan Summary / Plan Tree /
+Node Inspector。计划树为轻量嵌套行视图，不是 Canvas / DAG 编辑器。
+
+Phase 0 的 **Host Capability Audit Harness** 没有被删除，而是在同一 UI 中以“宿主审计（开发）”
+视图保留：它只打印 `window.dbxPlugin` 桥接面、宿主 `init` 消息、`dbxPlugin.context` 与
+`request("host.getContext")`，并探测候选宿主方法名；不包含解析器、指标、规则、Diff、AI，
+也不建立任何数据库连接。不在 DBX 宿主中时该视图会明确提示桥接不存在，而不影响分析视图。
+
+它**不**实现任何 Host 接入；#9692 合并后，真实接入仍只新增 `dbx-adapter` 将 `rawPlan` 映射为
+`RawPlanInput`。
