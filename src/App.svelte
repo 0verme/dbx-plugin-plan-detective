@@ -19,6 +19,7 @@
     describeAnalysisNotice,
     describeCapabilities,
     describeConnectionContext,
+    describeHostGate,
     describePlanWarning,
     formatRawPlan,
   } from "./lib/host-view-model.js";
@@ -46,7 +47,10 @@
    */
 
   const bridge = resolvePlanBridge();
-  const planApi = describePlanApi(bridge);
+  /** Fixtures / host audit are development tools and stay out of production UI. */
+  const isDev = import.meta.env.DEV;
+
+  let planApi = $state(describePlanApi(bridge));
 
   /* ------------------------------------------------------------- fixtures -- */
 
@@ -56,7 +60,7 @@
 
   /* ---------------------------------------------------------------- state -- */
 
-  let view = $state(planApi.available ? "host" : "fixtures");
+  let view = $state("host");
   let hostContext = $state(null);
   let manualConnectionId = $state("");
   let sqlText = $state("");
@@ -73,7 +77,7 @@
   /* ------------------------------------------------------- host lifecycle -- */
 
   onMount(() => {
-    if (!planApi.available) return undefined;
+    if (bridge === null) return undefined;
 
     const syncContext = () => {
       hostContext = bridge.context ?? null;
@@ -83,9 +87,21 @@
       }
     };
 
+    // `window.dbxPlugin` exists before the host init message fills
+    // `capabilities`. Re-evaluate the capability gate whenever init arrives; a
+    // pre-init bridge stays "initializing" and is never probed.
+    const syncPlanApi = () => {
+      planApi = describePlanApi(bridge, { initialized: true });
+    };
+
+    const handleInit = () => {
+      syncPlanApi();
+      syncContext();
+    };
+
     const offContext = typeof bridge.onContext === "function" ? bridge.onContext(syncContext) : null;
-    const offInit = typeof bridge.onInit === "function" ? bridge.onInit(syncContext) : null;
-    Promise.resolve(bridge.ready).then(syncContext, () => syncContext());
+    const offInit = typeof bridge.onInit === "function" ? bridge.onInit(handleInit) : null;
+    Promise.resolve(bridge.ready).then(handleInit, handleInit);
 
     return () => {
       offContext?.();
@@ -94,6 +110,7 @@
   });
 
   const contextView = $derived(describeConnectionContext(hostContext));
+  const hostGate = $derived(describeHostGate(planApi));
   const effectiveConnectionId = $derived(contextView.connectionId ?? (manualConnectionId.trim().length > 0 ? manualConnectionId.trim() : null));
   const capabilitiesView = $derived(describeCapabilities(capabilities));
   const capabilityMatches = $derived(capabilitiesConnectionId !== null && capabilitiesConnectionId === effectiveConnectionId);
@@ -136,7 +153,7 @@
   });
 
   const analyzeDisabledReason = $derived.by(() => {
-    if (!planApi.available) return planApi.reason;
+    if (!planApi.available) return planApi.reason ?? "DBX Plan API is unavailable.";
     if (effectiveConnectionId === null) return "缺少 connectionId";
     if (sqlText.trim().length === 0) return "请输入 SQL";
     if (capabilityState === "loading") return "正在读取宿主能力…";
@@ -234,23 +251,23 @@
     </div>
     <div class="header-right">
       {#if view === "host"}
-        <span class="badge {planApi.available ? 'info' : 'warning'}">
-          {planApi.available ? "DBX Host Mode · Estimated Plan" : "Host API unavailable"}
-        </span>
-      {:else}
+        <span class="badge {hostGate.tone}">{hostGate.badgeLabel}</span>
+      {:else if isDev}
         <span class="badge offline">Offline / Fixture Mode</span>
       {/if}
       <nav class="view-switch" aria-label="视图切换">
         <button type="button" class:active={view === "host"} onclick={() => (view = "host")}>Host 分析</button>
-        <button type="button" class:active={view === "fixtures"} onclick={() => (view = "fixtures")}>Fixtures（开发）</button>
-        <button type="button" class:active={view === "audit"} onclick={() => (view = "audit")}>宿主审计（开发）</button>
+        {#if isDev}
+          <button type="button" class:active={view === "fixtures"} onclick={() => (view = "fixtures")}>Fixtures（开发）</button>
+          <button type="button" class:active={view === "audit"} onclick={() => (view = "audit")}>宿主审计（开发）</button>
+        {/if}
       </nav>
     </div>
   </header>
 
-  {#if view === "audit"}
+  {#if isDev && view === "audit"}
     <HostAudit />
-  {:else if view === "fixtures"}
+  {:else if isDev && view === "fixtures"}
     <p class="mode-note">
       当前为 <strong>Offline / Fixture Mode</strong>（开发用）：数据来自仓库内 <code>fixtures/postgres/**</code>，
       经 <code>RawPlanInput → analyzePlan()</code> 离线分析。它不访问 DBX、数据库或网络。
@@ -276,11 +293,18 @@
       <code>mode: "estimated"</code>）。插件不建立数据库连接、不读取凭据、不执行 SQL；<code>EXPLAIN</code> 由 DBX 宿主生成。
     </p>
 
-    {#if !planApi.available}
+    {#if hostGate.state === "initializing"}
+      <section class="panel" aria-live="polite">
+        <strong>{hostGate.badgeLabel}</strong>
+        <p>{hostGate.message}</p>
+      </section>
+    {:else if !planApi.available}
       <section class="panel error-panel" role="alert">
         <strong>{describeAnalysisError("PLAN_API_UNAVAILABLE").title}</strong>
-        <p>{planApi.reason ?? "DBX Plan API is unavailable."}</p>
-        <p class="hint">离线开发可切换到 Fixtures（开发）视图；该视图不访问宿主。</p>
+        <p>{hostGate.message ?? "DBX Plan API is unavailable."}</p>
+        {#if isDev}
+          <p class="hint">离线开发可切换到 Fixtures（开发）视图；该视图不访问宿主。</p>
+        {/if}
       </section>
     {:else}
       <div class="host-input">

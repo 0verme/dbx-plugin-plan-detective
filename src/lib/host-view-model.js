@@ -59,6 +59,42 @@ export function describeCapabilities(capabilities) {
 }
 
 /**
+ * Map the runtime host gate (`describePlanApi`) onto the copy the Host view
+ * shows. `initializing` is a first-class state: the bridge exists, but the host
+ * init message has not arrived, so the UI must neither call the Plan API nor
+ * claim it is unavailable.
+ *
+ * @param {{ state?: string, available?: boolean, reason?: string | null } | null | undefined} api
+ * @returns {{
+ *   state: "initializing" | "available" | "unavailable",
+ *   badgeLabel: string,
+ *   tone: "info" | "warning",
+ *   message: string | null,
+ * }}
+ */
+export function describeHostGate(api) {
+  if (api?.state === "initializing") {
+    return {
+      state: "initializing",
+      badgeLabel: "正在初始化 DBX Host 能力…",
+      tone: "warning",
+      message: "已发现 DBX 插件桥，正在等待宿主 init message 与 capabilities.planApi 声明；初始化完成前不会调用任何 Host Plan API。",
+    };
+  }
+
+  if (api?.state === "available" && api?.available === true) {
+    return { state: "available", badgeLabel: "DBX Host Mode · Estimated Plan", tone: "info", message: null };
+  }
+
+  return {
+    state: "unavailable",
+    badgeLabel: "Host API unavailable",
+    tone: "warning",
+    message: api?.reason ?? null,
+  };
+}
+
+/**
  * Stable Chinese copy for every failure code the host boundary can produce.
  * The host message is always kept as a separate detail line; this table is the
  * part the plugin owns.

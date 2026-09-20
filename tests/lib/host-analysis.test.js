@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "../../src/lib/analysis-session.js";
 import { loadFixture } from "../helpers/fixtures.js";
+import { createSdkBridge } from "../helpers/sdk-bridge.js";
 
 /**
  * The analysis session is the only orchestration path from a DBX connection to
@@ -148,6 +149,55 @@ test("runHostAnalysis fails closed when the host has no plan API", async () => {
   const session = await runHostAnalysis({ ...REQUEST, bridge: { request: () => {} } });
   assert.equal(session.status, "error");
   assert.equal(session.error.code, "PLAN_API_UNAVAILABLE");
+});
+
+test("the session fails closed when planApi is false although both methods exist", async () => {
+  let called = 0;
+  const bridge = {
+    capabilities: { downloadFile: true, planApi: false },
+    getPlanCapabilities: async () => {
+      called += 1;
+      return capabilities();
+    },
+    explainPlan: async () => {
+      called += 1;
+      return planResult();
+    },
+  };
+
+  const loaded = await loadPlanCapabilities({ bridge, connectionId: "conn-1" });
+  assert.equal(loaded.status, "error");
+  assert.equal(loaded.error.code, "PLAN_API_UNAVAILABLE");
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "error");
+  assert.equal(session.error.code, "PLAN_API_UNAVAILABLE");
+  assert.equal(called, 0, "the session must not probe a host that does not advertise planApi");
+});
+
+test("the session waits for init instead of probing a pre-init bridge", async () => {
+  let called = 0;
+  const bridge = createSdkBridge({
+    getPlanCapabilities: async () => {
+      called += 1;
+      return capabilities();
+    },
+    explainPlan: async () => {
+      called += 1;
+      return planResult();
+    },
+  });
+
+  const before = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(before.status, "error");
+  assert.equal(before.error.code, "PLAN_API_UNAVAILABLE");
+  assert.match(before.error.message, /初始化/);
+  assert.equal(called, 0);
+
+  bridge.sendInit(true);
+  const after = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(after.status, "structured");
+  assert.equal(called, 2, "after init the session reads capabilities then the plan");
 });
 
 test("runHostAnalysis keeps the raw host result for a raw-only dialect", async () => {

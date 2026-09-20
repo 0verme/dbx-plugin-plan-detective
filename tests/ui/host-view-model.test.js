@@ -7,6 +7,7 @@ import {
   describeAnalysisNotice,
   describeCapabilities,
   describeConnectionContext,
+  describeHostGate,
   describePlanWarning,
   formatBytes,
   formatRawPlan,
@@ -85,6 +86,34 @@ test("describeCapabilities renders the host answer without reinterpretation", ()
 
   assert.equal(describeCapabilities(null), null);
   assert.equal(describeCapabilities(undefined), null);
+});
+
+test("describeHostGate keeps initializing distinct from unavailable", () => {
+  assert.deepEqual(describeHostGate({ state: "initializing", available: false, reason: "waiting" }), {
+    state: "initializing",
+    badgeLabel: "正在初始化 DBX Host 能力…",
+    tone: "warning",
+    message: "已发现 DBX 插件桥，正在等待宿主 init message 与 capabilities.planApi 声明；初始化完成前不会调用任何 Host Plan API。",
+  });
+
+  assert.deepEqual(describeHostGate({ state: "available", available: true, reason: null }), {
+    state: "available",
+    badgeLabel: "DBX Host Mode · Estimated Plan",
+    tone: "info",
+    message: null,
+  });
+
+  assert.deepEqual(describeHostGate({ state: "unavailable", available: false, reason: "宿主未声明 capabilities.planApi。" }), {
+    state: "unavailable",
+    badgeLabel: "Host API unavailable",
+    tone: "warning",
+    message: "宿主未声明 capabilities.planApi。",
+  });
+
+  // A partial/legacy shape must still fail closed to unavailable.
+  assert.equal(describeHostGate({ available: false, reason: null }).state, "unavailable");
+  assert.equal(describeHostGate({ state: "available", available: false }).state, "unavailable");
+  assert.equal(describeHostGate(null).state, "unavailable");
 });
 
 test("every host error code has its own copy", () => {

@@ -40,6 +40,12 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 - `manifest.json`：`engines.host_api: ^1.2`、`permissions: ["host.plans:read"]`、版本 0.2.0。
 - Fixture / mock 退出生产路径，只服务测试与离线开发。
 
+### 0.2.1 运行时 capability gate hardening（Issue #13，2026-09-20）
+
+- `src/host/dbx-plan-host.js`：`describePlanApi` 新增 `initializing / available / unavailable` 三态，`available` 必须同时满足 `capabilities.planApi === true` 且 `getPlanCapabilities` / `explainPlan` 都是 function；`planApi` false 或缺失时 fail closed（0 次 Host 调用），不再以 method presence 代替 capability。
+- init 时序：DBX SDK 在 init message 之前就已注入 `window.dbxPlugin`（`capabilities` getter 仍为 `{}`），此时状态为 `initializing`；`App.svelte` 在 `onMount` 监听 `bridge.ready` / `onInit`，init 后按 `{ initialized: true }` 重估。
+- 开发入口收敛：Fixtures（开发）与宿主审计（开发）仅在 `import.meta.env.DEV` 下渲染；生产构建的 bundle 不再包含这两个视图（`HostAudit` 组件与文案整体被 tree-shake）。
+
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
 完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
@@ -94,6 +100,8 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 
 ```text
 DBX context（result-view: connectionId / database / sql）
+   ↓
+planApi gate：capabilities.planApi === true 且两方法存在；false / 缺失 → fail closed（0 调用）
    ↓
 getPlanCapabilities(connectionId)          # supports.estimatedPlan === true 才继续
    ↓
