@@ -297,7 +297,8 @@ Plugin workbench 'io.github.0verme.plan-detective/io.github.0verme.plan-detectiv
 
 - 触发方式：执行 SQL 成功后点击结果工具栏中的插件 result-view 按钮（判据 `props.hasResult`，按钮确实渲染）。
 - 源码对应：`App.vue:4159-4166` 把 `tab.pluginWorkbench.contributionId`（= result-view id）传给 `PluginWorkbenchTab`，后者用 `findWorkbench()` 查找，而 `findWorkbench()` 只匹配 `type === "workbench"`（`frontendPlugin.ts:44-46`）。
-- 结论：`result-view` 贡献类型在 DBX `v0.6.16` 与当前 `main` 源码中**无法打开**；而它是目前唯一会把 `sql / connectionId / database / result` 交给插件的工作台路径。
+- 结论：`result-view` 贡献类型在 DBX `v0.6.16` 与审计时的 `main` 源码中**无法打开**；而它是目前唯一会把 `sql / connectionId / database / result` 交给插件的工作台路径。
+- **上游状态（2026-09-20 复核 `main @ d7e1b47`）**：已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597)，并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599)（merge `4f3be8cc`）修复、合入上游 `main`；`PluginWorkbenchTab` 改用 `findUiContribution()`，`result-view` 可正常打开。修复未进入 `v0.6.16` / `v0.6.17`，需等待后续 release。
 - 影响：Phase 0 无法在真实宿主中取得"当前 SQL 进入插件上下文"的正向运行时证据（设计路径由源码证据支持）。
 - 建议：作为独立的上游缺陷反馈（见 Gap Proposal 附录 B），与 Host API 能力缺口分开处理。
 
@@ -379,6 +380,6 @@ curl -X POST -F "file=@dist/io.github.0verme.plan-detective-0.1.0-universal.dbxp
 
 1. DBX Core 内部**具备**执行计划相关能力：查询执行、EXPLAIN（Estimated）、PostgreSQL Actual Plan（只读事务 + 回滚）、超时、取消。
 2. 公开的 Plugin Host API **没有**任何查询执行、EXPLAIN、计划读取、连接上下文读取入口；插件沙箱也无法绕过。
-3. 唯一设计上会向插件工作台投递 `connectionId / database / sql / result` 的路径（`result-view`）在 `v0.6.16` 中无法打开。
+3. 唯一设计上会向插件工作台投递 `connectionId / database / sql / result` 的路径（`result-view`）在 `v0.6.16` 中无法打开（该缺陷已在审计后由上游 PR #9599 修复，见 §6.2）。
 4. 因此 Phase 0 的结论是 **BLOCKED — Host API capability gap**；后续动作见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)。
 5. 按项目纪律：**不实现插件侧数据库执行层、不引入 Driver、不绕过沙箱**；等上游公开能力后再进入 Phase 1。

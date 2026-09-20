@@ -66,6 +66,8 @@ include = ["assets", "ui"]
 
 `docs/`、`fixtures/`、`src/`、`node_modules/` 不会进入 `.dbxp`。向 `assets/` 或 `ui/` 添加内容前，确认其确实需要随包分发。
 
+`ui/` 由 `npm run build` 生成，但**必须入库**（见下方 Git 规则）；它是发布产物，不是可忽略的本地生成物。
+
 ## 语言规则
 
 - 面向用户与文档的自然语言默认使用简体中文。
@@ -82,7 +84,8 @@ include = ["assets", "ui"]
 ## Git 规则
 
 - 只提交与当前任务直接相关的文件，禁止 `git add .` / `git add -A`。
-- 不提交生成物：`dist/`、`ui/`、`.dbx-dev/`、`node_modules/`（已由 `.gitignore` 覆盖）。
+- 不提交本地生成物：`dist/`、`.dbx-dev/`、`node_modules/`（已由 `.gitignore` 覆盖）。
+- **例外：`ui/` 必须入库。** DBX 官方 release workflow 不执行 `npm install` / `npm run build`，直接运行 `dbx-plugin package .`；缺少 `ui/` 会因 `manifest UI entry 'ui/index.html' does not exist` 打包失败。因此修改 `src/` 后必须重新 `npm run build` 并提交 `ui/` 的变更，不要将 `ui/` 加入 `.gitignore`。
 - 发现 `.env`、密钥、Token、私钥或真实连接串时，停止提交并提醒用户。
 - 不执行 force push，不删除远程内容。
 - 不修改 `t8y2/dbx` 仓库。

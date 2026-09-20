@@ -92,7 +92,7 @@ Phase 0: BLOCKED — DBX internal capability exists, Plugin Host API does not ex
 - 出口条件中的「至少三项明确结论」已满足，但**关键能力未公开**，因此不能判定 Phase 0 PASS。
 - 按纪律：不实现插件侧数据库执行层、不引入 Driver、不绕过沙箱、不调用 DBX 内部接口。
 - 下一步只有两条路：等待 / 推动上游公开 `host.plans:*` 一类只读计划 API（见 Gap Proposal），或由项目方决定改变产品边界（需新的架构决策与 Issue）。
-- 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 与当前 `main` 上无法打开工作台（见 Gap Proposal 附录 B）。
+- 附带上游缺陷：`result-view` 贡献在 `v0.6.16` 中无法打开工作台；已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（尚未进入 release），见 Gap Proposal 附录 B。
 
 ## 3. 后续阶段（暂不启动）
 

@@ -1,7 +1,8 @@
 # DBX Plugin Host API Gap Proposal
 
 > 关联：[Phase 0 Host Capability Audit](HOST_CAPABILITY_AUDIT.md) · Issue [#1](https://github.com/0verme/dbx-plugin-plan-detective/issues/1)
-> 状态：**提案（未向上游提交）**。本文件不修改 `t8y2/dbx`，仅作为反馈材料与上游 Issue 草稿的依据。
+> 状态（2026-09-20 复核）：**Host API 提案尚未向上游提交**；可直接提交的 Feature Issue 正文见 [`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。重复性检查未发现重复 Issue；相关但不重复：[#9396](https://github.com/t8y2/dbx/issues/9396)（更宽的插件 SQL 执行诉求）、[#5161](https://github.com/t8y2/dbx/issues/5161) / [#5160](https://github.com/t8y2/dbx/pull/5160)（DBX 内置 Plan Canvas）。附录 B 的 result-view 缺陷已由上游修复（[#9597](https://github.com/t8y2/dbx/issues/9597) → [PR #9599](https://github.com/t8y2/dbx/pull/9599)，已合入 `main`，尚未进入 release）。
+> 本文件不修改 `t8y2/dbx`，仅作为反馈材料与上游 Issue 草稿的依据。
 
 ## Problem
 
@@ -268,6 +269,9 @@ host.plan.progress   # { executionId, phase: "planning" | "executing" | "cancell
 
 ## 附录 A：上游 Issue 草稿（可提交到 `t8y2/dbx/issues`）
 
+> 更新（2026-09-20）：下方中文草稿已整理为英文优先、范围收窄、可直接提交的版本：[`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。提交时以该文件为准。
+> 重复性检查结论：无重复 Issue；#9396 是更宽的“插件执行任意 SQL”诉求，与本提案的只读计划获取不重复，提交时应在正文中交叉引用。
+>
 > 建议标题：`[Feature] Plugin Host API: expose read-only execution plan access (host.plans:read / host.plans:execute)`
 >
 > 说明：以下是草稿，**尚未提交**。提交前请确认不与既有 Issue 重复。
@@ -320,6 +324,8 @@ timeout 预算与取消注册表。
 
 ## 附录 B：附带发现的上游缺陷（result-view）
 
+> 状态（2026-09-20）：**已修复**。已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597)，并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599) 修复、合入上游 `main`（`4f3be8cc`）；未进入 `v0.6.16` / `v0.6.17`，需等待后续 release。以下为原始发现记录。
+>
 > 建议标题：`[Bug] result-view contribution cannot open: workbench lookup only matches type "workbench"`
 
 - 现象：插件声明 `result-view` 贡献后，在查询结果工具栏点击该按钮，DBX 显示

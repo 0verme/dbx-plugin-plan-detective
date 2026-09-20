@@ -24,7 +24,9 @@
 
 审计环境：DBX `v0.6.16` browser-static（真实宿主实测）+ PostgreSQL 15.19（本地审计库，凭据不入库）+ `t8y2/dbx` `main @ f0342ad3` 源码审计。未验证项（MySQL 运行时、桌面版差异）已在审计文档第 7 节逐项标记。
 
-附带发现：`result-view` 贡献在 `v0.6.16` 与当前 `main` 上无法打开工作台（`Plugin workbench '…' is unavailable`），已作为独立上游缺陷写入 Gap Proposal 附录 B。
+附带发现：`result-view` 贡献在 `v0.6.16` 与审计时的 `main` 上无法打开工作台（`Plugin workbench '…' is unavailable`），已作为独立上游缺陷写入 Gap Proposal 附录 B。
+
+上游状态（2026-09-20 复核 `t8y2/dbx` `main @ d7e1b47`）：该缺陷已提交为 [t8y2/dbx#9597](https://github.com/t8y2/dbx/issues/9597)，并由 [PR #9599](https://github.com/t8y2/dbx/pull/9599)（merge `4f3be8cc`）修复并合入上游 `main`；修复尚未进入任何正式 release（`v0.6.16` / `v0.6.17` 仍然受影响），需等待下一个 DBX 版本。
 
 ## 1. 完成度速览
 
@@ -70,7 +72,7 @@
 error: manifest UI entry 'ui/index.html' does not exist at ...\ui\index.html
 ```
 
-因此不要将 `ui/` 加入 `.gitignore`。已在 `.pi-lens.json` 中把 `ui/**`、`dist/**` 排除出静态扫描，避免对压缩产物误报。
+因此不要将 `ui/` 加入 `.gitignore`。已在 `.pi-lens.json` 中把 `ui/**`、`dist/**` 排除出静态扫描，避免对压缩产物误报。该规则已同步到 [AGENTS.md](AGENTS.md) 的 Git 规则与 [README.md](README.md) 的开发说明。
 
 ## 3. Host API 现状（文档取证 + 真实宿主实测）
 
@@ -150,7 +152,7 @@ Build failed (exit 1)
 ## 5. 待办
 
 1. ✅ Phase 0 Host Capability Audit 已完成（清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)，结论 BLOCKED）。
-2. 决定是否向上游 `t8y2/dbx` 提交插件宿主/能力相关 Issue（草稿见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 附录 A、附录 B）；目前**未经确认不修改上游仓库**。
+2. 上游反馈状态（2026-09-20 复核）：result-view 缺陷已提交 [#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [#9599](https://github.com/t8y2/dbx/pull/9599) 修复合入上游 `main`（尚未进入 release）。Execution Plan Plugin Host API 尚未发现重复 Issue（相关但不重复：[#9396](https://github.com/t8y2/dbx/issues/9396) 为更宽的插件 SQL 执行诉求；[#5161](https://github.com/t8y2/dbx/issues/5161) / [#5160](https://github.com/t8y2/dbx/pull/5160) 为 DBX 内置 Plan Canvas）；Feature Issue 正文已准备（[docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)），**尚未提交**，等待确认。
 3. 在上游公开只读计划 API 之前，**暂停** Phase 1 及以后实现；不设计插件侧替代架构、不引入数据库 Driver。
 4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
