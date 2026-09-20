@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyzePlan } from "../../src/core/analyze.js";
-import { analyzePostgresCost } from "../../src/core/hotspots/self-cost.js";
+import { analyzePostgresCost } from "../../src/core/cost/postgres-cost.js";
 import { walkNodes } from "../../src/core/tree.js";
 import { loadAllFixtures, loadFixture } from "../helpers/fixtures.js";
 
@@ -110,6 +110,10 @@ test("a truncating Limit stops cost attribution below it but not above it", () =
   const [hotspot] = analysis.hotspots.items;
   assert.deepEqual(hotspot.reasons.map((reason) => reason.code), ["cost-concentration"]);
   assert.equal(hotspot.reasons[0].evidence.selfCostShare, 0.9243);
+
+  assert.equal(analysis.metrics.costAttribution.status, "available");
+  assert.equal(analysis.metrics.highestIncrementalCost.nodeId, "0", "the truncated subtree is not comparable");
+  assert.equal(analysis.metrics.highestIncrementalCost.incrementalCost, 152.97);
 });
 
 test("the InitPlan fixture withholds PostgreSQL cost signals and keeps row signals", async () => {
@@ -117,6 +121,12 @@ test("the InitPlan fixture withholds PostgreSQL cost signals and keeps row signa
   const analysis = analyzePlan(fixture.input);
 
   assert.deepEqual(analysis.hotspots.cost, { engine: "postgresql", status: "withheld", reason: "PLAN_CONTAINS_SUBPLAN" });
+  assert.deepEqual(analysis.metrics.costAttribution, {
+    engine: "postgresql",
+    status: "withheld",
+    reason: "PLAN_CONTAINS_SUBPLAN",
+  });
+  assert.equal(analysis.metrics.highestIncrementalCost, null, "the Summary must not show a withheld cost");
   assert.deepEqual(analysis.hotspots.items.map((hotspot) => hotspot.nodeId), ["0.0.0", "0.1"]);
   for (const hotspot of analysis.hotspots.items) {
     assert.deepEqual(hotspot.reasons.map((reason) => reason.code), ["large-sequential-scan"]);
@@ -131,4 +141,27 @@ test("the PostgreSQL fixture set exercises both available and withheld cost sign
     fixtures.map((fixture) => analysisFor(`${fixture.mode}/${fixture.name}`).hotspots.cost.status),
   );
   assert.deepEqual([...statuses].sort(), ["available", "withheld"]);
+});
+
+test("metrics cost attribution never contradicts the hotspot cost envelope", () => {
+  for (const fixture of fixtures) {
+    const key = `${fixture.mode}/${fixture.name}`;
+    const analysis = analysisFor(key);
+    const { costAttribution, highestIncrementalCost, totalEstimatedCost } = analysis.metrics;
+
+    assert.equal(costAttribution.engine, "postgresql", `${key}: PostgreSQL cost model`);
+    if (analysis.hotspots.cost.status === "withheld") {
+      assert.equal(costAttribution.status, "withheld", `${key}: the Summary must not publish a withheld cost`);
+      assert.equal(highestIncrementalCost, null, `${key}: withheld attribution stays null`);
+      continue;
+    }
+
+    if (highestIncrementalCost === null) continue;
+    assert.equal(costAttribution.status, "available", `${key}: a published value needs an available envelope`);
+
+    const attribution = analyzePostgresCost(analysis.normalized.root, totalEstimatedCost);
+    const attributed = attribution.byNodeId.get(highestIncrementalCost.nodeId);
+    assert.ok(attributed, `${key}: ${highestIncrementalCost.nodeId} must be inside the attributable envelope`);
+    assert.equal(highestIncrementalCost.incrementalCost, attributed.selfCost, `${key}: value must be the attributed self cost`);
+  }
 });

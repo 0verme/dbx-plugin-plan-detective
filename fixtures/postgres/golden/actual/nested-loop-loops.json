@@ -328,6 +328,11 @@
       "relation": null,
       "estimatedRows": 80
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
       "nodeId": "0",
       "kind": "nested_loop",

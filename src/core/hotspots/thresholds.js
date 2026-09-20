@@ -37,7 +37,7 @@ export const HOTSPOT = Object.freeze({
   /**
    * PostgreSQL cost concentration: a node's own (incremental) cost relative to
    * the root Total Cost. Only used when the plan's cost accounting is
-   * cumulative; see self-cost.js.
+   * cumulative; see cost/postgres-cost.js.
    */
   postgresCost: Object.freeze({
     minSelfCost: 100,

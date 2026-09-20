@@ -12,7 +12,7 @@
  * - engine-neutral row signals (large sequential scan, nested-loop inner
  *   amplification) read estimated row counts only;
  * - PostgreSQL cost concentration reads `Total Cost` through the attribution
- *   envelope in self-cost.js;
+ *   envelope in ../cost/postgres-cost.js;
  * - MySQL signals read MySQL's own reported values: `rows_examined_per_scan`,
  *   `rows_produced_per_join`, `filtered`, access type, operation flags and
  *   `cost_info` inside one query block.
@@ -25,8 +25,8 @@
  * missing values and leaves every unavailable value as `null` or absent.
  */
 
+import { analyzePostgresCost } from "../cost/postgres-cost.js";
 import { flattenNodes } from "../tree.js";
-import { analyzePostgresCost } from "./self-cost.js";
 import { HOTSPOT } from "./thresholds.js";
 
 /** Attention ladder, strongest first. */

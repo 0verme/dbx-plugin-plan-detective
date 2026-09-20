@@ -18,7 +18,7 @@ const FORBIDDEN_TOKENS = ["window", "document", "dbxPlugin", "svelte", "@dbx-app
  * `raw-plan-input.js` lives at the Core root and deliberately names the values
  * that stay outside the contract, so only the stages are scanned here.
  */
-const KERNEL_DIRS = ["parsers", "postgres", "mysql", "normalize", "metrics", "rules", "findings", "hotspots"].map((name) =>
+const KERNEL_DIRS = ["parsers", "postgres", "mysql", "normalize", "metrics", "cost", "rules", "findings", "hotspots"].map((name) =>
   path.join(CORE_DIR, name),
 );
 const FORBIDDEN_KERNEL_TOKENS = [

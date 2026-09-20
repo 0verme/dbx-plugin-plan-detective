@@ -1,5 +1,17 @@
 /**
- * PostgreSQL cost attribution for hotspot analysis.
+ * PostgreSQL cost attribution.
+ *
+ * This is the single Core owner of the question "is `Total Cost` a cumulative
+ * subtree cost in this plan, and what does each node own?". Metrics and
+ * Hotspots are both consumers:
+ *
+ * - `metrics.costAttribution` publishes the envelope, and
+ *   `metrics.highestIncrementalCost` may only be filled from `byNodeId`;
+ * - `hotspots.cost` publishes the same envelope, and `cost-concentration`
+ *   reasons may only be produced from `byNodeId`.
+ *
+ * The two stages must never disagree: a plan whose cost signal is withheld by
+ * one must not be presented as a precise cost by the other.
  *
  * PostgreSQL reports `Total Cost` as a subtree-cumulative estimate, so the
  * naive "own cost" derivation is
@@ -40,6 +52,11 @@
  *
  * `MISSING_NODE_COST` intentionally differs from `incrementalCostOf`, which
  * treats a child without a cost as 0. Hotspot evidence refuses that guess.
+ *
+ * Beyond the four envelope reasons above, a consumer may add
+ * `NO_ATTRIBUTABLE_COST`: the envelope is reliable, but no node owns an
+ * attributable self cost (for example a `Limit` root that truncates its only
+ * child), so a "highest self cost" metric still has no value to publish.
  */
 
 import { flattenNodes } from "../tree.js";
@@ -53,7 +70,8 @@ const SUBPLAN_RELATIONSHIPS = new Set(["InitPlan", "SubPlan"]);
 /**
  * @typedef {Object} PostgresCostAttribution
  * @property {"available"|"withheld"} status
- * @property {string|null} reason stable withholding reason, `null` when available
+ * @property {string|null} reason one of `NO_PLAN_COST`, `MISSING_NODE_COST`,
+ *   `PLAN_CONTAINS_SUBPLAN`, `UNVERIFIED_COST_FLOW`; `null` when available
  * @property {Map<string, { selfCost: number, selfCostShare: number }>} byNodeId
  *   attributable self cost per normalized node id; empty when withheld
  */

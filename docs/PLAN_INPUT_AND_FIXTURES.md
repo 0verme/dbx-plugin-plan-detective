@@ -334,14 +334,33 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 | `joinCount` / `sortCount` / `aggregateCount` | join / sort / aggregate+group 计数 |
 | `unknownNodeTypeCount` | 未登记节点类型数 |
 | `largestEstimatedRows` | 估算行数最大的节点摘要（并列取先序第一个） |
-| `highestIncrementalCost` | 自身增量代价最大的节点摘要（并列取先序第一个） |
+| `costAttribution` | PostgreSQL 代价归因状态：`{ engine, status, reason }`（见下方） |
+| `highestIncrementalCost` | 归因安全时可归因自代价最大的节点摘要（并列取先序第一个）；不安全时为 `null` |
 
-增量代价沿用 PostgreSQL 语义，由 `src/core/tree.js` 的 `incrementalCostOf` 计算：
+代价指标不直接信任 `totalCost - Σ children.totalCost`。Metrics 与 Hotspots 共用
+`src/core/cost/postgres-cost.js` 的归因边界，只有当计划的 `Total Cost` 确实按子树累加时，
+`highestIncrementalCost` 才会从 `analyzePostgresCost().byNodeId`（可归因节点）中选出：
 
 ```text
-incrementalCost(node) = node.totalCost - Σ children.totalCost   （子节点无 cost 记 0）
-node.totalCost 缺失 → null（不猜）
+costAttribution.status = "available"       归因可靠，highestIncrementalCost 可展示
+                       = "withheld"        边界不成立或没有可归因节点，指标为 null
+                       = "not-applicable"  MySQL 等非 PostgreSQL 计划，不进入该语义
 ```
+
+withheld reason（与 `hotspots.cost.reason` 同一套）：
+
+| reason | 含义 |
+| --- | --- |
+| `NO_PLAN_COST` | 根节点没有正的 Total Cost，没有分母 |
+| `MISSING_NODE_COST` | 任一节点缺 Total Cost；缺失不按 `0` 处理 |
+| `PLAN_CONTAINS_SUBPLAN` | 含 InitPlan / SubPlan，父代价按 `cost_subplan()` 计入，不按子树累加 |
+| `UNVERIFIED_COST_FLOW` | 缺失或未知 `Parent Relationship`，代价流向无法验证 |
+| `NO_ATTRIBUTABLE_COST` | 边界可靠，但没有任何可归因节点（例如根节点自身截断子节点） |
+| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL 使用自己的 cost model |
+
+单节点负自代价（如 `Limit` 截断子节点）时，该节点及其子树不参与归因，祖先仍可归因；
+`src/core/tree.js` 的 `incrementalCostOf` 作为 legacy 路径继续服务 Findings，
+其“子节点无 cost 记 0”的语义不再用于 Metrics / Plan Summary。
 
 不做"性能评分 83 分"这类综合评分。
 
@@ -404,7 +423,7 @@ interface Finding {
 
 Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命中了哪条已知模式」）分层，两者可以命中同一节点但互不派生。
 实现：`src/core/hotspots/compute-hotspots.js`（信号聚合）、`src/core/hotspots/thresholds.js`（阈值）、
-`src/core/hotspots/self-cost.js`（PostgreSQL 代价归因边界）。
+`src/core/cost/postgres-cost.js`（PostgreSQL 代价归因边界，Metrics 共用）。
 
 ```ts
 HotspotAnalysis {
