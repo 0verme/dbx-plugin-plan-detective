@@ -6,7 +6,8 @@
  */
 
 export { analyzePlan } from "./analyze.js";
-export { PlanInputError, PlanParseError } from "./errors.js";
+export { adaptDbxEstimatedPlanResponse } from "./adapter/dbx-plan-response.js";
+export { DbxPlanAdapterError, PlanInputError, PlanParseError } from "./errors.js";
 export { createRawPlanInput, validateRawPlanInput, SUPPORTED_DATABASES, SUPPORTED_MODES, SUPPORTED_FORMATS } from "./raw-plan-input.js";
 export { parsePostgresJsonPlan } from "./postgres/parse-json-plan.js";
 export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";

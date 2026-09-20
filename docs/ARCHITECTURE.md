@@ -40,14 +40,17 @@ Plan Diff / UI
 ### 当前实现状态（2026-09-20）
 
 ```text
+已实现：DBX Estimated Plan Response → RawPlanInput adapter 契约（纯函数，离线；真实 Host wiring 待 t8y2/dbx#9692 merge / release）
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
 已实现：Fixture-driven MVP UI（fixture → RawPlanInput → analyzePlan() → view model → Svelte）
-未实现：DBX Host → Raw Execution Plan（等待上游 t8y2/dbx#9692 / #9675 合并与 release）
-未实现：dbx-adapter（唯一的 DBX 感知层）
+未实现：DBX Host → Raw Execution Plan 的真实 wiring（等待上游 t8y2/dbx#9692 / #9675 合并与 release）
 未实现：Plan Diff / History / Plan Canvas
 ```
 
 - `src/core/**` 只接受 `RawPlanInput`，不感知 connectionId / credential / Host API；fixture 即可驱动全链路。
+- `src/core/adapter/dbx-plan-response.js` 是唯一的 DBX 感知层（纯函数，离线）：将 #9692 的
+  `{ dbType, dbVersion?, format, rawPlan, truncated, warnings }` fail-closed 映射为 `RawPlanInput`；
+  契约与错误码见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md) 第 2.1 节。它不调用 Host API、不建连、不执行 EXPLAIN。
 - Parser 负责 PostgreSQL 原生字段映射（引擎专有），Normalizer 负责数据库无关语义 + `engineSpecific`。
 - UI 数据链路（Fixture-driven MVP）：
 
@@ -171,6 +174,8 @@ onBinary(listener)                       —— 需要 host.binary
 
 ```text
 src/
+├── core/                      # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules → Findings
+│   └── adapter/               # 唯一的 DBX 感知层：DBX response → RawPlanInput（离线契约）
 ├── App.svelte                 # Fixture-driven MVP 分析界面（含开发用宿主审计视图切换）
 ├── app.css                    # 设计 tokens 与共享基础样式
 ├── components/                # 按业务责任拆分的 Svelte 组件
@@ -240,5 +245,6 @@ Phase 0 的 **Host Capability Audit Harness** 没有被删除，而是在同一 
 `request("host.getContext")`，并探测候选宿主方法名；不包含解析器、指标、规则、Diff、AI，
 也不建立任何数据库连接。不在 DBX 宿主中时该视图会明确提示桥接不存在，而不影响分析视图。
 
-它**不**实现任何 Host 接入；#9692 合并后，真实接入仍只新增 `dbx-adapter` 将 `rawPlan` 映射为
-`RawPlanInput`。
+它**不**实现任何 Host 接入；`DBX Estimated Plan Response → RawPlanInput` 的 adapter 契约已在
+`src/core/adapter/dbx-plan-response.js` 离线实现（#9692 的 response shape），#9692 合并后真实接入只需把
+Host 返回值交给该 adapter。

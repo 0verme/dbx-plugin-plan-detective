@@ -4,8 +4,8 @@
 > `RawPlanInput`、PostgreSQL parser 输出、`NormalizedPlan`、Metrics、Findings/Rules、
 > fixture 目录约定与 Golden Test 机制。
 > DBX → Plugin 的**只读数据契约**（`sql` / `dbType` / `dbVersion` / `executionPlan.mode|format|raw`）见
-> [ARCHITECTURE.md](ARCHITECTURE.md) 第 3 节；两者由未来的 `dbx-adapter` 衔接。
-> 本轮**不**实现 adapter，也不依赖任何未合并的 DBX API。
+> [ARCHITECTURE.md](ARCHITECTURE.md) 第 3 节；两者由 `dbx-adapter` 衔接，其 `DBX response → RawPlanInput` 契约已离线实现
+> （第 2.1 节），不依赖任何未合并的 DBX API；真实 Host wiring 仍等待 t8y2/dbx#9692 合并 / release。
 
 ## 1. 职责边界与依赖方向
 
@@ -16,7 +16,7 @@ DBX Host（执行 EXPLAIN，产出 Raw Execution Plan）
 Execution Plan Plugin Extension Point（Host 提供；尚未落地）
    │
    ▼
-dbx-adapter（Plan Detective 内唯一的 DBX 感知层；尚未实现）
+dbx-adapter（Plan Detective 内唯一的 DBX 感知层；离线契约已实现，Host wiring 待 #9692）
    │
    ▼
 RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入契约
@@ -45,7 +45,8 @@ UI（Fixture-driven MVP）            → Fixture Selector / Plan Summary / Find
   `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」与「`postgres` / `normalize` / `metrics` / `rules` /
   `findings` 阶段不得出现 `connectionId` / `credential` / `password` / `manifest` / `iframe` /
   `result-view` / `queryTab`」。
-- `dbx-adapter` 是本契约唯一的转换点，必须保持极薄；本轮不实现 adapter，也不依赖任何未合并的 DBX API。
+- `dbx-adapter` 是本契约唯一的转换点，必须保持极薄；其 `DBX response → RawPlanInput` 契约已离线实现
+  （第 2.1 节），不依赖任何未合并的 DBX API。
 - DBX 的只读契约不包含 `connectionId`、`credential`、`catalog`、`clientSessionId`；`timeout` / `cancel`
   留在 Host 层。这些字段也**不进入**本契约。
 
@@ -80,6 +81,60 @@ interface RawPlanInput {
 - 未知顶层字段被忽略（forward compatible），不导致失败。
 - 契约错误一律抛 `PlanInputError`，带稳定 `code`（`INVALID_RAW_PLAN_INPUT`）。
 - 与 DBX 只读契约的映射由 `dbx-adapter` 负责，映射表与正式契约定义见 [ARCHITECTURE.md](ARCHITECTURE.md) 第 3 节。
+
+### 2.1 DBX Response Adapter Contract（离线已实现）
+
+实现：`src/core/adapter/dbx-plan-response.js`（纯函数；测试 `tests/core/dbx-plan-response.test.js`）。
+
+```ts
+adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
+```
+
+- `response` 是 DBX Host API 成功返回的 plain object（t8y2/dbx#9692 的 `PluginPlanResult`）：
+
+```ts
+{
+  dbType: string;              // DBX db_type 词汇；PostgreSQL 为 "postgres"
+  dbVersion?: string;          // 宿主已知时才有
+  format: "json" | "xml" | "text";
+  rawPlan: unknown;            // format === "json" 时为已解析 JSON，其余为文本
+  truncated: boolean;
+  warnings: string[];          // plan_not_json / plan_truncated / plan_rows_truncated
+}
+```
+
+- `options` 只允许 Adapter 已知、Host response 不返回的展示 provenance，当前仅 `{ sql?: string }`；
+  未知 option key 忽略，`null` 视为未提供。
+- 输出必须经过既有 `createRawPlanInput(...)`，不复制第二套校验；`RawPlanInput` 契约本身不修改。
+- 响应中的 `truncated` / `warnings` 在 Adapter 边界消化，不进入 Core；`rawPlan` 原引用直传。
+
+| DBX response | RawPlanInput | 规则 |
+| --- | --- | --- |
+| `dbType: "postgres"` | `database: "postgresql"` | 唯一允许的映射；其它 dbType 一律拒绝（含 `"postgresql"`——Host 词汇是 `postgres`） |
+| （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径，无 actual → estimated fallback |
+| `format: "json"` | `format: "json"` | 唯一允许的 format |
+| `rawPlan` | `plan` | 原引用直传，不克隆 / 不重写 / 不 JSON.parse |
+| `dbVersion?` | `databaseVersion?` | 字符串原样保留 |
+| `options.sql?` | `sql?` | 仅展示 provenance，parser 不依赖 |
+| `truncated` / `warnings` | — | 在 Adapter 边界消化，不进入 Core |
+
+Fail-closed 错误契约（`DbxPlanAdapterError`，稳定 `code`，message 不 dump `rawPlan`）：
+
+| code | 触发 |
+| --- | --- |
+| `INVALID_DBX_PLAN_RESPONSE` | 非 plain object；缺 / 空 `dbType`、`format`；缺 / null `rawPlan`；`warnings` 非字符串数组；`truncated` 非 boolean；`dbVersion` 非字符串（存在时） |
+| `UNSUPPORTED_DB_TYPE` | `dbType !== "postgres"`（mysql / sqlserver / oracle / dameng / sqlite …） |
+| `UNSUPPORTED_PLAN_FORMAT` | `format !== "json"`（不尝试解析 text / xml） |
+| `PLAN_NOT_JSON` | warnings 含 `plan_not_json` |
+| `PLAN_TRUNCATED` | `truncated === true`，或 warnings 含 `plan_truncated` |
+| `PLAN_ROWS_TRUNCATED` | warnings 含 `plan_rows_truncated` |
+| `INVALID_ADAPTER_OPTIONS` | Adapter 调用参数本身非法（非对象 / `sql` 非字符串） |
+
+Warning 策略：`plan_not_json` / `plan_truncated` / `plan_rows_truncated` 视为 payload 不可用 → reject；
+未来未知 warning 不自动 crash（忽略，不写入 RawPlanInput）。
+
+> 该 Adapter 是**离线契约**：不调用 Host API、不建立连接、不执行 EXPLAIN。真实 Host wiring 仍等待
+t8y2/dbx#9692 合并 / release；落地后只把 Host 返回值交给本 Adapter，不重新设计 Parser / Metrics / Rules / UI。
 
 ## 3. Estimated vs Actual
 
@@ -333,13 +388,14 @@ Findings 契约、golden 四 stage、determinism 与 JSON 可序列化、Plan Co
 
 ## 11. 明确不在本轮范围
 
-本轮（Offline Core vertical slice）不实现：`dbx-adapter`、Execution Plan 扩展点集成、
+本轮（Offline Core vertical slice）不实现：`dbx-adapter` 的真实 Host wiring（仅 `DBX response → RawPlanInput`
+离线契约已实现，见第 2.1 节）、Execution Plan 扩展点集成、
 DBX Host API 调用、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
 MySQL parser、DWS 适配、文本计划 parser、Plan Diff、History、UI Tree、Plan Canvas、
 AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
-以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，落地后只需新增 adapter 将
-`rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
+以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
+落地后只需把 Host 返回值交给第 2.1 节的 Adapter，将 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
 
 > 更新（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）：
 > Fixture-driven MVP UI 已实现（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector）。
