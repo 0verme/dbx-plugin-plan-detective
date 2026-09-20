@@ -9,8 +9,12 @@ import { listFixtureNames, loadFixture } from "../helpers/fixtures.js";
 /**
  * The adapter is the only DBX-aware boundary. These tests pin the response
  * shape to t8y2/dbx#9692 (`PluginPlanResult`) and the fail-closed policy:
- * unsupported databases, non-JSON formats and incomplete payloads must all
- * throw a stable error instead of degrading into a plausible-looking analysis.
+ * unknown databases, unknown formats and incomplete payloads must throw a
+ * stable error instead of degrading into a plausible-looking analysis.
+ *
+ * Every dialect the merged host contract can return maps to a Plan Core family
+ * (structured or raw-only); only a dbType the contract cannot produce is
+ * rejected.
  */
 
 /** Minimal well-formed response matching the #9692 `PluginPlanResult` shape. */
@@ -71,6 +75,50 @@ test("maps a PostgreSQL JSON estimated response to RawPlanInput", () => {
 test("adapter output exposes exactly the RawPlanInput contract", () => {
   const input = adaptDbxEstimatedPlanResponse(dbxResponse());
   assert.deepEqual(Object.keys(input).sort(), ["database", "databaseVersion", "format", "mode", "plan"]);
+});
+
+test("maps every dbType the merged host contract can return", () => {
+  const cases = [
+    ["postgres", "postgresql"],
+    ["mysql", "mysql"],
+    ["sqlserver", "sqlserver"],
+    ["oracle", "oracle"],
+    ["oceanbase-oracle", "oceanbase-oracle"],
+    ["doris", "doris"],
+    ["dameng", "dameng"],
+    ["questdb", "questdb"],
+  ];
+
+  for (const [dbType, database] of cases) {
+    const input = adaptDbxEstimatedPlanResponse(dbxResponse({ dbType }));
+    assert.equal(input.database, database, `${dbType} must map to ${database}`);
+    assert.equal(input.mode, "estimated");
+  }
+});
+
+test("accepts json, xml and text formats without parsing them", () => {
+  const json = adaptDbxEstimatedPlanResponse(dbxResponse());
+  assert.equal(json.format, "json");
+
+  const xml = adaptDbxEstimatedPlanResponse(
+    dbxResponse({ dbType: "sqlserver", format: "xml", rawPlan: "<ShowPlanXML><BatchSequence/></ShowPlanXML>" }),
+  );
+  assert.equal(xml.format, "xml");
+  assert.equal(xml.plan, "<ShowPlanXML><BatchSequence/></ShowPlanXML>");
+
+  const text = adaptDbxEstimatedPlanResponse(
+    dbxResponse({ dbType: "dameng", format: "text", rawPlan: "1 #NSET2: [0, 1, 0]" }),
+  );
+  assert.equal(text.format, "text");
+  assert.equal(text.plan, "1 #NSET2: [0, 1, 0]");
+});
+
+test("plan_not_json is accepted as text because the host already downgraded the format", () => {
+  const input = adaptDbxEstimatedPlanResponse(
+    dbxResponse({ format: "text", rawPlan: "Seq Scan on pd_fix_orders", warnings: ["plan_not_json"] }),
+  );
+  assert.equal(input.format, "text");
+  assert.equal(input.plan, "Seq Scan on pd_fix_orders");
 });
 
 test("keeps optional sql and databaseVersion as display provenance", () => {
@@ -142,6 +190,9 @@ test("malformed responses fail closed with INVALID_DBX_PLAN_RESPONSE", () => {
     ["non-boolean truncated", dbxResponse({ truncated: "false" })],
     ["null dbVersion", dbxResponse({ dbVersion: null })],
     ["non-string dbVersion", dbxResponse({ dbVersion: 15.19 })],
+    ["json format with a string plan", dbxResponse({ rawPlan: "Seq Scan" })],
+    ["text format with a JSON plan", dbxResponse({ format: "text", rawPlan: [{ Plan: {} }] })],
+    ["plan_not_json with json format", dbxResponse({ warnings: ["plan_not_json"] })],
   ];
 
   for (const [label, response] of cases) {
@@ -149,25 +200,25 @@ test("malformed responses fail closed with INVALID_DBX_PLAN_RESPONSE", () => {
   }
 });
 
-test("unsupported dbType fails closed with UNSUPPORTED_DB_TYPE", () => {
-  // The host vocabulary is exactly "postgres"; even "postgresql" is not the
-  // contract value, and no other DBX dialect has a Plan Core parser yet.
-  for (const dbType of ["mysql", "sqlserver", "oracle", "dameng", "sqlite", "postgresql", "MYSQL", "gaussdb"]) {
+test("a dbType the merged contract cannot return fails closed with UNSUPPORTED_DB_TYPE", () => {
+  // `postgresql` is Plan Core's family name, not DBX's dbType vocabulary; the
+  // rest are dialects without a host estimated-plan path.
+  for (const dbType of ["sqlite", "postgresql", "MYSQL", "gaussdb", "redis", "unknown-db"]) {
     assertAdapterError(`dbType ${dbType}`, () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType })), "UNSUPPORTED_DB_TYPE");
   }
 
   assert.throws(
-    () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "mysql" })),
+    () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "sqlite" })),
     (error) => {
       assert.equal(error.code, "UNSUPPORTED_DB_TYPE");
-      assert.match(error.message, /mysql/);
+      assert.match(error.message, /sqlite/);
       return true;
     },
   );
 });
 
-test("non-JSON formats fail closed with UNSUPPORTED_PLAN_FORMAT", () => {
-  for (const format of ["text", "xml"]) {
+test("a format outside the merged contract fails closed with UNSUPPORTED_PLAN_FORMAT", () => {
+  for (const format of ["yaml", "showplan", "JSON"]) {
     assertAdapterError(
       `format ${format}`,
       () => adaptDbxEstimatedPlanResponse(dbxResponse({ format, rawPlan: "Seq Scan on pd_fix_orders" })),
@@ -176,25 +227,16 @@ test("non-JSON formats fail closed with UNSUPPORTED_PLAN_FORMAT", () => {
   }
 
   assert.throws(
-    () => adaptDbxEstimatedPlanResponse(dbxResponse({ format: "xml", rawPlan: "<ShowPlanXML/>" })),
+    () => adaptDbxEstimatedPlanResponse(dbxResponse({ format: "yaml", rawPlan: "plan: yes" })),
     (error) => {
       assert.equal(error.code, "UNSUPPORTED_PLAN_FORMAT");
-      assert.match(error.message, /xml/);
+      assert.match(error.message, /yaml/);
       return true;
     },
   );
 });
 
-test("plan_not_json fails closed before the text-format gate", () => {
-  const response = dbxResponse({
-    format: "text",
-    rawPlan: "Seq Scan on pd_fix_orders",
-    warnings: ["plan_not_json"],
-  });
-  assertAdapterError("plan_not_json", () => adaptDbxEstimatedPlanResponse(response), "PLAN_NOT_JSON");
-});
-
-test("truncation signals fail closed", () => {
+test("truncation signals fail closed with PLAN_TRUNCATED", () => {
   assertAdapterError(
     "truncated flag",
     () => adaptDbxEstimatedPlanResponse(dbxResponse({ truncated: true })),
@@ -208,12 +250,12 @@ test("truncation signals fail closed", () => {
   assertAdapterError(
     "plan_rows_truncated warning",
     () => adaptDbxEstimatedPlanResponse(dbxResponse({ truncated: true, warnings: ["plan_rows_truncated"] })),
-    "PLAN_ROWS_TRUNCATED",
+    "PLAN_TRUNCATED",
   );
   assertAdapterError(
     "truncation warning without the flag",
-    () => adaptDbxEstimatedPlanResponse(dbxResponse({ truncated: false, warnings: ["plan_rows_truncated"] })),
-    "PLAN_ROWS_TRUNCATED",
+    () => adaptDbxEstimatedPlanResponse(dbxResponse({ format: "text", rawPlan: "cut off", truncated: false, warnings: ["plan_rows_truncated"] })),
+    "PLAN_TRUNCATED",
   );
 });
 

@@ -1,54 +1,60 @@
 /**
  * Adapter: DBX estimated plan Host API response -> RawPlanInput.
  *
- * This is the single DBX-aware boundary of Plan Detective. It is deliberately a
+ * This is the single DBX-aware boundary of Plan Core. It is deliberately a
  * pure function: it validates the plain object the host returned, applies a
  * fail-closed policy and hands the result to the existing
  * `createRawPlanInput(...)` contract. It never calls a host bridge, opens a
- * connection, runs EXPLAIN, or parses XML / text plans.
+ * connection, runs EXPLAIN, or parses JSON / XML / text plans.
  *
  *     DBX estimated plan response -> adaptDbxEstimatedPlanResponse() -> RawPlanInput -> Plan Core
  *
- * Upstream contract: t8y2/dbx#9675, implementation PR t8y2/dbx#9692. The
- * response shape accepted here is that PR's `PluginPlanResult`:
+ * Upstream contract: t8y2/dbx#9675, implementation PR t8y2/dbx#9692 (merged).
+ * The response shape accepted here is that PR's `PluginPlanResult`:
  *
  *     { dbType, dbVersion?, format, rawPlan, truncated, warnings }
  *
- * `dbType` uses DBX's `db_type` vocabulary, where PostgreSQL is `"postgres"`.
+ * `dbType` uses DBX's `db_type` vocabulary (for example `"postgres"` or
+ * `"oceanbase-oracle"`); the adapter maps it to Plan Core's database family.
  * The response carries no `mode`: #9692 only serves estimated plans, so this
  * adapter always emits `mode: "estimated"`. There is no actual-plan path and no
  * actual -> estimated fallback; actual plans need a separate contract.
+ *
+ * Structured parsing is not decided here. Every dialect the host can return
+ * maps to a RawPlanInput; the parser registry decides whether that family has a
+ * structured parser or is raw-only.
  */
 
 import { DbxPlanAdapterError } from "../errors.js";
 import { SUPPORTED_DATABASES, SUPPORTED_FORMATS, createRawPlanInput } from "../raw-plan-input.js";
 
-/** DBX `db_type` for PostgreSQL (upstream `plugins/connection-types/postgres.yaml`). */
-const DBX_DB_TYPE_POSTGRES = "postgres";
-
-/** RawPlanInput database value the DBX PostgreSQL dbType maps to. */
-const CORE_DATABASE_POSTGRES = "postgresql";
+/**
+ * DBX `db_type` -> Plan Core database family.
+ *
+ * Mirrors `supports_explain_plan` / `estimated_plan_format` in
+ * `crates/dbx-sql/src/query_execution_sql.rs`. A dbType that is absent here is
+ * not a dialect the merged host contract can produce, so it fails closed
+ * instead of being guessed into a family.
+ */
+const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
+  postgres: "postgresql",
+  mysql: "mysql",
+  sqlserver: "sqlserver",
+  oracle: "oracle",
+  "oceanbase-oracle": "oceanbase-oracle",
+  doris: "doris",
+  dameng: "dameng",
+  questdb: "questdb",
+});
 
 /** The only mode this host contract serves (t8y2/dbx#9692). */
 const CORE_MODE_ESTIMATED = "estimated";
 
-/** The only plan serialization Plan Core can parse today. */
-const CORE_FORMAT_JSON = "json";
+/** Host warnings that mean the payload is incomplete and must not be parsed. */
+const TRUNCATION_WARNINGS = Object.freeze(["plan_truncated", "plan_rows_truncated"]);
 
-/**
- * Host warnings that mean the payload must not enter the analysis pipeline.
- *
- * `plan_not_json` is emitted together with `format: "text"` by the host, so it
- * is checked before the format gate to keep the specific reason instead of
- * collapsing into "unsupported format". Unknown warnings stay inert: they are
- * ignored rather than turned into a crash, because only these three are defined
- * as "the payload is incomplete or not JSON".
- */
-const UNSAFE_WARNING_CODES = new Map([
-  ["plan_not_json", "PLAN_NOT_JSON"],
-  ["plan_truncated", "PLAN_TRUNCATED"],
-  ["plan_rows_truncated", "PLAN_ROWS_TRUNCATED"],
-]);
+/** `plan_not_json` means the host already downgraded the payload to `text`. */
+const WARNING_PLAN_NOT_JSON = "plan_not_json";
 
 /**
  * Validate one DBX estimated plan response and map it to a RawPlanInput.
@@ -70,29 +76,29 @@ export function adaptDbxEstimatedPlanResponse(response, options) {
 
   assertResponseShape(response);
 
-  if (response.dbType !== DBX_DB_TYPE_POSTGRES) {
+  const database = DATABASE_BY_DBX_DB_TYPE[response.dbType];
+  if (database === undefined) {
     throw new DbxPlanAdapterError(
       "UNSUPPORTED_DB_TYPE",
-      `DBX dbType ${describeValue(response.dbType)} is not supported; this adapter only maps ` +
-        `"${DBX_DB_TYPE_POSTGRES}" to ${SUPPORTED_DATABASES.map((database) => JSON.stringify(database)).join(", ")}.`,
+      `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
+        `supported dbTypes map to ${SUPPORTED_DATABASES.map((family) => JSON.stringify(family)).join(", ")}.`,
     );
   }
 
-  rejectUnsafeWarnings(response.warnings);
-  rejectTruncation(response.truncated);
-
-  if (response.format !== CORE_FORMAT_JSON) {
+  if (!SUPPORTED_FORMATS.includes(response.format)) {
     throw new DbxPlanAdapterError(
       "UNSUPPORTED_PLAN_FORMAT",
-      `DBX plan format ${describeValue(response.format)} is not supported; Plan Core can only parse ` +
+      `DBX plan format ${describeValue(response.format)} is not supported; Plan Core accepts ` +
         `${SUPPORTED_FORMATS.map((format) => JSON.stringify(format)).join(", ")}.`,
     );
   }
 
+  rejectTruncation(response.truncated, response.warnings);
+
   return createRawPlanInput({
-    database: CORE_DATABASE_POSTGRES,
+    database,
     mode: CORE_MODE_ESTIMATED,
-    format: CORE_FORMAT_JSON,
+    format: response.format,
     plan: response.rawPlan,
     ...(sql === undefined ? {} : { sql }),
     ...(response.dbVersion === undefined ? {} : { databaseVersion: response.dbVersion }),
@@ -125,34 +131,33 @@ function assertResponseShape(response) {
   if (response.dbVersion !== undefined && typeof response.dbVersion !== "string") {
     throw invalidResponse(`dbVersion must be a string when present; got ${describeValue(response.dbVersion)}.`);
   }
+  if (response.format === "json" && typeof response.rawPlan === "string") {
+    throw invalidResponse("format is json but rawPlan is a string; the host must return a JSON payload.");
+  }
+  if (response.format !== "json" && typeof response.rawPlan !== "string") {
+    throw invalidResponse(`format is ${response.format} but rawPlan is not a string.`);
+  }
+  if (response.warnings.includes(WARNING_PLAN_NOT_JSON) && response.format !== "text") {
+    throw invalidResponse(`warning ${WARNING_PLAN_NOT_JSON} requires format "text".`);
+  }
 }
 
 /**
+ * An incomplete plan cannot produce trustworthy findings, so truncation is a
+ * hard failure for this boundary. The UI keeps the raw host result and shows it
+ * with a warning instead of routing it through the parser.
+ *
+ * @param {boolean} truncated
  * @param {string[]} warnings
  */
-function rejectUnsafeWarnings(warnings) {
-  for (const warning of warnings) {
-    const code = UNSAFE_WARNING_CODES.get(warning);
-    if (code !== undefined) {
-      throw new DbxPlanAdapterError(
-        code,
-        `DBX plan response is not analyzable: warning ${JSON.stringify(warning)} means the payload is ` +
-          "incomplete or not JSON, so it must not reach the plan parser.",
-      );
-    }
-  }
-}
+function rejectTruncation(truncated, warnings) {
+  const truncatedWarning = warnings.find((warning) => TRUNCATION_WARNINGS.includes(warning));
+  if (!truncated && truncatedWarning === undefined) return;
 
-/**
- * @param {boolean} truncated
- */
-function rejectTruncation(truncated) {
-  if (truncated) {
-    throw new DbxPlanAdapterError(
-      "PLAN_TRUNCATED",
-      "DBX plan response is marked truncated; an incomplete plan cannot produce trustworthy findings.",
-    );
-  }
+  throw new DbxPlanAdapterError(
+    "PLAN_TRUNCATED",
+    `DBX plan response is incomplete (${truncatedWarning ?? "truncated"}); an incomplete plan must not reach the plan parser.`,
+  );
 }
 
 /**

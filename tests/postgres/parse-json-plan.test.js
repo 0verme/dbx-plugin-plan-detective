@@ -295,7 +295,7 @@ test("a single sort key reported as a string is accepted as a one-element list",
 
 test("contract violations surface as PlanInputError before parsing", () => {
   assert.throws(
-    () => parsePostgresJsonPlan({ database: "mysql", mode: "estimated", format: "json", plan: [] }),
+    () => parsePostgresJsonPlan({ database: "redis", mode: "estimated", format: "json", plan: [] }),
     (error) => {
       assert.ok(error instanceof PlanInputError);
       assert.equal(error.code, "INVALID_RAW_PLAN_INPUT");

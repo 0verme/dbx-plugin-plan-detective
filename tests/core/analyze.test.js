@@ -117,7 +117,7 @@ test("analyzePlan propagates contract and parse errors unchanged", () => {
     (error) => error instanceof PlanParseError && error.code === "MODE_MISMATCH",
   );
   assert.throws(
-    () => analyzePlan({ database: "mysql", mode: "estimated", format: "json", plan: [] }),
+    () => analyzePlan({ database: "redis", mode: "estimated", format: "json", plan: [] }),
     (error) => error instanceof PlanInputError && error.code === "INVALID_RAW_PLAN_INPUT",
   );
 });

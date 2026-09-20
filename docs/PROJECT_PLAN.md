@@ -1,8 +1,8 @@
 # 项目计划
 
-**Offline Core 与 Fixture-driven MVP UI 已实现（不依赖上游合并）；真实 Host 接入仍等待上游 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并 / release。**本文件记录已确认决策、当前阶段任务与路线约束。
+**Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-20）：Phase 0 已完成；上游 Estimated Plan Host API 需求已正式提交并认领（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)，实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)），当前处于 `Offline Core implemented · Fixture-driven MVP UI implemented · DBX response adapter contract implemented offline · Real Host integration blocked on upstream t8y2/dbx#9692 merge / release`。一期只做 Estimated Plan；Actual Plan 属于 Future。
+> 状态（2026-09-20）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL structured；其余方言 raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
 
 ## 1. 已确认决策
 
@@ -136,34 +136,50 @@ fixture → RawPlanInput → analyzePlan()（现有 Offline Core）→ View Mode
   Core / View Model / 组件不重写。
 - 不在本轮范围：Plan Diff、Plan Canvas / DAG 编辑器、MySQL parser、综合评分、SQL Rewrite、AI。
 
-### Phase 0D：DBX Response Adapter Contract（2026-09-20，离线已实现）
+### Phase 0D：DBX Response Adapter Contract（2026-09-20，已随 PR #10 合入）
 
-在上游 #9692 的 response contract 基本冻结后，先把 `DBX Host Response → RawPlanInput` 的转换规则钉死
-（Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)），不等待上游合并：
+在上游 #9692 的 response contract 冻结后，先把 `DBX Host Response → RawPlanInput` 的转换规则钉死
+（Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)）：
 
 ```text
-Mock #9692 Response → adaptDbxEstimatedPlanResponse() → RawPlanInput → 现有 Offline Core
+#9692 Response → adaptDbxEstimatedPlanResponse() → RawPlanInput → 现有 Offline Core
 ```
 
 - 实现：`src/core/adapter/dbx-plan-response.js`（纯函数，唯一的 DBX 感知层）；
-  测试：`tests/core/dbx-plan-response.test.js`（含全部 estimated fixture 的 mock response 等价性断言）。
-- 映射：`dbType: "postgres"` → `database: "postgresql"`；响应无 `mode` → `mode: "estimated"`；
-  `format` 仅接受 `"json"`；`rawPlan` → `plan` 原引用直传；`dbVersion?` → `databaseVersion?`。
-- Fail-closed：不支持的 dbType / format、`plan_not_json`、`truncated` / `plan_truncated` /
+  测试：`tests/core/dbx-plan-response.test.js`（含全部 estimated fixture 的 response 等价性断言）。
+- 映射：`dbType` → Plan Core database family（8 个方言）；响应无 `mode` → `mode: "estimated"`；
+  `format` 接受 `json` / `text` / `xml`；`rawPlan` → `plan` 原引用直传；`dbVersion?` → `databaseVersion?`。
+- Fail-closed：契约外的 dbType / format、结构不符、`truncated` / `plan_truncated` /
   `plan_rows_truncated` 全部拒绝，错误码稳定（`DbxPlanAdapterError`）。
 - 契约细节见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md) 第 2.1 节。
-- 退出条件：真实 Host wiring 仍等 #9692 merge / release；落地后只把 `explainPlan(...)` 的结果交给本 adapter。
-- 不在本轮范围：Host API 调用、`host.plans:read`、`engines.host_api`、数据库 Driver、XML / text parser、
-  MySQL parser、Actual Plan。
+
+### Phase 1：Host Plan API MVP 闭环（2026-09-20，Issue #11）
+
+#9692 合并后，正式把真实 Host 接入生产路径：
+
+```text
+DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
+→ RawPlanInput → parser registry → NormalizedPlan → Metrics → Rules → Findings → UI
+```
+
+- 实现：`src/host/**`（Host adapter + 错误码）、`src/core/parsers/**`（registry）、
+  `src/lib/analysis-session.js`（编排）、`src/lib/host-view-model.js`（纯 view model）、
+  新组件（ConnectionContext / SqlInput / AnalysisNotice / RawPlanViewer）。
+- 结构化支持：PostgreSQL；其余 7 个方言 raw-only，明确标注 `structured parser not implemented`。
+- 连接上下文：result-view 入口带入 `connectionId` / `database` / `sql`；standalone workbench 提供
+  Connection ID 输入（仅引用已打开连接，不创建连接、不读凭据）。
+- 错误状态：宿主错误映射为稳定错误码，逐项 UI 文案；不使用通用 `Analysis failed`。
+- mock / fixture 只服务测试与开发，退出生产路径。
+- 不在本轮范围：Actual Plan、MySQL 等 parser、Plan Diff、AI、SQL Rewrite、自建连接。
 
 ## 2.1 当前一期目标与 Future 边界
 
 **当前一期（Estimated Plan only）**：
 
 ```text
-DBX Host Adapter          ← 依赖上游 #9675 实现；接入前不可用
-→ Estimated Raw Plan（EXPLAIN ...）
-→ Parser
+DBX Host Adapter          ← 已接入（Host API 1.2，权限 host.plans:read）
+→ Estimated Raw Plan（EXPLAIN ...，宿主构造）
+→ Parser（PostgreSQL structured；其余 raw-only）
 → Normalization
 → Metrics
 → Rules
@@ -171,8 +187,7 @@ DBX Host Adapter          ← 依赖上游 #9675 实现；接入前不可用
 ```
 
 - 只请求 `host.plans:read`、`host.getPlanCapabilities`、`host.explainPlan`，且 `mode=estimated`。
-- `DBX Host Adapter` 之外的下游链路可以基于 fixture 独立开发与验证，不阻塞于上游实现进度。
-  （离线部分已在 Phase 0B 实现，见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。）
+- `DBX Host Adapter` 已按 #9692 已合并实现接入；下游链路与离线 fixture 模式共用同一 Core。
 
 **Future（不属于一期，不属于 #9675）**：
 
@@ -185,18 +200,18 @@ Actual Plan / EXPLAIN ANALYZE
 - **不属于 #9675**；
 - 未来需要**独立 upstream proposal**，重新评估授权模型与安全边界（会真正执行用户语句）。
 
-## 3. 后续阶段（Phase 1 离线部分进行中，真实 Host 接入暂不启动）
+## 3. 后续阶段（Phase 1 Host MVP 已完成）
 
 | 阶段 | 内容 | 状态 / 前置条件 |
 | --- | --- | --- |
-| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20，PR #6）；Host 接入仍待 #9675 / #9692 |
-| Phase 0C | Fixture-driven MVP UI（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector，**离线**） | ✅ 已实现（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）；Host 接入后复用同一 Core 与 UI |
-| Phase 0D | DBX Estimated Plan Response → RawPlanInput Adapter Contract（**离线**，纯函数、fail-closed） | ✅ 契约已实现（2026-09-20，Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)）；真实 Host wiring 仍待 #9692 merge / release |
-| Phase 1 | Raw Plan → Normalized Plan（PostgreSQL 优先） | **离线部分已完成**；真实 Host 接入需等待 #9675 实现、合并并进入 release |
-| Phase 2 | Metrics Engine + Findings/Evidence | ✅ 离线部分已实现（确定性 Metrics + Findings；扩展指标如 Hotspot / Estimate Error 属后续 Issue） |
-| Phase 3 | Rule Engine | ✅ 3 条确定性规则已实现；更多规则与规则分级属后续 Issue |
-| Phase 4 | Plan Diff / History | 上述阶段通过 |
-| Phase 5 | MySQL Adapter | 验证跨数据库抽象；边界设计见 `fixtures/mysql/README.md` |
+| Phase 0B | Raw Plan → NormalizedPlan → Metrics → Rules → Findings（**离线**，fixture-first） | ✅ 已实现（2026-09-20，PR #6） |
+| Phase 0C | Fixture-driven MVP UI（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector，**离线**） | ✅ 已实现（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）；继续作为开发模式保留 |
+| Phase 0D | DBX Estimated Plan Response → RawPlanInput Adapter Contract（**离线**，纯函数、fail-closed） | ✅ 已实现并合入（Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)，PR #10） |
+| Phase 1 | Host Plan API 真实接入 + MVP 闭环（PostgreSQL structured，其余 raw-only） | ✅ 已实现（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)） |
+| Phase 2 | Metrics Engine + Findings/Evidence 扩展（Hotspot / Estimate Error 等） | 离线基础已实现；扩展指标属后续 Issue |
+| Phase 3 | Rule Engine 扩展与规则分级 | 3 条确定性规则已实现；更多规则属后续 Issue |
+| Phase 4 | Plan Diff / History | 后续 Issue |
+| Phase 5 | MySQL / SQL Server / Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现 |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -244,7 +259,12 @@ PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic�
 
 例外：**DBX Response Adapter Contract**（DBX Estimated Plan Response → RawPlanInput）已由 Issue
 [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9) 明确授权实现，范围限于 `src/core/adapter/**`，
-必须保持纯函数、fail-closed、离线可测；它不调用任何 DBX Host API，不构成 Host 接入，真实 wiring 仍等待 #9692。
+必须保持纯函数、fail-closed、离线可测。
+
+例外：**Host Plan API MVP 闭环**（`src/host/**`、`src/core/parsers/**`、`src/lib/analysis-session.js`、
+`src/lib/host-view-model.js`、新组件、`manifest.json` 的 `host_api ^1.2` / `host.plans:read`）已由 Issue
+[#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11) 明确授权实现；仅接入已合并的 #9692 契约，
+不请求 Actual Plan、不建立数据库连接、不引入 Driver / 凭据。
 
 ## 6. 依赖约束
 

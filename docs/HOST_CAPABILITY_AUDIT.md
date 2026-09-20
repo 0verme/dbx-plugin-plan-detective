@@ -9,6 +9,10 @@
 | 审计对象（插件） | `io.github.0verme.plan-detective` 0.1.0，`universal`，`dbx-plugin` CLI 0.1.9 |
 | 结论 | **BLOCKED — Host API capability gap**（见 [DBX_HOST_API_GAP_PROPOSAL.md](DBX_HOST_API_GAP_PROPOSAL.md)） |
 
+> **历史文档（2026-09-18 审计快照）**：该能力缺口已由上游实现 PR
+> [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)（merge `f909f85`，Host API 1.2）关闭；
+> 当前真实接入状态见 [../STATUS.md](../STATUS.md) 与 [ARCHITECTURE.md](ARCHITECTURE.md)。
+
 > 本轮只做能力审计、证据收集与最小 Audit Harness。**未实现任何 Plan Detective 业务能力**：没有 Plan Parser、Normalized Plan、Metrics、Rule Engine、SQL Rewrite、AI、数据库 Driver、sidecar、连接池或 Credential 管理。
 
 ## 1. 状态定义

@@ -4,7 +4,8 @@
 >
 > **状态（2026-09-20 复核）**
 >
-> - 本文件描述的上游 Host API 需求已正式提交为 **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（2026-09-20，OPEN，已由 `0verme` `/claim`），是**当前唯一 canonical upstream contract**。
+> - 本文件描述的上游 Host API 需求已正式提交为 **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（2026-09-20，已由 `0verme` `/claim`），是**当前唯一 canonical upstream contract**。
+> - **该缺口已关闭：实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已 MERGED**（merge `f909f85`，Host API 1.2）；下游接入已完成（Issue #11）。本文件只作为历史能力缺口记录保留。
 > - 本文件是**下游侧能力缺口说明与设计记录**，不再是"待提交 Issue 草稿"；提交正文见 [`docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md`](upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)，范围以 #9675 为准。
 > - **当前一期范围 = Estimated Plan only**：`EXPLAIN ...`、权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。
 > - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` / generic SQL execution 属于 [Future / historical design](#future--historical-design不属于当前一期-contract)，**不属于当前一期 contract**，未来需要独立 upstream proposal。

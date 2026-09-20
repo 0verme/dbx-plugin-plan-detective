@@ -6,7 +6,8 @@ DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性
 | --- | --- |
 | 插件 ID | `io.github.0verme.plan-detective` |
 | Publisher | `0verme` |
-| 当前版本 | `0.1.0` |
+| 当前版本 | `0.2.0` |
+| Host API | `^1.2`（`host.plans:read`） |
 | 模板 | DBX 官方 `svelte`（Svelte + Vite，`universal`，frontend-only） |
 
 ## 项目定位
@@ -19,26 +20,120 @@ Plan Detective 负责理解和分析执行计划。
 
 ## 目标能力
 
-- Execution Plan Parsing ✅（离线，PostgreSQL）
-- Plan Normalization ✅（离线，PostgreSQL）
+- Host Estimated Plan 接入 ✅（`window.dbxPlugin.getPlanCapabilities` / `explainPlan`，`mode: "estimated"`）
+- Execution Plan Parsing ✅（结构化：PostgreSQL；其余方言 raw-only）
+- Plan Normalization ✅（PostgreSQL）
 - Performance Metrics ✅（确定性基础指标，不含综合评分）
 - Hotspot Analysis ⛔
 - Rule-based Diagnosis ✅（3 条确定性规则）
 - Findings + Evidence ✅
-- Fixture-driven MVP UI ✅（离线 / demo：Fixture → RawPlanInput → Offline Core → UI）
+- Plan Tree / Raw Plan viewer ✅
 - Plan Diff ⛔
 
-> ✅ 为 **Phase 0B Offline Core + Fixture-driven MVP UI**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现，
-> 仍需等待上游能力落地（`Offline Core implemented · Fixture-driven MVP UI implemented ·
-> Real Host integration blocked on upstream t8y2/dbx#9692 merge / release`）。
+> ✅ 为**当前已实现**；⛔ 为未实现。Actual Plan / `EXPLAIN ANALYZE` 明确不在范围内。
 > 实际完成度以 [STATUS.md](STATUS.md) 与 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) 为准。
 
-## 首批目标数据库
+## 上游契约
 
-- PostgreSQL
-- MySQL
+Host Plan API 的 canonical contract 为 **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**，
+实现 PR **[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`**（merge `f909f85`）。
+本插件以该已合并实现为唯一正式契约，不设计兼容层：
 
-DWS 暂时视为 PostgreSQL-family 的后续兼容目标，当前不作为第一阶段独立 Adapter。
+```ts
+window.dbxPlugin.getPlanCapabilities(connectionId)
+window.dbxPlugin.explainPlan({ connectionId, database?, schema?, sql, mode: "estimated", timeoutMs? })
+```
+
+- 权限：manifest 声明 `host.plans:read`；`engines.host_api: ^1.2` 是兼容下限，运行时以 `dbxPlugin.capabilities.planApi` 为准。
+- 只读 Estimated Plan：EXPLAIN 由宿主构造；插件不能传 EXPLAIN 语句、不能执行用户 SQL、不能请求 Actual Plan。
+- 连接必须已由用户在 DBX 中打开；插件不能建立连接、拿不到 credential / connection string。
+- `getPlanCapabilities` 返回 `{ dbType, dbVersion?, supports: { estimatedPlan }, limits: { maxTimeoutMs, maxPlanBytes } }`。
+- `explainPlan` 返回 `{ dbType, dbVersion?, format: "json" | "xml" | "text", rawPlan, truncated, warnings }`。
+
+DBX 支持的 estimated-plan 方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、
+OceanBase Oracle、Doris、Dameng、QuestDB。**本插件当前只有 PostgreSQL 的结构化 parser**；其余方言
+展示 Raw Plan 并明确标注 `structured parser not implemented`。
+
+## 数据链路
+
+```text
+DBX 当前连接
+    ↓
+SQL 输入
+    ↓
+getPlanCapabilities(connectionId)        # 只在 supports.estimatedPlan === true 时继续
+    ↓
+explainPlan({ connectionId, sql, mode: "estimated" })
+    ↓
+Raw Estimated Plan（宿主返回，未修改）
+    ↓
+DBX response adapter → RawPlanInput
+    ↓
+parser registry（PostgreSQL 结构化；其余 raw-only）
+    ↓
+NormalizedPlan（Plan IR）
+    ↓
+deterministic rules
+    ↓
+Findings + Plan Tree + Raw Plan
+```
+
+分层目录：
+
+```text
+src/host/                    Host Adapter：window.dbxPlugin → HostPlanError / PluginPlanResult
+src/core/adapter/            DBX response → RawPlanInput（纯函数，fail-closed）
+src/core/parsers/            parser registry：database family → structured parser
+src/core/postgres/           PostgreSQL JSON parser
+src/core/normalize/          NormalizedPlan（Plan IR）
+src/core/metrics/            deterministic metrics
+src/core/rules/              deterministic findings
+src/lib/analysis-session.js  Host → Parser → IR → Rules 编排（可注入 fake bridge 测试）
+src/components/              UI（ConnectionContext / SqlInput / PlanTree / Findings / RawPlan …）
+```
+
+## 连接上下文与入口
+
+- **查询结果页入口（推荐）**：在 DBX 查询结果工具栏选择 Plan Detective。宿主会带入
+  `connectionId`、`database`、`sql` 与结果快照；插件用这些上下文预填 SQL。
+- **Sidebar workbench 入口**：宿主不传连接上下文；插件提供 Connection ID 输入框，只引用已打开的
+  连接，不创建连接、不测试连接、不读取凭据。
+
+连接未打开时，宿主返回 `Connection is not open`，UI 会明确展示该错误，不会尝试自动连接。
+
+## 错误状态
+
+插件不会用一个通用 `Analysis failed` 吞掉错误。Host Adapter 将宿主错误映射为稳定错误码
+（`src/host/host-plan-errors.js`），UI 为每个错误码给出独立文案：
+
+| code | 触发条件 |
+| --- | --- |
+| `PLAN_API_UNAVAILABLE` | 宿主没有 Plan API（DBX < Host API 1.2 / 非 DBX 宿主） |
+| `PERMISSION_NOT_DECLARED` | manifest 未声明 `host.plans:read` |
+| `CONNECTION_NOT_OPEN` | 连接已保存但未打开 |
+| `CONNECTION_NOT_FOUND` | connectionId 不存在 |
+| `UNSUPPORTED_DIALECT` | 该方言没有 estimated plan 路径 |
+| `EMPTY_SQL` / `SQL_TOO_LARGE` | SQL 为空 / 超过 200,000 字符 |
+| `UNSAFE_SQL` | 宿主只读计划门拒绝（多语句 / DDL / DML / 危险关键字） |
+| `PLAN_TOO_LARGE` | 计划超过 4 MiB 宿主上限 |
+| `EMPTY_PLAN` | 数据库返回空计划 |
+| `TIMEOUT` | 宿主超时或 UI 侧 guard 超时 |
+| `INVALID_REQUEST` / `INVALID_RESPONSE` | 请求 / 宿主响应不符合契约 |
+| `UNSUPPORTED_DB_TYPE` / `UNSUPPORTED_PLAN_FORMAT` | 契约外的 dbType / format |
+| `PLAN_TRUNCATED` | 计划被宿主截断（仅展示 Raw Plan，不做结构化解析） |
+
+## 数据库支持
+
+```text
+PostgreSQL: structured
+MySQL: raw only
+SQL Server: raw only
+Oracle: raw only
+OceanBase Oracle: raw only
+Doris: raw only
+Dameng: raw only
+QuestDB: raw only
+```
 
 ## 当前不依赖 AI
 
@@ -49,83 +144,14 @@ DWS 暂时视为 PostgreSQL-family 的后续兼容目标，当前不作为第一
 ## 架构原则
 
 1. **Thin Plugin** —— 只提供执行计划智能，不重复实现 DBX 已有基础设施。
-2. **DBX 已有能力优先复用** —— Connection、Credential、驱动、Query Context、SQL 执行、Timeout、Cancel 均属于 DBX。
-3. **frontend-only** —— 当前不引入 Rust / Go sidecar，也不修改 DBX Core。
+2. **DBX 已有能力优先复用** —— Connection、Credential、驱动、SQL 执行、Timeout、Cancel 均属于 DBX。
+3. **frontend-only** —— 不引入 Rust / Go sidecar，也不修改 DBX Core。
 4. **不提前架构** —— 只有确认 Host API 无法满足需求后，才讨论 native backend 或 DBX Core 变更。
 
-当前阶段明确**不**引入：PostgreSQL driver、MySQL driver、sqlx、JDBC、自定义连接池、Credential 管理、SSH Tunnel、自定义数据库执行层、AI SDK、LLM、自动 SQL Rewrite、Rust backend、Go backend。
+明确不引入：PostgreSQL driver、MySQL driver、sqlx、JDBC、自定义连接池、Credential 管理、SSH Tunnel、
+自定义数据库执行层、AI SDK、LLM、自动 SQL Rewrite、Rust backend、Go backend。
 
 完整边界说明见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
-
-## 当前进度
-
-当前状态：**Offline Core implemented · Fixture-driven MVP UI implemented · Real Host integration blocked on upstream t8y2/dbx#9692 merge / release**。Phase 0 Host Capability Audit 已于 2026-09-18 完成（历史结论 **BLOCKED — Host API capability gap**）：
-
-```text
-DBX 内部有执行计划能力
-≠
-第三方插件可通过公开 Host API 取得执行计划
-```
-
-在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。
-
-该能力缺口已正式提交为 upstream Issue **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（OPEN，已由 `0verme` `/claim`），实现 PR 为 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)（等待 review / merge / release），是当前唯一 canonical contract：一期只请求 **Estimated Plan**（`EXPLAIN ...`）—— 权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` 不属于一期。详见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 与 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
-
-当前 blocker 是 #9675 的实现 / 合并：真实 Host 接入需等待上游落地，本仓库**不会**自行引入数据库 Driver / 连接池 / 凭据管理来绕过。**但这不阻止离线内核开发**：Phase 0B 已落地与 DBX 完全解耦的 fixture-first 分析内核：
-
-```text
-PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
-```
-
-- 实现：`src/core/`；契约与阈值：[docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)
-- fixture：`fixtures/postgres/`（19 个：17 真实采集 + 2 synthetic），带四 stage golden test
-- 与 DBX 的衔接点只有 `dbx-adapter`：其 `DBX Estimated Plan Response → RawPlanInput` 契约已离线实现
-  （`src/core/adapter/dbx-plan-response.js`，mock response 即可全链路测试，不依赖 #9692 合并），
-  内核不感知 connectionId / credential / Host API
-
-离线验证（无需 DBX、无需数据库、无需 `npm install`）：
-
-```bash
-npm test                                  # 契约 / parser / normalize / metrics / rules / golden / UI view-model
-npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
-```
-
-### Fixture-driven MVP UI（离线 / demo）
-
-第一版可用 UI 已落地（Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)），数据链路：
-
-```text
-fixtures/postgres/**  →  RawPlanInput  →  analyzePlan()（现有 Offline Core）  →  view model  →  Svelte UI
-```
-
-- **Fixture Selector**：选择仓库内 fixture；展示 database / databaseVersion / mode / SQL /
-  provenance；synthetic fixture 明确标识为 synthetic。
-- **Plan Summary**：直接展示 Core 已计算的 Metrics（Total Estimated Cost、Root Estimated Rows、
-  Node Count、Max Depth、Scan / Sequential Scan / Index Scan / Join / Sort / Aggregate Count、
-  Unknown Node Type Count，以及 Core 已产出的 largestEstimatedRows / highestIncrementalCost）。
-  没有综合评分、没有 health score。
-- **Findings**：severity / title / summary / rule id / nodeRef / evidence，保持规则的 observation
-  语义与证据（Estimated Plan 不代表 runtime truth）。
-- **Plan Tree + Node Inspector**：嵌套行计划树（可折叠、可选中）；点击节点查看该节点真实报告的
-  字段（nodeType / kind / relation / alias / estimatedRows / startupCost / totalCost / width /
-  filter / join condition / index condition / sort keys / group keys / engineSpecific / extra）。
-  缺失值不显示，不产生 `undefined` / `null` 噪音。
-
-UI 入口顶部的 **Offline / Fixture Mode** 明确标注当前不是产品正式数据源；开发视图仍保留
-Phase 0 Host Capability Audit Harness（“宿主审计（开发）”）。
-
-fixture 通过构建期 Vite 虚拟模块（`scripts/vite-plugin-fixtures.mjs`）从 `fixtures/postgres/**`
-读取，**只嵌入 `.plan.json` 与展示所需的 `.meta.json` 字段**，不包含 golden / `setup.sql` /
-绝对路径；fixture 仍是唯一真相来源，没有把内容复制成手写常量。
-
-边界（本轮严格不变）：不调用 `window.dbxPlugin.explainPlan()` / `host.getPlanCapabilities()`，
-不修改 `manifest.json` 的 `engines.host_api`，不新增 `host.plans:read`，不引入数据库 Driver、
-不执行 EXPLAIN。`DBX Estimated Plan Response → RawPlanInput` 的 adapter 契约已离线实现；
-未来真实 Host 接入只需把 Host 返回值交给极薄的 `dbx-adapter`：
-
-```text
-DBX Host Response  →  dbx-adapter  →  RawPlanInput  →  同一套 Core 与 UI
-```
 
 ## 开发
 
@@ -136,7 +162,21 @@ npm install
 dbx-plugin dev --path . --port 5190
 ```
 
-UI 从 `src/` 编译到 `ui/`。分析视图为 **Offline / Fixture Mode**，不依赖 DBX 宿主即可运行；`window.dbxPlugin` 仅由开发用宿主审计视图使用，未来 Host 接入也复用这一桥接。最终集成测试请使用真实 DBX 宿主。
+离线验证（无需 DBX、无需数据库）：
+
+```bash
+npm test                                  # 契约 / Host adapter / parser / rules / golden / UI view-model
+npm run build                             # 构建 ui/ 发布产物
+npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
+```
+
+真实 Host 集成测试请使用真实 DBX 宿主：在已打开连接的查询结果页打开 Plan Detective，输入 SQL，
+点击 **Analyze Plan / 分析执行计划**。
+
+UI 从 `src/` 编译到 `ui/`。默认进入 **Host 分析** 模式；无宿主时自动回退到
+**Fixtures（开发）** 模式。Fixture 数据来自 `fixtures/postgres/**`，经构建期 Vite 虚拟模块
+（`scripts/vite-plugin-fixtures.mjs`）嵌入，只包含 `.plan.json` 与展示所需 `.meta.json` 字段。
+mock / fixture 只服务测试与离线开发，不进入 Host 生产路径。
 
 > `ui/` 是**必须入库的发布产物**：DBX 官方 release workflow 不执行 `npm install` / `npm run build`，直接运行 `dbx-plugin package .`，因此修改 `src/` 后需要重新构建并提交 `ui/` 变更。`.gitignore` 只忽略 `dist/`、`.dbx-dev/`、`node_modules/` 等本地生成物，不忽略 `ui/`。详见 [AGENTS.md](AGENTS.md) 的 Git 规则。
 
@@ -158,12 +198,13 @@ dbx-plugin package .
 ├── fixtures/              # 离线执行计划样本（postgres 已建立 / mysql 占位）
 ├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析、UI fixture 虚拟模块）
 ├── src/                   # Svelte 前端源码
-│   ├── components/        # FixtureSelector / PlanSummary / FindingsList / PlanTree / NodeInspector / HostAudit
-│   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖
-│   ├── lib/               # 纯 UI 逻辑：fixture catalog、view model、格式化
-│   └── App.svelte         # Fixture-driven MVP 分析界面（含开发用宿主审计视图）
-├── tests/                 # node:test，离线运行
-├── manifest.json          # DBX 插件清单
+│   ├── components/        # ConnectionContext / SqlInput / PlanSummary / FindingsList / PlanTree / NodeInspector / RawPlanViewer / HostAudit
+│   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖（adapter / parsers / normalize / metrics / rules）
+│   ├── host/              # DBX Host Plan API adapter（唯一接触 window.dbxPlugin 的模块）
+│   ├── lib/               # 纯 UI 逻辑：analysis session、view model、fixture catalog、格式化
+│   └── App.svelte         # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
+├── tests/                 # node:test，离线运行（core / host / lib / ui / postgres）
+├── manifest.json          # DBX 插件清单（host_api ^1.2、host.plans:read）
 ├── dbx-plugin.toml        # 打包与开发配置
 └── STATUS.md              # 当前状态与已知问题
 ```
@@ -178,11 +219,11 @@ dbx-plugin package .
 
 ## 文档
 
-- [STATUS.md](STATUS.md) —— 当前状态、上游 #9675 contract、已验证项与已知问题
-- [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 Host Capability Matrix、逐项证据、真实宿主实测
-- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口、一期 Estimated Plan API 提案、Future / historical design 记录
-- [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note（canonical upstream contract：[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）
+- [STATUS.md](STATUS.md) —— 当前状态、上游 #9692 契约核验、已验证项与已知问题
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
-- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、Phase 0 审计清单与结论、一期 / Future 边界、Fixture 策略
-- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
+- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / parser registry / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、阶段划分、一期 / Future 边界
+- [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 Host Capability Matrix（历史审计）
+- [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口与提案（历史记录）
+- [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note
 - 上游插件开发指南：<https://dbxio.com/en/docs/plugin-development>
