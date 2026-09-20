@@ -17,9 +17,8 @@ Normalized Plan
    ↓
 Metrics Engine
    ↓
-Rule Engine
-   ↓
-Findings
+   ├─► Rule Engine → Findings
+   └─► Hotspot Analysis → Hotspots
    ↓
 Plan Diff / UI
 ```
@@ -34,6 +33,7 @@ Plan Diff / UI
 | Parser Registry | 按 database family 选择结构化 parser；无 parser 的方言 raw-only | Plan Detective |
 | Normalized Plan | 数据库无关的计划模型（节点、代价、行数、过滤等） | Plan Detective |
 | Metrics Engine | 计算指标（节点数、深度、scan/join/sort 计数、最大行数、最高增量代价等） | Plan Detective |
+| Hotspot Analysis | 基于 NormalizedPlan + Metrics 聚合确定性注意力信号（engine-aware，无综合评分） | Plan Detective |
 | Rule Engine | 基于指标与计划结构产出确定性结论 | Plan Detective |
 | Findings | 结论 + Evidence（observation 语义，不是命令） | Plan Detective |
 | Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
@@ -45,7 +45,8 @@ Plan Diff / UI
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
 已实现：parser registry + PostgreSQL / MySQL 结构化 parser；其余 6 个方言 raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
-已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Findings / Raw Plan）
+已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号）
+已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
 未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI
 ```
@@ -64,7 +65,8 @@ src/core/adapter/dbx-plan-response.js（dbType → database family，format → 
    ↓
 src/core/parsers/index.js（registry：postgres / mysql structured，其余 raw-only）
    ↓
-src/core/normalize → metrics → rules
+src/core/normalize → metrics → rules → findings
+src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
    ↓
 src/lib/analysis-session.js（编排，可注入 fake bridge 测试）
    ↓
@@ -86,7 +88,7 @@ fixture（fixtures/postgres/**；MySQL fixture 由核心测试直接加载）
    ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
 RawPlanInput
    ↓ analyzePlan()
-parsed / normalized / metrics / findings
+parsed / normalized / metrics / findings / hotspots
    ↓ src/lib/view-model.js（纯映射，不重算 Core 结果）
 Svelte components
 ```
@@ -122,6 +124,7 @@ UI / rules / metrics 不变。
 - Host response 校验与 `RawPlanInput` 映射
 - Plan semantic normalization（Plan IR）
 - Metrics
+- Hotspot Analysis（确定性信号聚合，无综合评分、无跨数据库比较）
 - Rule Engine / Findings / Evidence
 - Raw Plan viewer、Plan Tree、Node Inspector
 - （Future）Plan Diff / History / Tuning workflow
@@ -183,9 +186,10 @@ src/
 ├── host/                       # DBX Host Plan API adapter（唯一接触 window.dbxPlugin）
 │   ├── dbx-plan-host.js        # getPlanCapabilities / explainPlan / 响应结构校验 / timeout guard
 │   └── host-plan-errors.js     # HostPlanError + 错误分类
-├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules → Findings
+├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
-│   └── parsers/                # parser registry + postgres parser 声明
+│   ├── parsers/                # parser registry + postgres parser 声明
+│   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值 / PostgreSQL 代价归因边界）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
 ├── app.css                     # 设计 tokens 与共享基础样式
 ├── components/                 # 按业务责任拆分的 Svelte 组件
@@ -193,6 +197,7 @@ src/
 │   ├── SqlInput.svelte         # SQL 输入 + Analyze Plan
 │   ├── AnalysisNotice.svelte   # loading / success / warning / error 状态
 │   ├── PlanSummary.svelte      # Core Metrics 展示（不评分）
+│   ├── HotspotsList.svelte     # Hotspot 注意力列表 + reason/evidence（不重算、不排名）
 │   ├── FindingsList.svelte     # rule findings + evidence
 │   ├── PlanTree.svelte         # 嵌套行计划树
 │   ├── NodeInspector.svelte    # 选中节点字段
@@ -203,7 +208,7 @@ src/
     ├── analysis-session.js     # Host → Parser → IR → Rules 编排（注入 bridge）
     ├── host-view-model.js      # 连接上下文 / 能力 / 错误文案 / Raw Plan 格式化
     ├── fixture-catalog.js      # fixture catalog / 筛选 / analyzeFixture()
-    ├── view-model.js           # summary / tree / findings / inspector 映射
+    ├── view-model.js           # summary / tree / findings / hotspots / inspector 映射
     └── format.js               # 展示格式化
 ```
 
@@ -240,7 +245,7 @@ include = ["assets", "ui"]
 `src/App.svelte` 有三个视图：
 
 1. **Host 分析（生产路径）**：Connection Context（连接上下文 + Plan Capabilities）→ SQL Input →
-   Analyze Plan → Findings / Plan Summary / Plan Tree / Node Inspector / Raw Plan。
+   Analyze Plan → Plan Summary / Hotspots / Findings / Plan Tree / Node Inspector / Raw Plan。
    数据只来自 DBX Host Plan API；插件不建立连接、不执行 SQL、不读取凭据。
 2. **Fixtures（开发）**：仓库内 fixture 经 Offline Core 分析，不访问 DBX / 数据库 / 网络。
 3. **宿主审计（开发）**：只打印 `window.dbxPlugin` 桥接面、`init` 消息与 `host.getContext`，

@@ -22,6 +22,8 @@ export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";
 export { parseMySqlJsonPlan } from "./mysql/parse-json-plan.js";
 export { normalizeMySqlPlan } from "./normalize/normalize-mysql.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
+export { computeHotspots } from "./hotspots/compute-hotspots.js";
+export { HOTSPOT } from "./hotspots/thresholds.js";
 export { runRules, RULES } from "./rules/index.js";
 export { LARGE_SEQUENTIAL_SCAN, EXPENSIVE_SORT, NESTED_LOOP_LARGE_INNER } from "./rules/thresholds.js";
 export { createFinding, nodeEvidence, SEVERITIES } from "./findings/finding.js";

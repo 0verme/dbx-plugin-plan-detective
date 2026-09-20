@@ -308,5 +308,103 @@
         }
       }
     }
-  ]
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Nested Loop",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "high",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "high",
+            "statement": "Nested Loop accounts for 99.61% of the plan's estimated self cost (1161571 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 1161571,
+              "selfCostShare": 0.9961,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          },
+          {
+            "code": "nested-loop-amplification",
+            "level": "warning",
+            "statement": "Nested Loop is estimated to drive 200 outer rows into 66667 inner rows each, about 13333400 estimated row comparisons.",
+            "source": "Plan Rows",
+            "evidence": {
+              "outerNodeRef": "0.0",
+              "innerNodeRef": "0.1",
+              "outerEstimatedRows": 200,
+              "innerEstimatedRows": 66667,
+              "estimatedRowComparisons": 13333400,
+              "thresholds": {
+                "minOuterEstimatedRows": 10,
+                "warningInnerEstimatedRows": 10000,
+                "highInnerEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "Nested Loop",
+          "kind": "nested_loop",
+          "estimatedRows": 13333400,
+          "startupCost": 0,
+          "estimatedTotalCost": 1166072,
+          "selfCost": 1161571,
+          "selfCostShare": 0.9961
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.1",
+        "nodeId": "0.1",
+        "nodeType": "Seq Scan",
+        "kind": "seq_scan",
+        "relation": "pd_fix_events",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "Seq Scan on pd_fix_events is estimated to return 66667 rows.",
+            "source": "Plan Rows",
+            "evidence": {
+              "estimatedRows": 66667,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.1",
+          "nodeType": "Seq Scan",
+          "kind": "seq_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 66667,
+          "startupCost": 0,
+          "estimatedTotalCost": 4497,
+          "selfCost": 4497,
+          "selfCostShare": 0.0039
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

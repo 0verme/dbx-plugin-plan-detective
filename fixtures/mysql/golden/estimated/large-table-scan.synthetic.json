@@ -254,5 +254,52 @@
         }
       }
     }
-  ]
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "mysql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "Table Scan on events is estimated to examine 240000 rows per scan (access_type = ALL).",
+            "source": "table.rows_examined_per_scan",
+            "evidence": {
+              "estimatedRows": 240000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "events",
+          "estimatedRows": 240000,
+          "accessType": "ALL",
+          "rowsExaminedPerScan": 240000,
+          "rowsProducedPerJoin": 240000,
+          "filteredPercent": 100,
+          "readCost": 22000,
+          "evalCost": 2000,
+          "prefixCost": 24000
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

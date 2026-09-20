@@ -46,7 +46,7 @@ test("every committed fixture appears exactly once, sorted by mode then name", a
   assert.deepEqual(ids, [...catalog].sort(compareCatalogEntries).map((entry) => entry.id));
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(ids.every((id, index) => id === `${catalog[index].mode}/${catalog[index].name}`), true);
-  assert.deepEqual(countByMode(catalog), { estimated: 15, actual: 4, total: catalog.length });
+  assert.deepEqual(countByMode(catalog), { estimated: 16, actual: 4, total: catalog.length });
 });
 
 test("catalog entries expose display metadata and RawPlanInput only", () => {
@@ -106,11 +106,11 @@ test("analyzeFixture runs the same offline pipeline as the tests", async () => {
     analysis.findings.map((finding) => finding.ruleId).sort(),
     [...fixture.meta.expect.findingRuleIds].sort(),
   );
-  assert.deepEqual(Object.keys(analysis).sort(), ["findings", "metrics", "normalized", "parsed"]);
+  assert.deepEqual(Object.keys(analysis).sort(), ["findings", "hotspots", "metrics", "normalized", "parsed"]);
 });
 
 test("filterCatalog filters by mode and free-text query", () => {
-  assert.equal(filterCatalog(catalog, { mode: "estimated" }).length, 15);
+  assert.equal(filterCatalog(catalog, { mode: "estimated" }).length, 16);
   assert.equal(filterCatalog(catalog, { mode: "actual" }).length, 4);
   // A query may match the fixture id, its SQL, its root node type or a feature
   // string, so the assertion pins the definite match rather than an exact set.

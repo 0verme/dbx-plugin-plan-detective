@@ -277,5 +277,13 @@
       "totalCost": 120.5
     }
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "withheld",
+      "reason": "UNVERIFIED_COST_FLOW"
+    },
+    "items": []
+  }
 }

@@ -108,6 +108,11 @@ test("runHostAnalysis acquires capabilities first and sends one estimated plan",
     session.analysis.findings.map((finding) => finding.ruleId),
     postgresFixture.meta.expect.findingRuleIds,
   );
+  assert.equal(session.analysis.hotspots.cost.engine, "postgresql");
+  assert.deepEqual(
+    session.analysis.hotspots.items.map((hotspot) => hotspot.nodeId),
+    postgresFixture.meta.expect.hotspotNodeRefs,
+  );
 });
 
 test("runHostAnalysis does not acquire a plan when the dialect is unsupported", async () => {
@@ -230,6 +235,11 @@ test("runHostAnalysis runs the structured pipeline for a MySQL host response", a
   assert.deepEqual(
     session.analysis.findings.map((finding) => finding.ruleId),
     mysqlFixture.meta.expect.findingRuleIds,
+  );
+  assert.equal(session.analysis.hotspots.cost.engine, "mysql");
+  assert.deepEqual(
+    session.analysis.hotspots.items.map((hotspot) => hotspot.nodeId),
+    mysqlFixture.meta.expect.hotspotNodeRefs,
   );
   assert.equal(session.hostResult.rawPlan, mysqlFixture.input.plan, "the host payload must stay available for the Raw Plan viewer");
 });

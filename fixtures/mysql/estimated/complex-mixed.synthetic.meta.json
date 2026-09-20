@@ -25,6 +25,10 @@
     "rootNodeType": "Query Block",
     "hasActualFields": false,
     "minDepth": 6,
-    "findingRuleIds": []
+    "findingRuleIds": [],
+    "hotspotNodeRefs": [
+      "0.0.0.0.1",
+      "0.0.0.0.0.0"
+    ]
   }
 }

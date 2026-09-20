@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-20 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.3.0（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.4.0（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
@@ -75,6 +75,29 @@ DBX Host（dbType: "mysql" / format: "json" / EXPLAIN FORMAT=JSON）
 - 测试：`tests/mysql/**`（parser / normalize / fixture+golden / end-to-end / UI view-model）+ registry /
   fixture-convention / host-analysis / rules 适配；`npm test` 502/502，`npm run build` 通过。
 
+### 0.2.3 Hotspot Analysis（Issue #19，2026-09-20）
+
+```text
+NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
+→ Hotspots 面板（Plan Summary → Hotspots → Findings → Plan Tree → Raw Plan）
+```
+
+- 定位：Hotspot = “这棵计划里优先看哪里”（注意力列表），Finding = “命中了哪条已知模式”；两者可命中同一节点但互不派生。
+- 契约：`Hotspot { id, nodeId, nodeType, kind, relation, level, reasons[{code, level, statement, source, evidence}], evidence, estimateOnly }`；
+  确定性排序 `level → reason 数量降序 → plan pre-order`；raw-only 方言 `hotspots = null`。
+- 无综合评分、无跨数据库比较：PostgreSQL 用 PostgreSQL cost units，MySQL 用 MySQL cost units。
+- PostgreSQL 代价归因边界（`src/core/hotspots/self-cost.js`）：计划缺总代价 / 节点缺代价 / 含
+  `InitPlan` / `SubPlan` / 未知 Parent Relationship → `cost.status = "withheld"`；`Limit` 截断产生负自代价时
+  仅停用该节点及其子树的占比信号（祖先仍可归因）。不修改既有 `incrementalCostOf`（Findings 行为不变）。
+- MySQL 只使用自身语义：`rows_examined_per_scan` / `filtered` / `using_filesort` / `using_temporary_table` /
+  `using_join_buffer`，以及同一 query block 内 ≥ 2 个有代价访问的 `(read_cost + eval_cost) / query_cost`
+  （MySQL cost units，不做子节点相减）。
+- 新增真实采集 fixture `estimated/subplan-initplan`（18 个 locally-generated + 2 个 synthetic）：
+  InitPlan 计划代价信号 withheld，两个 200 000 行 Seq Scan 仍为行数 hotspot。
+- golden 增加 `hotspots` stage（五 stage）；新增 `expect.hotspotNodeRefs` 可选断言。
+- 测试：`tests/core/hotspots.test.js`、`tests/postgres/hotspot-fixtures.test.js`、
+  `tests/mysql/hotspot-fixtures.test.js` + UI view-model；`npm test` 586/586。
+
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
 完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
@@ -105,7 +128,7 @@ DBX Host（dbType: "mysql" / format: "json" / EXPLAIN FORMAT=JSON）
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
 | **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL structured；其余方言 raw-only） |
-| **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Findings / Plan Tree / Node Inspector / Raw Plan |
+| **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Hotspots / Findings / Plan Tree / Node Inspector / Raw Plan |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`） |
 | Fixture-driven 开发 UI | ✅ 保留为开发模式（不进入生产路径） |
 | DBX Estimated Plan Response Adapter | ✅ 已实现并接入（Issue #9 / PR #10；本轮扩展到 8 方言 + 3 format） |
@@ -115,7 +138,7 @@ DBX Host（dbType: "mysql" / format: "json" / EXPLAIN FORMAT=JSON）
 | Execution Plan Parsing | ✅ PostgreSQL / MySQL structured；其余 6 方言 raw-only（不伪造 parser） |
 | Plan Normalization | ✅ 已实现（PostgreSQL / MySQL；公共字段 + `engineSpecific`） |
 | Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
-| Hotspot Analysis | ⛔ 未实现（属于后续 Issue） |
+| Hotspot Analysis | ✅ 已实现（确定性、engine-aware 注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号；无综合评分） |
 | Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
 | Findings + Evidence | ✅ 已实现（`info` / `warning` / `high`） |
 | Raw Plan viewer | ✅ 已实现（默认折叠，仅展示层截断，payload 不改写） |
@@ -140,7 +163,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码 + timeout guard）
    ↓
 src/core/adapter/dbx-plan-response.js → RawPlanInput
    ↓
-src/core/parsers/** → Normalize → Metrics → Rules → Findings
+src/core/parsers/** → Normalize → Metrics → Rules / Hotspots → Findings
    ↓
 src/lib/analysis-session.js → UI
 ```
@@ -263,7 +286,7 @@ Build failed (exit 1)
 
 1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
 2. **发布路径**：#9692 已合并但尚未进入 release；在包含 Host API 1.2 的 DBX release 可用前，插件在旧版 DBX 上会因 `engines.host_api ^1.2` 被宿主拒绝加载（这是预期行为）。
-3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、更多 metrics / rules、UI 扩展。
+3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
 4. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
 ## 6. 相关文档
@@ -272,7 +295,7 @@ Build failed (exit 1)
 - [AGENTS.md](AGENTS.md) —— 仓库约束与红线
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 决策记录、阶段划分、Fixture 策略
-- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / parser registry / NormalizedPlan / Metrics / Rules / Findings 契约
+- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / parser registry / NormalizedPlan / Metrics / Rules / Findings / Hotspots 契约
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 审计矩阵（历史）
 - [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口与提案（历史）
 - [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note

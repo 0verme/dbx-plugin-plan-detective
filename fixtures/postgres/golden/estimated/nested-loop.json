@@ -331,5 +331,50 @@
       "totalCost": 155.28
     }
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Nested Loop",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "high",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "high",
+            "statement": "Nested Loop accounts for 92.43% of the plan's estimated self cost (152.97 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 152.97,
+              "selfCostShare": 0.9243,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "Nested Loop",
+          "kind": "nested_loop",
+          "estimatedRows": 20,
+          "startupCost": 0.28,
+          "estimatedTotalCost": 165.5,
+          "selfCost": 152.97,
+          "selfCostShare": 0.9243
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

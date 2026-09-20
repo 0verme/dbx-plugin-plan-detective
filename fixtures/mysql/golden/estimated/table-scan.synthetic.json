@@ -236,5 +236,56 @@
     },
     "highestIncrementalCost": null
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "mysql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "orders",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "mysql-filtered-out",
+            "level": "warning",
+            "statement": "Only 10% of the estimated 1500 examined rows are expected to pass the access condition (filtered = 10).",
+            "source": "table.filtered",
+            "evidence": {
+              "filteredPercent": 10,
+              "rowsExaminedPerScan": 1500,
+              "accessType": "ALL",
+              "thresholds": {
+                "warningFilteredPercent": 10,
+                "warningMinRowsExamined": 1000,
+                "highFilteredPercent": 1,
+                "highMinRowsExamined": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "orders",
+          "estimatedRows": 1500,
+          "accessType": "ALL",
+          "rowsExaminedPerScan": 1500,
+          "rowsProducedPerJoin": 150,
+          "filteredPercent": 10,
+          "readCost": 130.85,
+          "evalCost": 15,
+          "prefixCost": 1520.85
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

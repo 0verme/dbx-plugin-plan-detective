@@ -4,28 +4,30 @@
   "format": "json",
   "databaseVersion": "15.19",
   "capturedAt": "2026-09-20",
-  "captureCommand": "psql -h <host> -U <user> -d <test-db> -q -At -c \"SET enable_hashjoin = off; SET enable_nestloop = off; EXPLAIN (FORMAT JSON) SELECT c.name, e.id FROM pd_fix_customers c JOIN pd_fix_events e ON e.customer_id = c.id WHERE e.status = 'pending';\"",
-  "sql": "SELECT c.name, e.id FROM pd_fix_customers c JOIN pd_fix_events e ON e.customer_id = c.id WHERE e.status = 'pending';",
+  "captureCommand": "psql -h <host> -U <user> -d <test-db> -At -c \"EXPLAIN (FORMAT JSON) SELECT * FROM pd_fix_events e WHERE (SELECT count(*) FROM pd_fix_events e2) > 100;\"",
+  "sql": "SELECT * FROM pd_fix_events e WHERE (SELECT count(*) FROM pd_fix_events e2) > 100;",
   "source": {
     "kind": "locally-generated",
     "detail": "locally generated test fixture: captured with psql against a throwaway local PostgreSQL 15.19 test database seeded by fixtures/postgres/setup.sql. Schema and rows are synthetic test data; the JSON plan is raw EXPLAIN output and was not hand-written.",
     "reference": null
   },
   "features": [
-    "merge join",
-    "planner settings used only to obtain this node type",
-    "sort on both inputs",
-    "sort incremental cost stays below the expensive-sort share"
+    "InitPlan (uncorrelated scalar subquery)",
+    "One-Time Filter on the Result root",
+    "Parent Relationship: InitPlan",
+    "PostgreSQL cost attribution withheld because the parent Total Cost is not the sum of child totals",
+    "two 200000-row Seq Scans still produce row-based hotspots"
   ],
   "expect": {
-    "rootNodeType": "Merge Join",
+    "rootNodeType": "Result",
     "hasActualFields": false,
     "minDepth": 3,
     "findingRuleIds": [
       "large-sequential-scan"
     ],
     "hotspotNodeRefs": [
-      "0.1.0"
+      "0.0.0",
+      "0.1"
     ]
   }
 }

@@ -23,6 +23,9 @@
     "minDepth": 2,
     "findingRuleIds": [
       "large-sequential-scan"
+    ],
+    "hotspotNodeRefs": [
+      "0.0"
     ]
   }
 }

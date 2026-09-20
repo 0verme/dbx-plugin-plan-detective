@@ -6,7 +6,7 @@ DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性
 | --- | --- |
 | 插件 ID | `io.github.0verme.plan-detective` |
 | Publisher | `0verme` |
-| 当前版本 | `0.3.0` |
+| 当前版本 | `0.4.0` |
 | Host API | `^1.2`（`host.plans:read`） |
 | 模板 | DBX 官方 `svelte`（Svelte + Vite，`universal`，frontend-only） |
 
@@ -24,7 +24,7 @@ Plan Detective 负责理解和分析执行计划。
 - Execution Plan Parsing ✅（结构化：PostgreSQL / MySQL；其余方言 raw-only）
 - Plan Normalization ✅（PostgreSQL / MySQL）
 - Performance Metrics ✅（确定性基础指标，不含综合评分）
-- Hotspot Analysis ⛔
+- Hotspot Analysis ✅（确定性、engine-aware 的注意力列表；PostgreSQL / MySQL 代价语义分开，无综合评分）
 - Rule-based Diagnosis ✅（3 条确定性规则）
 - Findings + Evidence ✅
 - Plan Tree / Raw Plan viewer ✅
@@ -73,9 +73,11 @@ parser registry（PostgreSQL / MySQL 结构化；其余 raw-only）
     ↓
 NormalizedPlan（Plan IR）
     ↓
-deterministic rules
+deterministic rules → Findings
     ↓
-Findings + Plan Tree + Raw Plan
+deterministic hotspots（注意力列表，与 Findings 分层）
+    ↓
+Findings + Hotspots + Plan Tree + Raw Plan
 ```
 
 分层目录：
@@ -89,8 +91,9 @@ src/core/mysql/              MySQL EXPLAIN FORMAT=JSON parser
 src/core/normalize/          NormalizedPlan（Plan IR）
 src/core/metrics/            deterministic metrics
 src/core/rules/              deterministic findings
-src/lib/analysis-session.js  Host → Parser → IR → Rules 编排（可注入 fake bridge 测试）
-src/components/              UI（ConnectionContext / SqlInput / PlanTree / Findings / RawPlan …）
+src/core/hotspots/           deterministic hotspot analysis（信号聚合 / 阈值 / PG 代价归因边界）
+src/lib/analysis-session.js  Host → Parser → IR → Rules / Hotspots 编排（可注入 fake bridge 测试）
+src/components/              UI（ConnectionContext / SqlInput / PlanTree / Hotspots / Findings / RawPlan …）
 ```
 
 ## 连接上下文与入口
@@ -193,6 +196,11 @@ IR 映射规则：
 | `nested-loop-large-inner` | 适用：只用估算行数，明确标注 `estimateOnly`，不声称 runtime loops |
 | `expensive-sort` | 不触发：需要 PostgreSQL 语义的增量代价与计划总代价，MySQL 不满足 |
 
+Hotspot 适用性：engine-neutral 的 `large-sequential-scan` / `nested-loop-amplification` 按估算行数适用；
+MySQL 专属信号为 `mysql-rows-examined` / `mysql-filtered-out` / `mysql-cost-concentration` /
+`mysql-filesort` / `mysql-temporary-table` / `mysql-join-buffer`。它们只用 MySQL 自己的
+`rows_examined_per_scan` / `filtered` / `cost_info` / 操作标记，**绝不**使用 PostgreSQL 的 self-cost 语义。
+
 范围与限制：当前只覆盖 Host 能返回的 Estimated Plan JSON，不支持 `FORMAT=TRADITIONAL` 表格输出、
 `FORMAT=TREE`、MySQL `EXPLAIN ANALYZE`、MariaDB / OceanBase MySQL / ADB MySQL 等兼容方言的自动归入，
 也不对 optimizer estimate 的准确性下结论。MySQL fixture 均为 shape-verified synthetic（本机无 MySQL
@@ -228,7 +236,7 @@ dbx-plugin dev --path . --port 5190
 离线验证（无需 DBX、无需数据库）：
 
 ```bash
-npm test                                  # 契约 / Host adapter / parser / rules / golden / UI view-model
+npm test                                  # 契约 / Host adapter / parser / rules / hotspots / golden / UI view-model
 npm run build                             # 构建 ui/ 发布产物
 npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline（另有 mysql/estimated/...）
 ```
@@ -263,8 +271,8 @@ dbx-plugin package .
 ├── fixtures/              # 离线执行计划样本（postgres 真实采集 + mysql shape-verified synthetic）
 ├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析、UI fixture 虚拟模块）
 ├── src/                   # Svelte 前端源码
-│   ├── components/        # ConnectionContext / SqlInput / PlanSummary / FindingsList / PlanTree / NodeInspector / RawPlanViewer / HostAudit
-│   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖（adapter / parsers / normalize / metrics / rules）
+│   ├── components/        # ConnectionContext / SqlInput / PlanSummary / HotspotsList / FindingsList / PlanTree / NodeInspector / RawPlanViewer / HostAudit
+│   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖（adapter / parsers / normalize / metrics / rules / hotspots）
 │   ├── host/              # DBX Host Plan API adapter（唯一接触 window.dbxPlugin 的模块）
 │   ├── lib/               # 纯 UI 逻辑：analysis session、view model、fixture catalog、格式化
 │   └── App.svelte         # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
@@ -286,7 +294,7 @@ dbx-plugin package .
 
 - [STATUS.md](STATUS.md) —— 当前状态、上游 #9692 契约核验、已验证项与已知问题
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) —— 架构边界与职责划分
-- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / parser registry / NormalizedPlan / Metrics / Rules / Findings 契约与 Fixture 约定
+- [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) —— RawPlanInput / parser registry / NormalizedPlan / Metrics / Rules / Findings / Hotspots 契约与 Fixture 约定
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) —— 已确认决策、阶段划分、一期 / Future 边界
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md) —— Phase 0 Host Capability Matrix（历史审计）
 - [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口与提案（历史记录）

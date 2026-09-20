@@ -185,5 +185,51 @@
       "totalCost": 1954.43
     }
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Bitmap Heap Scan",
+        "kind": "bitmap_heap_scan",
+        "relation": "pd_fix_events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "high",
+            "statement": "Bitmap Heap Scan on pd_fix_events accounts for 88.87% of the plan's estimated self cost (1736.86 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 1736.8600000000001,
+              "selfCostShare": 0.8887,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "Bitmap Heap Scan",
+          "kind": "bitmap_heap_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 15728,
+          "startupCost": 221.51,
+          "estimatedTotalCost": 1954.43,
+          "selfCost": 1736.8600000000001,
+          "selfCostShare": 0.8887
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

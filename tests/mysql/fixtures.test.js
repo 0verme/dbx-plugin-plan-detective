@@ -18,7 +18,7 @@ import { MODES_BY_DATABASE, goldenPathFor, loadAllFixtures, relativeToRepo } fro
  */
 
 const fixtures = await loadAllFixtures("mysql");
-const STAGES = ["parsed", "normalized", "metrics", "findings"];
+const STAGES = ["parsed", "normalized", "metrics", "findings", "hotspots"];
 
 test("the MySQL fixture set is non-empty and estimated-only", () => {
   assert.ok(fixtures.length >= 8, `expected at least 8 MySQL fixtures, found ${fixtures.length}`);
@@ -50,12 +50,12 @@ for (const stage of STAGES) {
   });
 }
 
-test("MySQL golden files pin all four stages and nothing else", async (t) => {
+test("MySQL golden files pin all five stages and nothing else", async (t) => {
   for (const fixture of fixtures) {
     await t.test(fixture.name, async () => {
       const file = goldenPathFor(fixture.mode, fixture.name, "mysql");
       const golden = JSON.parse(await readFile(file, "utf8"));
-      assert.deepEqual(Object.keys(golden).sort(), [...STAGES].sort(), `${relativeToRepo(file)} must contain the four pipeline stages`);
+      assert.deepEqual(Object.keys(golden).sort(), [...STAGES].sort(), `${relativeToRepo(file)} must contain the five pipeline stages`);
     });
   }
 });

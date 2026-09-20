@@ -135,5 +135,64 @@
         }
       }
     }
-  ]
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Seq Scan",
+        "kind": "seq_scan",
+        "relation": "pd_fix_events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "cost-concentration",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events accounts for 100% of the plan's estimated self cost (3497 PostgreSQL cost units).",
+            "source": "Total Cost",
+            "evidence": {
+              "selfCost": 3497,
+              "selfCostShare": 1,
+              "thresholds": {
+                "minSelfCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          },
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events is estimated to return 200000 rows.",
+            "source": "Plan Rows",
+            "evidence": {
+              "estimatedRows": 200000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "Seq Scan",
+          "kind": "seq_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 200000,
+          "startupCost": 0,
+          "estimatedTotalCost": 3497,
+          "selfCost": 3497,
+          "selfCostShare": 1
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

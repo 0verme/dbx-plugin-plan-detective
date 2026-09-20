@@ -5,7 +5,7 @@
  *
  * Each golden file pins the full pipeline for one fixture:
  *
- *     raw plan -> parsed -> normalized -> metrics -> findings
+ *     raw plan -> parsed -> normalized -> metrics -> findings -> hotspots
  *
  * Run this only when a pipeline change is intentional, then review the diff
  * before committing:
@@ -35,6 +35,7 @@ for (const fixture of fixtures) {
     normalized: analysis.normalized,
     metrics: analysis.metrics,
     findings: analysis.findings,
+    hotspots: analysis.hotspots,
   };
   const next = `${JSON.stringify(golden, null, 2)}\n`;
   const file = goldenPathFor(fixture.mode, fixture.name, fixture.database);

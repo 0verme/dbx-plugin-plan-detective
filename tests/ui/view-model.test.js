@@ -4,13 +4,17 @@ import { analyzePlan } from "../../src/core/analyze.js";
 import { formatNumber, formatPercent, formatRawValue } from "../../src/lib/format.js";
 import {
   buildFindingViews,
+  buildHotspotViews,
   buildNodeInspector,
   buildPlanSummary,
   buildTreeRows,
   countFindingsBySeverity,
+  countHotspotLevels,
+  describeHotspotCost,
   describeNodeRef,
   expandAncestors,
   groupFindingsByNodeRef,
+  groupHotspotsByNodeRef,
   indexNodesById,
   indexRowsById,
   nodeLabel,
@@ -293,6 +297,59 @@ test("buildNodeInspector keeps engine-specific booleans only when meaningful", (
   assert.equal(buildNodeInspector(null), null);
 });
 
+/* ---------------------------------------------------------------- hotspots -- */
+
+test("buildHotspotViews maps the core hotspots without re-ranking them", () => {
+  const rows = buildTreeRows(largeSeqScanAnalysis.normalized.root);
+  const view = buildHotspotViews(largeSeqScanAnalysis.hotspots, indexRowsById(rows), largeSeqScanAnalysis.findings);
+
+  assert.equal(view.costNote, null, "available cost signals need no note");
+  assert.equal(view.items.length, 1);
+
+  const [item] = view.items;
+  assert.equal(item.rank, 1, "rank follows the core order");
+  assert.equal(item.id, "hotspot:0");
+  assert.equal(item.nodeId, "0");
+  assert.equal(item.nodeLabel, "Seq Scan · pd_fix_events");
+  assert.equal(item.level, "high");
+  assert.equal(item.estimateOnly, true);
+  assert.deepEqual(
+    item.reasons.map((reason) => reason.code),
+    ["cost-concentration", "large-sequential-scan"],
+  );
+  assert.equal(item.reasons[0].source, "Total Cost");
+  assert.deepEqual(item.findingRuleIds, ["large-sequential-scan"], "finding cross-reference is a lookup");
+
+  const evidence = new Map(item.evidence.map((row) => [row.path, row.value]));
+  assert.equal(evidence.get("estimatedRows"), "200,000");
+  assert.equal(evidence.get("selfCostShare"), "100.0%", "shares are rendered as percentages");
+});
+
+test("buildHotspotViews explains withheld cost signals but never changes them", () => {
+  assert.equal(describeHotspotCost({ status: "available", reason: null }), null);
+  assert.match(describeHotspotCost({ status: "withheld", reason: "PLAN_CONTAINS_SUBPLAN" }), /InitPlan/);
+  assert.match(describeHotspotCost({ status: "withheld", reason: "NO_QUERY_COST" }), /query_cost/);
+  assert.match(describeHotspotCost({ status: "withheld", reason: "MISSING_NODE_COST" }), /Total Cost/);
+
+  const view = buildHotspotViews({ cost: { engine: "postgresql", status: "withheld", reason: "MISSING_NODE_COST" }, items: [] });
+  assert.match(view.costNote, /Total Cost/);
+  assert.deepEqual(view.items, []);
+  assert.deepEqual(buildHotspotViews(null), { costNote: null, items: [] });
+});
+
+test("countHotspotLevels and groupHotspotsByNodeRef summarize without re-running signals", () => {
+  const counts = countHotspotLevels(nestedLoopAnalysis.hotspots.items);
+  assert.deepEqual(counts, { high: 1, warning: 1, info: 0, total: 2 });
+
+  const grouped = groupHotspotsByNodeRef([
+    { nodeId: "0", level: "warning" },
+    { nodeId: "0", level: "high" },
+    { nodeId: "0.1", level: "warning" },
+  ]);
+  assert.deepEqual(grouped.get("0"), { count: 2, level: "high" });
+  assert.deepEqual(grouped.get("0.1"), { count: 1, level: "warning" });
+});
+
 /* ------------------------------------------------------------------ extras -- */
 
 test("view-model works on every committed fixture", async () => {
@@ -302,9 +359,15 @@ test("view-model works on every committed fixture", async () => {
     const rows = buildTreeRows(analysis.normalized.root);
     const rowsById = indexRowsById(rows);
     const views = buildFindingViews(analysis.findings, rowsById);
+    const hotspotViews = buildHotspotViews(analysis.hotspots, rowsById, analysis.findings);
 
     assert.equal(rows.length, analysis.metrics.nodeCount, `${fixture.mode}/${fixture.name} tree row count`);
     assert.equal(views.length, analysis.findings.length, `${fixture.mode}/${fixture.name} finding views`);
+    assert.equal(
+      hotspotViews.items.length,
+      analysis.hotspots.items.length,
+      `${fixture.mode}/${fixture.name} hotspot views follow the core list`,
+    );
     assert.notEqual(buildNodeInspector(analysis.normalized.root), null, `${fixture.mode}/${fixture.name} root inspector`);
     for (const row of rows) {
       assert.ok(row.label.length > 0, `${fixture.mode}/${fixture.name} row ${row.id} has a label`);

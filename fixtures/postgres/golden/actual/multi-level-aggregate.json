@@ -509,5 +509,13 @@
       "totalCost": 80
     }
   },
-  "findings": []
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
+    "items": []
+  }
 }

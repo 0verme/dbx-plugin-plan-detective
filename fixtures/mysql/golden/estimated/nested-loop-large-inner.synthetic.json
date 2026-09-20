@@ -473,5 +473,110 @@
         }
       }
     }
-  ]
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "mysql",
+      "status": "available",
+      "reason": null
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.1",
+        "nodeId": "0.0.1",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "mysql-cost-concentration",
+            "level": "high",
+            "statement": "Table Scan on events accounts for 95.24% of its query block's estimated MySQL cost (read_cost + eval_cost = 10000 of 10500).",
+            "source": "table.cost_info.read_cost + eval_cost / query_block.cost_info.query_cost",
+            "evidence": {
+              "readCost": 8000,
+              "evalCost": 2000,
+              "accessCost": 10000,
+              "queryCost": 10500,
+              "costShare": 0.9524,
+              "blockNodeRef": "0",
+              "thresholds": {
+                "minAccessCost": 100,
+                "warningShare": 0.25,
+                "highShare": 0.5
+              }
+            }
+          },
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "Table Scan on events is estimated to examine 50000 rows per scan (access_type = ALL).",
+            "source": "table.rows_examined_per_scan",
+            "evidence": {
+              "estimatedRows": 50000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.1",
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "events",
+          "estimatedRows": 50000,
+          "accessType": "ALL",
+          "rowsExaminedPerScan": 50000,
+          "rowsProducedPerJoin": 50000,
+          "filteredPercent": 100,
+          "readCost": 8000,
+          "evalCost": 2000,
+          "prefixCost": 10500,
+          "accessCost": 10000,
+          "costShare": 0.9524,
+          "blockNodeRef": "0",
+          "queryCost": 10500
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "Nested Loop",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "nested-loop-amplification",
+            "level": "warning",
+            "statement": "Nested Loop is estimated to drive 1000 outer rows into 50000 inner rows each, about 50000000 estimated row comparisons.",
+            "source": "Plan Rows",
+            "evidence": {
+              "outerNodeRef": "0.0.0",
+              "innerNodeRef": "0.0.1",
+              "outerEstimatedRows": 1000,
+              "innerEstimatedRows": 50000,
+              "estimatedRowComparisons": 50000000,
+              "thresholds": {
+                "minOuterEstimatedRows": 10,
+                "warningInnerEstimatedRows": 10000,
+                "highInnerEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "Nested Loop",
+          "kind": "nested_loop",
+          "estimatedRows": 50000
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
 }

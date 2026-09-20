@@ -152,6 +152,25 @@ test("metadata validation rejects convention violations", () => {
     }).join("\n"),
     /findingRuleIds/,
   );
+  assert.deepEqual(
+    validateFixtureMeta(
+      validMeta({
+        expect: { rootNodeType: "Result", hasActualFields: false, minDepth: 1, findingRuleIds: [], hotspotNodeRefs: ["0", "0.1"] },
+      }),
+      { mode: "estimated", name: "x" },
+    ),
+    [],
+    "hotspotNodeRefs is optional but must validate when present",
+  );
+  assert.match(
+    validateFixtureMeta(
+      validMeta({
+        expect: { rootNodeType: "Result", hasActualFields: false, minDepth: 1, findingRuleIds: [], hotspotNodeRefs: [""] },
+      }),
+      { mode: "estimated", name: "x" },
+    ).join("\n"),
+    /hotspotNodeRefs/,
+  );
   assert.match(
     validateFixtureMeta(validMeta({ source: { kind: "copied", detail: "", reference: null } }), { mode: "estimated", name: "x" }).join("\n"),
     /source.kind/,

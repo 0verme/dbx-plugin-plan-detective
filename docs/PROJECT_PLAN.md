@@ -209,7 +209,7 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 0D | DBX Estimated Plan Response → RawPlanInput Adapter Contract（**离线**，纯函数、fail-closed） | ✅ 已实现并合入（Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)，PR #10） |
 | Phase 1 | Host Plan API 真实接入 + MVP 闭环（PostgreSQL structured，其余 raw-only） | ✅ 已实现（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)） |
 | Phase 1.1 | MySQL Estimated Plan 结构化（`EXPLAIN FORMAT=JSON` → 现有 IR / metrics / rules） | ✅ 已实现（Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)） |
-| Phase 2 | Metrics Engine + Findings/Evidence 扩展（Hotspot / Estimate Error 等） | 离线基础已实现；扩展指标属后续 Issue |
+| Phase 2 | Metrics Engine + Findings/Evidence 扩展（Hotspot / Estimate Error 等） | Hotspot Analysis ✅ 已实现（Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）；Estimate Error 等扩展属后续 Issue |
 | Phase 3 | Rule Engine 扩展与规则分级 | 3 条确定性规则已实现；更多规则属后续 Issue |
 | Phase 4 | Plan Diff / History | 后续 Issue |
 | Phase 5 | SQL Server / Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现（MySQL 已在 Phase 1.1 完成） |

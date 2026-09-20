@@ -4,21 +4,21 @@
     "format": "json",
     "mode": "estimated",
     "root": {
-      "nodeType": "Merge Join",
+      "nodeType": "Result",
       "relationName": null,
       "alias": null,
       "indexName": null,
-      "startupCost": 4979.84,
-      "totalCost": 5192.24,
-      "planRows": 14093,
-      "planWidth": 26,
+      "startupCost": 3997.01,
+      "totalCost": 7494.01,
+      "planRows": 200000,
+      "planWidth": 31,
       "filter": null,
       "indexCondition": null,
       "recheckCondition": null,
       "hashCondition": null,
-      "mergeCondition": "(c.id = e.customer_id)",
+      "mergeCondition": null,
       "joinFilter": null,
-      "joinType": "Inner",
+      "joinType": null,
       "parentRelationship": null,
       "subplanName": null,
       "sortKeys": null,
@@ -34,14 +34,14 @@
       "actualLoops": null,
       "children": [
         {
-          "nodeType": "Sort",
+          "nodeType": "Aggregate",
           "relationName": null,
           "alias": null,
           "indexName": null,
-          "startupCost": 11.64,
-          "totalCost": 12.14,
-          "planRows": 200,
-          "planWidth": 22,
+          "startupCost": 3997,
+          "totalCost": 3997.01,
+          "planRows": 1,
+          "planWidth": 8,
           "filter": null,
           "indexCondition": null,
           "recheckCondition": null,
@@ -49,17 +49,15 @@
           "mergeCondition": null,
           "joinFilter": null,
           "joinType": null,
-          "parentRelationship": "Outer",
-          "subplanName": null,
-          "sortKeys": [
-            "c.id"
-          ],
+          "parentRelationship": "InitPlan",
+          "subplanName": "InitPlan 1 (returns $0)",
+          "sortKeys": null,
           "groupKeys": null,
           "presortedKeys": null,
           "parallelAware": false,
           "asyncCapable": false,
-          "strategy": null,
-          "partialMode": null,
+          "strategy": "Plain",
+          "partialMode": "Simple",
           "actualStartupTime": null,
           "actualTotalTime": null,
           "actualRows": null,
@@ -67,13 +65,13 @@
           "children": [
             {
               "nodeType": "Seq Scan",
-              "relationName": "pd_fix_customers",
-              "alias": "c",
+              "relationName": "pd_fix_events",
+              "alias": "e2",
               "indexName": null,
               "startupCost": 0,
-              "totalCost": 4,
-              "planRows": 200,
-              "planWidth": 22,
+              "totalCost": 3497,
+              "planRows": 200000,
+              "planWidth": 0,
               "filter": null,
               "indexCondition": null,
               "recheckCondition": null,
@@ -101,14 +99,14 @@
           "extra": {}
         },
         {
-          "nodeType": "Sort",
-          "relationName": null,
-          "alias": null,
+          "nodeType": "Seq Scan",
+          "relationName": "pd_fix_events",
+          "alias": "e",
           "indexName": null,
-          "startupCost": 4968.2,
-          "totalCost": 5003.43,
-          "planRows": 14093,
-          "planWidth": 12,
+          "startupCost": 3997.01,
+          "totalCost": 7494.01,
+          "planRows": 200000,
+          "planWidth": 31,
           "filter": null,
           "indexCondition": null,
           "recheckCondition": null,
@@ -116,11 +114,9 @@
           "mergeCondition": null,
           "joinFilter": null,
           "joinType": null,
-          "parentRelationship": "Inner",
+          "parentRelationship": "Outer",
           "subplanName": null,
-          "sortKeys": [
-            "e.customer_id"
-          ],
+          "sortKeys": null,
           "groupKeys": null,
           "presortedKeys": null,
           "parallelAware": false,
@@ -131,45 +127,12 @@
           "actualTotalTime": null,
           "actualRows": null,
           "actualLoops": null,
-          "children": [
-            {
-              "nodeType": "Seq Scan",
-              "relationName": "pd_fix_events",
-              "alias": "e",
-              "indexName": null,
-              "startupCost": 0,
-              "totalCost": 3997,
-              "planRows": 14093,
-              "planWidth": 12,
-              "filter": "(status = 'pending'::text)",
-              "indexCondition": null,
-              "recheckCondition": null,
-              "hashCondition": null,
-              "mergeCondition": null,
-              "joinFilter": null,
-              "joinType": null,
-              "parentRelationship": "Outer",
-              "subplanName": null,
-              "sortKeys": null,
-              "groupKeys": null,
-              "presortedKeys": null,
-              "parallelAware": false,
-              "asyncCapable": false,
-              "strategy": null,
-              "partialMode": null,
-              "actualStartupTime": null,
-              "actualTotalTime": null,
-              "actualRows": null,
-              "actualLoops": null,
-              "children": [],
-              "extra": {}
-            }
-          ],
+          "children": [],
           "extra": {}
         }
       ],
       "extra": {
-        "Inner Unique": false
+        "One-Time Filter": "($0 > 100)"
       }
     }
   },
@@ -179,44 +142,42 @@
     "format": "json",
     "root": {
       "id": "0",
-      "kind": "merge_join",
-      "nodeType": "Merge Join",
+      "kind": "result",
+      "nodeType": "Result",
       "relation": null,
-      "estimatedRows": 14093,
+      "estimatedRows": 200000,
       "actualRows": null,
       "actualStartupTime": null,
       "actualTotalTime": null,
       "loops": null,
-      "startupCost": 4979.84,
-      "totalCost": 5192.24,
-      "width": 26,
+      "startupCost": 3997.01,
+      "totalCost": 7494.01,
+      "width": 31,
       "filter": null,
-      "joinType": "Inner",
-      "joinCondition": "(c.id = e.customer_id)",
+      "joinType": null,
+      "joinCondition": null,
       "indexCondition": null,
       "sortKeys": null,
       "groupKeys": null,
       "children": [
         {
           "id": "0.0",
-          "kind": "sort",
-          "nodeType": "Sort",
+          "kind": "aggregate",
+          "nodeType": "Aggregate",
           "relation": null,
-          "estimatedRows": 200,
+          "estimatedRows": 1,
           "actualRows": null,
           "actualStartupTime": null,
           "actualTotalTime": null,
           "loops": null,
-          "startupCost": 11.64,
-          "totalCost": 12.14,
-          "width": 22,
+          "startupCost": 3997,
+          "totalCost": 3997.01,
+          "width": 8,
           "filter": null,
           "joinType": null,
           "joinCondition": null,
           "indexCondition": null,
-          "sortKeys": [
-            "c.id"
-          ],
+          "sortKeys": null,
           "groupKeys": null,
           "children": [
             {
@@ -224,18 +185,18 @@
               "kind": "seq_scan",
               "nodeType": "Seq Scan",
               "relation": {
-                "name": "pd_fix_customers",
-                "alias": "c",
+                "name": "pd_fix_events",
+                "alias": "e2",
                 "indexName": null
               },
-              "estimatedRows": 200,
+              "estimatedRows": 200000,
               "actualRows": null,
               "actualStartupTime": null,
               "actualTotalTime": null,
               "loops": null,
               "startupCost": 0,
-              "totalCost": 4,
-              "width": 22,
+              "totalCost": 3497,
+              "width": 0,
               "filter": null,
               "joinType": null,
               "joinCondition": null,
@@ -262,10 +223,10 @@
           ],
           "engineSpecific": {
             "database": "postgresql",
-            "parentRelationship": "Outer",
-            "subplanName": null,
-            "strategy": null,
-            "partialMode": null,
+            "parentRelationship": "InitPlan",
+            "subplanName": "InitPlan 1 (returns $0)",
+            "strategy": "Plain",
+            "partialMode": "Simple",
             "parallelAware": false,
             "asyncCapable": false,
             "hashCondition": null,
@@ -278,70 +239,31 @@
         },
         {
           "id": "0.1",
-          "kind": "sort",
-          "nodeType": "Sort",
-          "relation": null,
-          "estimatedRows": 14093,
+          "kind": "seq_scan",
+          "nodeType": "Seq Scan",
+          "relation": {
+            "name": "pd_fix_events",
+            "alias": "e",
+            "indexName": null
+          },
+          "estimatedRows": 200000,
           "actualRows": null,
           "actualStartupTime": null,
           "actualTotalTime": null,
           "loops": null,
-          "startupCost": 4968.2,
-          "totalCost": 5003.43,
-          "width": 12,
+          "startupCost": 3997.01,
+          "totalCost": 7494.01,
+          "width": 31,
           "filter": null,
           "joinType": null,
           "joinCondition": null,
           "indexCondition": null,
-          "sortKeys": [
-            "e.customer_id"
-          ],
+          "sortKeys": null,
           "groupKeys": null,
-          "children": [
-            {
-              "id": "0.1.0",
-              "kind": "seq_scan",
-              "nodeType": "Seq Scan",
-              "relation": {
-                "name": "pd_fix_events",
-                "alias": "e",
-                "indexName": null
-              },
-              "estimatedRows": 14093,
-              "actualRows": null,
-              "actualStartupTime": null,
-              "actualTotalTime": null,
-              "loops": null,
-              "startupCost": 0,
-              "totalCost": 3997,
-              "width": 12,
-              "filter": "(status = 'pending'::text)",
-              "joinType": null,
-              "joinCondition": null,
-              "indexCondition": null,
-              "sortKeys": null,
-              "groupKeys": null,
-              "children": [],
-              "engineSpecific": {
-                "database": "postgresql",
-                "parentRelationship": "Outer",
-                "subplanName": null,
-                "strategy": null,
-                "partialMode": null,
-                "parallelAware": false,
-                "asyncCapable": false,
-                "hashCondition": null,
-                "mergeCondition": null,
-                "joinFilter": null,
-                "recheckCondition": null,
-                "presortedKeys": null,
-                "extra": {}
-              }
-            }
-          ],
+          "children": [],
           "engineSpecific": {
             "database": "postgresql",
-            "parentRelationship": "Inner",
+            "parentRelationship": "Outer",
             "subplanName": null,
             "strategy": null,
             "partialMode": null,
@@ -365,62 +287,85 @@
         "parallelAware": false,
         "asyncCapable": false,
         "hashCondition": null,
-        "mergeCondition": "(c.id = e.customer_id)",
+        "mergeCondition": null,
         "joinFilter": null,
         "recheckCondition": null,
         "presortedKeys": null,
         "extra": {
-          "Inner Unique": false
+          "One-Time Filter": "($0 > 100)"
         }
       }
     },
     "unknownNodeTypes": []
   },
   "metrics": {
-    "nodeCount": 5,
+    "nodeCount": 4,
     "maxDepth": 3,
-    "totalEstimatedCost": 5192.24,
-    "rootEstimatedRows": 14093,
+    "totalEstimatedCost": 7494.01,
+    "rootEstimatedRows": 200000,
     "scanCount": 2,
     "sequentialScanCount": 2,
     "indexScanCount": 0,
     "bitmapScanCount": 0,
-    "joinCount": 1,
-    "sortCount": 2,
-    "aggregateCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 1,
     "unknownNodeTypeCount": 0,
     "largestEstimatedRows": {
       "nodeId": "0",
-      "kind": "merge_join",
-      "nodeType": "Merge Join",
+      "kind": "result",
+      "nodeType": "Result",
       "relation": null,
-      "estimatedRows": 14093
+      "estimatedRows": 200000
     },
     "highestIncrementalCost": {
-      "nodeId": "0.1.0",
+      "nodeId": "0.1",
       "kind": "seq_scan",
       "nodeType": "Seq Scan",
       "relation": "pd_fix_events",
-      "incrementalCost": 3997,
-      "totalCost": 3997
+      "incrementalCost": 7494.01,
+      "totalCost": 7494.01
     }
   },
   "findings": [
     {
-      "id": "large-sequential-scan:0.1.0",
+      "id": "large-sequential-scan:0.0.0",
       "ruleId": "large-sequential-scan",
-      "severity": "warning",
+      "severity": "high",
       "title": "Large sequential scan",
-      "summary": "Seq Scan on pd_fix_events with a filter is estimated to read 14093 rows and accounts for an incremental cost of 3997. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
-      "nodeRef": "0.1.0",
+      "summary": "Seq Scan on pd_fix_events with no filter reported is estimated to read 200000 rows and accounts for an incremental cost of 3497. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.0.0",
       "evidence": {
-        "nodeId": "0.1.0",
+        "nodeId": "0.0.0",
         "nodeType": "Seq Scan",
         "relation": "pd_fix_events",
-        "estimatedRows": 14093,
-        "estimatedTotalCost": 3997,
-        "incrementalCost": 3997,
-        "filter": "(status = 'pending'::text)",
+        "estimatedRows": 200000,
+        "estimatedTotalCost": 3497,
+        "incrementalCost": 3497,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    },
+    {
+      "id": "large-sequential-scan:0.1",
+      "ruleId": "large-sequential-scan",
+      "severity": "high",
+      "title": "Large sequential scan",
+      "summary": "Seq Scan on pd_fix_events with no filter reported is estimated to read 200000 rows and accounts for an incremental cost of 7494.01. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.1",
+      "evidence": {
+        "nodeId": "0.1",
+        "nodeType": "Seq Scan",
+        "relation": "pd_fix_events",
+        "estimatedRows": 200000,
+        "estimatedTotalCost": 7494.01,
+        "incrementalCost": 7494.01,
+        "filter": null,
         "thresholds": {
           "warningEstimatedRows": 10000,
           "highEstimatedRows": 100000,
@@ -433,40 +378,25 @@
   "hotspots": {
     "cost": {
       "engine": "postgresql",
-      "status": "available",
-      "reason": null
+      "status": "withheld",
+      "reason": "PLAN_CONTAINS_SUBPLAN"
     },
     "items": [
       {
-        "id": "hotspot:0.1.0",
-        "nodeId": "0.1.0",
+        "id": "hotspot:0.0.0",
+        "nodeId": "0.0.0",
         "nodeType": "Seq Scan",
         "kind": "seq_scan",
         "relation": "pd_fix_events",
         "level": "high",
         "reasons": [
           {
-            "code": "cost-concentration",
-            "level": "high",
-            "statement": "Seq Scan on pd_fix_events accounts for 76.98% of the plan's estimated self cost (3997 PostgreSQL cost units).",
-            "source": "Total Cost",
-            "evidence": {
-              "selfCost": 3997,
-              "selfCostShare": 0.7698,
-              "thresholds": {
-                "minSelfCost": 100,
-                "warningShare": 0.25,
-                "highShare": 0.5
-              }
-            }
-          },
-          {
             "code": "large-sequential-scan",
-            "level": "warning",
-            "statement": "Seq Scan on pd_fix_events is estimated to return 14093 rows.",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events is estimated to return 200000 rows.",
             "source": "Plan Rows",
             "evidence": {
-              "estimatedRows": 14093,
+              "estimatedRows": 200000,
               "thresholds": {
                 "warningEstimatedRows": 10000,
                 "highEstimatedRows": 100000
@@ -475,15 +405,46 @@
           }
         ],
         "evidence": {
-          "nodeId": "0.1.0",
+          "nodeId": "0.0.0",
           "nodeType": "Seq Scan",
           "kind": "seq_scan",
           "relation": "pd_fix_events",
-          "estimatedRows": 14093,
+          "estimatedRows": 200000,
           "startupCost": 0,
-          "estimatedTotalCost": 3997,
-          "selfCost": 3997,
-          "selfCostShare": 0.7698
+          "estimatedTotalCost": 3497
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.1",
+        "nodeId": "0.1",
+        "nodeType": "Seq Scan",
+        "kind": "seq_scan",
+        "relation": "pd_fix_events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "Seq Scan on pd_fix_events is estimated to return 200000 rows.",
+            "source": "Plan Rows",
+            "evidence": {
+              "estimatedRows": 200000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.1",
+          "nodeType": "Seq Scan",
+          "kind": "seq_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 200000,
+          "startupCost": 3997.01,
+          "estimatedTotalCost": 7494.01
         },
         "estimateOnly": true
       }

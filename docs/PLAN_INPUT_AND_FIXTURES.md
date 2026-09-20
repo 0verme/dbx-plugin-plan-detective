@@ -30,8 +30,9 @@ Normalizer                        → NormalizedPlan（数据库无关语义 + e
    ▼
 Metrics（确定性算术）
    │
-   ▼
-Rules（确定性阈值）                → Findings（结论 + Evidence）
+   ├─► Rules（确定性阈值）              → Findings（结论 + Evidence）
+   │
+   └─► Hotspots（确定性信号聚合）        → HotspotAnalysis（注意力列表 + reason + evidence）
    │
    ▼
 src/lib/analysis-session.js（编排） + UI（Host 分析 / Fixtures 开发模式）
@@ -39,7 +40,7 @@ src/lib/analysis-session.js（编排） + UI（Host 分析 / Fixtures 开发模�
 
 - Plan Core 位于 `src/core/`，不得 import DBX Host 类型、不得访问浏览器全局、不得连接数据库。
 - UI 只消费 `analysis-session` / `analyzePlan()` 的输出；`src/lib/` 的 view model 只做展示映射，不重算 Metrics、
-  不重跑规则、不修改 Core 语义。
+  不重跑规则、不重算热点。
 - `window.dbxPlugin` 只在 `src/host/**` 与开发用 HostAudit 视图中出现；依赖方向由测试强制：
   `tests/core-isolation.test.js` 检查「不得引用 `window` / `document` / `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」
   与「`parsers` / `postgres` / `mysql` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
@@ -397,7 +398,54 @@ interface Finding {
 `createFinding` 会校验 severity / title / summary / node / evidence，非法输入抛 `TypeError`。
 
 统一入口：`src/core/analyze.js` 的 `analyzePlan(rawInput)` 返回
-`{ parsed, normalized, metrics, findings }`；未来 adapter 与 UI 只调用它即可。
+`{ parsed, normalized, metrics, findings, hotspots }`；未来 adapter 与 UI 只调用它即可。
+
+### Hotspots（`src/core/hotspots/`）
+
+Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命中了哪条已知模式」）分层，两者可以命中同一节点但互不派生。
+实现：`src/core/hotspots/compute-hotspots.js`（信号聚合）、`src/core/hotspots/thresholds.js`（阈值）、
+`src/core/hotspots/self-cost.js`（PostgreSQL 代价归因边界）。
+
+```ts
+HotspotAnalysis {
+  cost: { engine: "postgresql" | "mysql", status: "available" | "withheld", reason: string | null },
+  items: Hotspot[],
+}
+
+Hotspot {
+  id: "hotspot:<nodeId>"; nodeId; nodeType; kind; relation;
+  level: "high" | "warning" | "info";          // 注意力档位 = 最强 reason
+  reasons: [{ code; level; statement; source; evidence }];
+  evidence: Record<string, unknown>;             // 平面 node 快照 + 可用信号值
+  estimateOnly: true;                            // 当前全部信号来自 planner estimate
+}
+```
+
+确定性排序：`level` → reason 数量降序 → plan pre-order。它是注意力顺序，不是性能排名、不是综合评分。
+raw-only 方言的 `hotspots` 为 `null`（与 `metrics` / `normalized` 一致），不进入结构化分析。
+
+| reason code | 引擎 | 依据 | 档位 |
+| --- | --- | --- | --- |
+| `large-sequential-scan` | PostgreSQL / MySQL | `kind = seq_scan`；PG `Plan Rows`，MySQL `rows_examined_per_scan` | ≥ 10 000 `warning`；≥ 100 000 `high` |
+| `nested-loop-amplification` | PostgreSQL / MySQL | 外层 × 内层估算行数 | 外层 ≥ 10 且内层 ≥ 10 000 `warning`；内层 ≥ 100 000 `high` |
+| `cost-concentration` | PostgreSQL | 节点自身增量代价 / 根 Total Cost（PostgreSQL cost units） | ≥ 25% `warning`；≥ 50% `high` |
+| `mysql-rows-examined` | MySQL | 非 `ALL` 访问的 `rows_examined_per_scan` | ≥ 10 000 / ≥ 100 000 |
+| `mysql-filtered-out` | MySQL | `filtered` 低且 `rows_examined_per_scan` 大 | `≤ 10%` 且 ≥ 1 000 行；`≤ 1%` 且 ≥ 100 000 行 |
+| `mysql-cost-concentration` | MySQL | 同一 query block 内 ≥ 2 个有代价访问的 `(read_cost + eval_cost) / query_cost`（MySQL cost units） | ≥ 25% / ≥ 50% |
+| `mysql-filesort` / `mysql-temporary-table` / `mysql-join-buffer` | MySQL | `using_filesort` / `using_temporary_table` / `using_join_buffer` + 子树最大估算行数 | ≥ 10 000 / ≥ 100 000 |
+
+PostgreSQL 代价归因安全边界（`cost.status = "withheld"`，只用行数信号）：
+
+| reason | 触发 |
+| --- | --- |
+| `NO_PLAN_COST` | 根节点没有正的 Total Cost |
+| `MISSING_NODE_COST` | 任一节点缺少 Total Cost（不把缺失当 0） |
+| `PLAN_CONTAINS_SUBPLAN` | 出现 `Parent Relationship: InitPlan` / `SubPlan`（父代价由 `cost_subplan()` 计入） |
+| `UNVERIFIED_COST_FLOW` | 子节点缺少 / 未知 Parent Relationship |
+
+即使计划整体可归因，单个节点自代价为负（`Limit` 会截断子节点代价）时，该节点及其子树也不产生占比信号；
+祖先节点不受影响。MySQL 侧不做任何子节点相减，只用 `read_cost + eval_cost` 相对最近外层 query block `query_cost` 的占比，
+且只在同一 block 内 ≥ 2 个有代价访问时输出（单表 block 恒为 100%，无区分度）。
 
 ## 7. Fixture Convention
 
@@ -426,13 +474,13 @@ fixtures/mysql/                     # 仅 estimated；全部为 shape-verified s
 - `.plan.json` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
 - `.meta.json` 的 `expect` 记录该 fixture 要钉住的行为：
   `rootNodeType` / `hasActualFields` / `minDepth` / `findingRuleIds`（实际触发的 rule id 集合，
-  没有触发则为 `[]`）。
+  没有触发则为 `[]`）；可选 `hotspotNodeRefs`（`analysis.hotspots.items` 的 node id 顺序，未声明则不校验）。
 - 一个 fixture 只验证一个主要行为，优先小而可人工核对。
 - 合成 fixture 必须在文件名中标记 `.synthetic`。
 - MySQL 只有 `estimated/`：Host API 不提供 MySQL actual plan，MySQL `EXPLAIN ANALYZE` 也不是该 JSON 形状。
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
-当前 fixture：PostgreSQL 19 个（17 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
+当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
 MySQL 11 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）。
 
 ## 8. Fixture Provenance
@@ -459,7 +507,7 @@ MySQL 11 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/RE
 .plan.json ──loadFixture（校验 metadata → RawPlanInput）
       │
       ▼ analyzePlan()
-{ parsed, normalized, metrics, findings }
+{ parsed, normalized, metrics, findings, hotspots }
       │
       ▼ deepStrictEqual
 fixtures/postgres/golden/<mode>/<name>.json
@@ -470,7 +518,7 @@ fixtures/postgres/golden/<mode>/<name>.json
   golden，并逐文件 review diff。
 - golden 与 fixture 一一对应，不允许 orphan 文件。
 - `expect.findingRuleIds` 是独立于 golden 的第二重断言：即使 golden 被一并更新，
-  也必须显式确认规则触发集合的意图。
+  也必须显式确认规则触发集合的意图；声明了 `expect.hotspotNodeRefs` 的 fixture 同样会独立校验 hotspot 顺序。
 
 ## 10. 测试
 
@@ -482,7 +530,8 @@ npm run analyze -- estimated/seq-scan   # 开发用：对单个 fixture 跑完�
 
 覆盖范围：契约校验、PostgreSQL / MySQL parser 字段映射与错误路径、estimated / actual 不混淆、未知节点与未知字段、
 NormalizedPlan 语义与 id、Metrics 计数与增量代价、3 条规则的正反例与阈值边界、
-Findings 契约、golden 四 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
+Hotspot 契约 / PostgreSQL 代价归因边界（Limit 截断、InitPlan / SubPlan、缺失代价）/ MySQL 行数与 cost_info 信号 / 排序稳定性、
+Findings 契约、golden 五 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
 
 ## 11. 明确不在本轮范围
 
@@ -494,6 +543,11 @@ SQL Server / Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQ
 
 以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
 落地后只需把 Host 返回值交给第 2.1 节的 Adapter，将 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
+
+> 更新（2026-09-20，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）：
+> Hotspot Analysis 已实现（`src/core/hotspots/**`）：确定性、engine-aware、无综合评分，与 Findings 分层；
+> golden 增加 `hotspots` stage；UI 新增 Hotspots 面板（Plan Summary → Hotspots → Findings → Plan Tree → Raw Plan）。
+> Parser / NormalizedPlan / Metrics / Rules / Findings 语义与阈值未变。
 
 > 更新（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）：
 > Fixture-driven MVP UI 已实现（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector）。
