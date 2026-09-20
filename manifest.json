@@ -3,7 +3,7 @@
   "manifest_version": 1,
   "id": "io.github.0verme.plan-detective",
   "name": "DBX Plan Detective",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "0verme",
   "description": "为 DBX 提供 Estimated Plan 解析、基础可视化与确定性 Findings。",
   "icon": "assets/plugin.svg",

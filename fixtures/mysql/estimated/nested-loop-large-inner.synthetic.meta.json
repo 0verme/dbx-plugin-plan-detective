@@ -1,0 +1,30 @@
+{
+  "database": "mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-assembled MySQL 8.0 EXPLAIN FORMAT=JSON document, not captured from a live server. The shape (query_block / nested_loop / table / ordering_operation / grouping_operation / union_result / materialized_from_subquery / cost_info, numeric cost and filtered strings) was verified against MySQL Server 8.0 mysql-test expected output (explain_json_all.result) and against DBX's own MySQL EXPLAIN JSON consumer (apps/desktop/src/lib/diagram/explainPlan.ts). Table names, row counts and costs are synthetic test data. Scenario: SELECT orders.id FROM orders JOIN events ON events.order_id = orders.id; the inner side is estimated at 50000 rows, so it pins nested-loop-large-inner (row estimates only) and large-sequential-scan for the inner table scan.",
+    "reference": "https://raw.githubusercontent.com/mysql/mysql-server/8.0/mysql-test/r/explain_json_all.result"
+  },
+  "features": [
+    "nested loop",
+    "large inner estimate",
+    "nested-loop-large-inner rule",
+    "large-sequential-scan rule",
+    "inner table has no IR cost"
+  ],
+  "expect": {
+    "rootNodeType": "Query Block",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": [
+      "large-sequential-scan",
+      "nested-loop-large-inner"
+    ]
+  }
+}

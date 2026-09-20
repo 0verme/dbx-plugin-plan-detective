@@ -55,6 +55,32 @@ test("large-sequential-scan can be triggered by cost alone when rows are unknown
   assert.equal(run(largeSequentialScanRule, high)[0]?.severity, "high");
 });
 
+test("large-sequential-scan does not treat a missing cost as zero", () => {
+  // MySQL table scans map to `seq_scan` but carry no PostgreSQL-style cost;
+  // the row branch must still fire and must not print a fabricated 0.
+  const root = normalizedNode({
+    kind: "seq_scan",
+    nodeType: "Table Scan",
+    relation: { name: "events", alias: null, indexName: null },
+    estimatedRows: 20_000,
+    totalCost: null,
+  });
+
+  const [finding] = run(largeSequentialScanRule, root);
+  assert.equal(finding.severity, "warning");
+  assert.equal(finding.nodeRef, "0");
+  assert.equal(finding.evidence.incrementalCost, null);
+  assert.equal(finding.evidence.estimatedTotalCost, null);
+  assert.match(finding.summary, /^Table Scan on events/);
+  assert.match(finding.summary, /does not report a cost estimate/);
+  assert.doesNotMatch(finding.summary, /incremental cost of 0/);
+});
+
+test("large-sequential-scan cannot trigger on cost when the plan reports none", () => {
+  const root = normalizedNode({ kind: "seq_scan", nodeType: "Table Scan", estimatedRows: null, totalCost: null });
+  assert.deepEqual(run(largeSequentialScanRule, root), []);
+});
+
 test("large-sequential-scan uses incremental cost, not the parent's cost", () => {
   const root = normalizedNode({
     kind: "sort",

@@ -1,0 +1,244 @@
+{
+  "parsed": {
+    "database": "mysql",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "structure": "query_block",
+      "nodeType": "Query Block",
+      "relationName": null,
+      "indexName": null,
+      "estimatedRows": null,
+      "filter": null,
+      "indexCondition": null,
+      "children": [
+        {
+          "structure": "table",
+          "nodeType": "Const Row Lookup",
+          "relationName": "settings",
+          "indexName": "PRIMARY",
+          "estimatedRows": 1,
+          "filter": null,
+          "indexCondition": null,
+          "children": [],
+          "mysql": {
+            "selectId": null,
+            "message": null,
+            "accessType": "const",
+            "possibleKeys": [
+              "PRIMARY"
+            ],
+            "usedKeyParts": [
+              "id"
+            ],
+            "usedColumns": [
+              "id",
+              "name",
+              "value"
+            ],
+            "keyLength": "4",
+            "ref": [
+              "const"
+            ],
+            "rowsExaminedPerScan": 1,
+            "rowsProducedPerJoin": 1,
+            "filteredPercent": 100,
+            "usingIndex": null,
+            "usingIndexForGroupBy": null,
+            "usingFilesort": null,
+            "usingTemporaryTable": null,
+            "usingJoinBuffer": null,
+            "firstMatch": null,
+            "dependent": null,
+            "cacheable": null,
+            "queryCost": null,
+            "readCost": 0,
+            "evalCost": 0.1,
+            "prefixCost": 0.35,
+            "dataReadPerJoin": 16,
+            "sortCost": null
+          },
+          "extra": {}
+        }
+      ],
+      "mysql": {
+        "selectId": 1,
+        "message": null,
+        "accessType": null,
+        "possibleKeys": null,
+        "usedKeyParts": null,
+        "usedColumns": null,
+        "keyLength": null,
+        "ref": null,
+        "rowsExaminedPerScan": null,
+        "rowsProducedPerJoin": null,
+        "filteredPercent": null,
+        "usingIndex": null,
+        "usingIndexForGroupBy": null,
+        "usingFilesort": null,
+        "usingTemporaryTable": null,
+        "usingJoinBuffer": null,
+        "firstMatch": null,
+        "dependent": null,
+        "cacheable": null,
+        "queryCost": 0.35,
+        "readCost": null,
+        "evalCost": null,
+        "prefixCost": null,
+        "dataReadPerJoin": null,
+        "sortCost": null
+      },
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "mysql",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "query_block",
+      "nodeType": "Query Block",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "const_scan",
+          "nodeType": "Const Row Lookup",
+          "relation": {
+            "name": "settings",
+            "alias": null,
+            "indexName": "PRIMARY"
+          },
+          "estimatedRows": 1,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "mysql",
+            "mysql": {
+              "structure": "table",
+              "selectId": null,
+              "message": null,
+              "accessType": "const",
+              "possibleKeys": [
+                "PRIMARY"
+              ],
+              "usedKeyParts": [
+                "id"
+              ],
+              "usedColumns": [
+                "id",
+                "name",
+                "value"
+              ],
+              "keyLength": "4",
+              "ref": [
+                "const"
+              ],
+              "rowsExaminedPerScan": 1,
+              "rowsProducedPerJoin": 1,
+              "filteredPercent": 100,
+              "usingIndex": null,
+              "usingIndexForGroupBy": null,
+              "usingFilesort": null,
+              "usingTemporaryTable": null,
+              "usingJoinBuffer": null,
+              "firstMatch": null,
+              "dependent": null,
+              "cacheable": null,
+              "queryCost": null,
+              "readCost": 0,
+              "evalCost": 0.1,
+              "prefixCost": 0.35,
+              "dataReadPerJoin": 16,
+              "sortCost": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "mysql",
+        "mysql": {
+          "structure": "query_block",
+          "selectId": 1,
+          "message": null,
+          "accessType": null,
+          "possibleKeys": null,
+          "usedKeyParts": null,
+          "usedColumns": null,
+          "keyLength": null,
+          "ref": null,
+          "rowsExaminedPerScan": null,
+          "rowsProducedPerJoin": null,
+          "filteredPercent": null,
+          "usingIndex": null,
+          "usingIndexForGroupBy": null,
+          "usingFilesort": null,
+          "usingTemporaryTable": null,
+          "usingJoinBuffer": null,
+          "firstMatch": null,
+          "dependent": null,
+          "cacheable": null,
+          "queryCost": 0.35,
+          "readCost": null,
+          "evalCost": null,
+          "prefixCost": null,
+          "dataReadPerJoin": null,
+          "sortCost": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "const_scan",
+      "nodeType": "Const Row Lookup",
+      "relation": "settings",
+      "estimatedRows": 1
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": []
+}

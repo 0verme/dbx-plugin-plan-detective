@@ -3,7 +3,7 @@ import test from "node:test";
 import { analyzePlan } from "../../src/core/analyze.js";
 import { PlanParseError } from "../../src/core/errors.js";
 import { analyzeRawPlan, describeParserSupport, getParser } from "../../src/core/parsers/index.js";
-import { createRawPlanInput } from "../../src/core/raw-plan-input.js";
+import { STRUCTURED_DATABASES, createRawPlanInput } from "../../src/core/raw-plan-input.js";
 import { loadFixture } from "../helpers/fixtures.js";
 
 /**
@@ -14,24 +14,33 @@ import { loadFixture } from "../helpers/fixtures.js";
  */
 
 const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-scan" });
+const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "table-scan.synthetic" });
 
-function mysqlRawInput() {
+function pendingDialectInput() {
   return createRawPlanInput({
-    database: "mysql",
+    database: "sqlserver",
     mode: "estimated",
-    format: "json",
-    plan: { query_block: { table: { table_name: "orders", access_type: "ALL" } } },
+    format: "xml",
+    plan: "<ShowPlanXML />",
   });
 }
 
-test("getParser only returns a parser for an implemented family", () => {
-  const parser = getParser("postgresql");
-  assert.equal(parser?.id, "postgres");
-  assert.deepEqual(parser?.formats, ["json"]);
+test("getParser returns a parser only for an implemented family", () => {
+  const postgres = getParser("postgresql");
+  assert.equal(postgres?.id, "postgres");
+  assert.deepEqual(postgres?.formats, ["json"]);
 
-  for (const database of ["mysql", "sqlserver", "oracle", "unknown-database"]) {
+  const mysql = getParser("mysql");
+  assert.equal(mysql?.id, "mysql");
+  assert.deepEqual(mysql?.formats, ["json"]);
+
+  for (const database of ["sqlserver", "oracle", "unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
+});
+
+test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql"]);
 });
 
 test("describeParserSupport separates structured, pending and unknown families", () => {
@@ -42,7 +51,14 @@ test("describeParserSupport separates structured, pending and unknown families",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
-  for (const database of ["mysql", "sqlserver", "oracle", "oceanbase-oracle", "doris", "dameng", "questdb"]) {
+  assert.deepEqual(describeParserSupport("mysql", "json"), { structured: true, parser: "mysql", reasonCode: null });
+  assert.deepEqual(describeParserSupport("mysql", "text"), {
+    structured: false,
+    parser: "mysql",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  for (const database of ["sqlserver", "oracle", "oceanbase-oracle", "doris", "dameng", "questdb"]) {
     assert.deepEqual(
       describeParserSupport(database, "json"),
       { structured: false, parser: "none", reasonCode: "PARSER_NOT_IMPLEMENTED" },
@@ -77,13 +93,31 @@ test("analyzeRawPlan runs the full structured pipeline for PostgreSQL", () => {
   assert.deepEqual(result.findings, strict.findings);
 });
 
+test("analyzeRawPlan runs the full structured pipeline for MySQL", () => {
+  const result = analyzeRawPlan(mysqlFixture.input);
+
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "mysql");
+  assert.equal(result.reasonCode, null);
+  assert.equal(result.reason, null);
+  assert.equal(result.parsed.database, "mysql");
+  assert.equal(result.normalized.database, "mysql");
+  assert.ok(result.metrics.nodeCount >= 2);
+
+  const strict = analyzePlan(mysqlFixture.input);
+  assert.deepEqual(result.parsed, strict.parsed);
+  assert.deepEqual(result.normalized, strict.normalized);
+  assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+});
+
 test("analyzeRawPlan returns a raw-only result for a pending dialect", () => {
-  const result = analyzeRawPlan(mysqlRawInput());
+  const result = analyzeRawPlan(pendingDialectInput());
 
   assert.equal(result.status, "raw-only");
   assert.equal(result.parser, "none");
   assert.equal(result.reasonCode, "PARSER_NOT_IMPLEMENTED");
-  assert.match(result.reason, /mysql/);
+  assert.match(result.reason, /sqlserver/);
   assert.equal(result.parsed, null);
   assert.equal(result.normalized, null);
   assert.equal(result.metrics, null);
@@ -107,21 +141,28 @@ test("analyzeRawPlan reports a format mismatch instead of silently skipping the 
   assert.equal(result.parser, "postgres");
   assert.equal(result.reasonCode, "UNSUPPORTED_FORMAT");
   assert.match(result.reason, /text/);
+
+  const mysqlResult = analyzeRawPlan(
+    createRawPlanInput({ database: "mysql", mode: "estimated", format: "text", plan: "-> Table scan on orders" }),
+  );
+  assert.equal(mysqlResult.status, "raw-only");
+  assert.equal(mysqlResult.parser, "mysql");
+  assert.equal(mysqlResult.reasonCode, "UNSUPPORTED_FORMAT");
 });
 
 test("analyzePlan stays strict: a raw-only family throws instead of returning empty findings", () => {
   try {
-    analyzePlan(mysqlRawInput());
+    analyzePlan(pendingDialectInput());
     assert.fail("analyzePlan must throw for a family without a structured parser");
   } catch (error) {
     assert.ok(error instanceof PlanParseError);
     assert.equal(error.code, "PARSER_NOT_IMPLEMENTED");
-    assert.match(error.message, /mysql/);
+    assert.match(error.message, /sqlserver/);
   }
 });
 
 test("a structured parser still fails loudly on a malformed payload", () => {
-  const malformed = createRawPlanInput({
+  const malformedPostgres = createRawPlanInput({
     database: "postgresql",
     mode: "estimated",
     format: "json",
@@ -129,9 +170,25 @@ test("a structured parser still fails loudly on a malformed payload", () => {
   });
 
   assert.throws(
-    () => analyzeRawPlan(malformed),
+    () => analyzeRawPlan(malformedPostgres),
     (error) => {
       assert.ok(error instanceof PlanParseError);
+      return true;
+    },
+  );
+
+  const malformedMysql = createRawPlanInput({
+    database: "mysql",
+    mode: "estimated",
+    format: "json",
+    plan: { not_a_query_block: true },
+  });
+
+  assert.throws(
+    () => analyzeRawPlan(malformedMysql),
+    (error) => {
+      assert.ok(error instanceof PlanParseError);
+      assert.equal(error.code, "MALFORMED_PLAN");
       return true;
     },
   );

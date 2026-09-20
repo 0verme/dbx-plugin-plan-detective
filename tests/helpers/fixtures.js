@@ -7,21 +7,53 @@ import { createRawPlanInput } from "../../src/core/raw-plan-input.js";
 export const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 export const POSTGRES_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "postgres");
+export const MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "mysql");
+
+/**
+ * Fixture roots by Plan Core database family. The default stays PostgreSQL so
+ * existing call sites keep working; MySQL call sites pass `"mysql"` explicitly.
+ */
+export const FIXTURE_DIRS = Object.freeze({
+  postgresql: POSTGRES_FIXTURES_DIR,
+  mysql: MYSQL_FIXTURES_DIR,
+});
+
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql"]);
 export const MODES = ["estimated", "actual"];
+/**
+ * Modes each database has fixtures for. MySQL supports estimated plans only:
+ * the Host API never serves `EXPLAIN ANALYZE` for MySQL, and MySQL's actual
+ * plan is a TREE listing rather than this JSON envelope, so there is no
+ * `fixtures/mysql/actual` directory by design.
+ */
+export const MODES_BY_DATABASE = Object.freeze({
+  postgresql: ["estimated", "actual"],
+  mysql: ["estimated"],
+});
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
 const PLAN_SUFFIX = ".plan.json";
 const META_SUFFIX = ".meta.json";
+
+/** @param {string} database */
+function fixturesDir(database) {
+  const dir = FIXTURE_DIRS[database];
+  if (dir === undefined) {
+    throw new Error(`Unknown fixture database ${JSON.stringify(database)}; expected one of ${FIXTURE_DATABASES.join(", ")}.`);
+  }
+  return dir;
+}
 
 /**
  * List fixture names for one mode, sorted. A fixture named
  * `seq-scan.plan.json` is returned as `seq-scan`.
  *
  * @param {string} mode
+ * @param {string} [database]
  * @returns {Promise<string[]>}
  */
-export async function listFixtureNames(mode) {
-  const entries = await readdir(path.join(POSTGRES_FIXTURES_DIR, mode));
+export async function listFixtureNames(mode, database = "postgresql") {
+  const entries = await readdir(path.join(fixturesDir(database), mode));
   return entries
     .filter((entry) => entry.endsWith(PLAN_SUFFIX))
     .map((entry) => entry.slice(0, -PLAN_SUFFIX.length))
@@ -29,13 +61,14 @@ export async function listFixtureNames(mode) {
 }
 
 /**
- * @returns {Promise<Array<{ mode: string, name: string }>>}
+ * @param {string} [database]
+ * @returns {Promise<Array<{ database: string, mode: string, name: string }>>}
  */
-export async function listFixtures() {
+export async function listFixtures(database = "postgresql") {
   const fixtures = [];
-  for (const mode of MODES) {
-    for (const name of await listFixtureNames(mode)) {
-      fixtures.push({ mode, name });
+  for (const mode of MODES_BY_DATABASE[database] ?? MODES) {
+    for (const name of await listFixtureNames(mode, database)) {
+      fixtures.push({ database, mode, name });
     }
   }
   return fixtures;
@@ -44,10 +77,10 @@ export async function listFixtures() {
 /**
  * Load one fixture plus its metadata sidecar and turn them into a RawPlanInput.
  *
- * @param {{ mode: string, name: string }} fixture
+ * @param {{ mode: string, name: string, database?: string }} fixture
  */
-export async function loadFixture({ mode, name }) {
-  const dir = path.join(POSTGRES_FIXTURES_DIR, mode);
+export async function loadFixture({ database = "postgresql", mode, name }) {
+  const dir = path.join(fixturesDir(database), mode);
   const planPath = path.join(dir, `${name}${PLAN_SUFFIX}`);
   const metaPath = path.join(dir, `${name}${META_SUFFIX}`);
 
@@ -67,7 +100,7 @@ export async function loadFixture({ mode, name }) {
     throw new Error(`Fixture metadata ${relativeToRepo(metaPath)} is not valid JSON: ${error.message}`);
   }
 
-  const problems = validateFixtureMeta(meta, { mode, file: relativeToRepo(metaPath), name });
+  const problems = validateFixtureMeta(meta, { database, mode, file: relativeToRepo(metaPath), name });
   if (problems.length > 0) {
     throw new Error(`Fixture metadata ${relativeToRepo(metaPath)} violates the fixture convention:\n- ${problems.join("\n- ")}`);
   }
@@ -81,12 +114,15 @@ export async function loadFixture({ mode, name }) {
     ...(meta.databaseVersion === null ? {} : { databaseVersion: meta.databaseVersion }),
   });
 
-  return { mode, name, planPath, metaPath, plan, meta, input };
+  return { database, mode, name, planPath, metaPath, plan, meta, input };
 }
 
-/** @returns {Promise<Array<Awaited<ReturnType<typeof loadFixture>>>>} */
-export async function loadAllFixtures() {
-  const fixtures = await listFixtures();
+/**
+ * @param {string} [database]
+ * @returns {Promise<Array<Awaited<ReturnType<typeof loadFixture>>>>}
+ */
+export async function loadAllFixtures(database = "postgresql") {
+  const fixtures = await listFixtures(database);
   const loaded = [];
   for (const fixture of fixtures) {
     loaded.push(await loadFixture(fixture));
@@ -98,6 +134,8 @@ export async function loadAllFixtures() {
  * Validate a fixture metadata sidecar without throwing.
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
+ * - `database` must be a structured family the shared conventions cover
+ *   (`postgresql` / `mysql`) and must match the fixture directory when known;
  * - `mode` must match the directory the fixture lives in;
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
@@ -107,7 +145,7 @@ export async function loadAllFixtures() {
  * - `expect` records the behavior the fixture pins down.
  *
  * @param {unknown} meta
- * @param {{ mode?: string, file?: string, name?: string }} [context]
+ * @param {{ database?: string, mode?: string, file?: string, name?: string }} [context]
  * @returns {string[]}
  */
 export function validateFixtureMeta(meta, context = {}) {
@@ -120,11 +158,17 @@ export function validateFixtureMeta(meta, context = {}) {
   const kind = source?.kind;
   const isSynthetic = kind === "synthetic";
 
-  if (meta.database !== "postgresql") {
-    problems.push(`database must be "postgresql"; got ${JSON.stringify(meta.database)}`);
+  if (!FIXTURE_DATABASES.includes(meta.database)) {
+    problems.push(`database must be one of ${FIXTURE_DATABASES.join(", ")}; got ${JSON.stringify(meta.database)}`);
+  }
+  if (context.database !== undefined && meta.database !== context.database) {
+    problems.push(`database ${JSON.stringify(meta.database)} does not match fixture directory ${JSON.stringify(context.database)}`);
   }
   if (!MODES.includes(meta.mode)) {
     problems.push(`mode must be one of ${MODES.join(", ")}; got ${JSON.stringify(meta.mode)}`);
+  }
+  if (meta.database === "mysql" && meta.mode !== "estimated") {
+    problems.push('mysql fixtures only support mode "estimated"; MySQL has no actual-plan JSON path');
   }
   if (context.mode !== undefined && meta.mode !== context.mode) {
     problems.push(`mode ${JSON.stringify(meta.mode)} does not match fixture directory ${JSON.stringify(context.mode)}`);
@@ -202,9 +246,15 @@ export function validateFixtureMeta(meta, context = {}) {
   return problems;
 }
 
-/** Absolute path of the golden file that pins a fixture's parsed output. */
-export function goldenPathFor(mode, name) {
-  return path.join(POSTGRES_FIXTURES_DIR, "golden", mode, `${name}.json`);
+/**
+ * Absolute path of the golden file that pins a fixture's parsed output.
+ *
+ * @param {string} mode
+ * @param {string} name
+ * @param {string} [database] defaults to `"postgresql"` for backwards compatibility
+ */
+export function goldenPathFor(mode, name, database = "postgresql") {
+  return path.join(fixturesDir(database), "golden", mode, `${name}.json`);
 }
 
 /** @param {string} absolutePath */

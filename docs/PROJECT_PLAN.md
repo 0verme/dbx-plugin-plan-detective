@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-20）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL structured；其余方言 raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
+> 状态（2026-09-20）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL / MySQL structured；其余方言 raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
 
 ## 1. 已确认决策
 
@@ -208,10 +208,11 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 0C | Fixture-driven MVP UI（Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector，**离线**） | ✅ 已实现（2026-09-20，Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)）；继续作为开发模式保留 |
 | Phase 0D | DBX Estimated Plan Response → RawPlanInput Adapter Contract（**离线**，纯函数、fail-closed） | ✅ 已实现并合入（Issue [#9](https://github.com/0verme/dbx-plugin-plan-detective/issues/9)，PR #10） |
 | Phase 1 | Host Plan API 真实接入 + MVP 闭环（PostgreSQL structured，其余 raw-only） | ✅ 已实现（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)） |
+| Phase 1.1 | MySQL Estimated Plan 结构化（`EXPLAIN FORMAT=JSON` → 现有 IR / metrics / rules） | ✅ 已实现（Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)） |
 | Phase 2 | Metrics Engine + Findings/Evidence 扩展（Hotspot / Estimate Error 等） | 离线基础已实现；扩展指标属后续 Issue |
 | Phase 3 | Rule Engine 扩展与规则分级 | 3 条确定性规则已实现；更多规则属后续 Issue |
 | Phase 4 | Plan Diff / History | 后续 Issue |
-| Phase 5 | MySQL / SQL Server / Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现 |
+| Phase 5 | SQL Server / Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现（MySQL 已在 Phase 1.1 完成） |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -233,7 +234,9 @@ raw plan → normalized plan → metrics → findings
 - Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` 四 stage 与预期快照比对；
   约定见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
-PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic）；MySQL 仅占位与 adapter boundary 设计。
+PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic）；MySQL 样本已落地
+（Phase 1.1：11 个，全部为 shape-verified synthetic，覆盖 table scan / index access / nested loop /
+sort / group / union / subquery；本机无 MySQL 实例，来源见 `fixtures/mysql/README.md`）。
 
 ## 5. Host 接入与其它阶段仍禁止顺手实现
 
@@ -244,7 +247,7 @@ PostgreSQL 样本已落地（Phase 0B：19 个，17 真实采集 + 2 synthetic�
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
-- MySQL parser（PostgreSQL 优先，不属于一期前置）
+- SQL Server / Oracle / Dameng / Doris / QuestDB parser（MySQL 已由 Issue #15 显式启动并完成）
 - 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
 

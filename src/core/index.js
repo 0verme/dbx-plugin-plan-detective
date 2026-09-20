@@ -19,6 +19,8 @@ export {
 export { analyzeRawPlan, describeParserSupport, getParser } from "./parsers/index.js";
 export { parsePostgresJsonPlan } from "./postgres/parse-json-plan.js";
 export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";
+export { parseMySqlJsonPlan } from "./mysql/parse-json-plan.js";
+export { normalizeMySqlPlan } from "./normalize/normalize-mysql.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { runRules, RULES } from "./rules/index.js";
 export { LARGE_SEQUENTIAL_SCAN, EXPENSIVE_SORT, NESTED_LOOP_LARGE_INNER } from "./rules/thresholds.js";

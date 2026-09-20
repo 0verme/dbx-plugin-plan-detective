@@ -1,0 +1,50 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "10500.00"
+    },
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "orders",
+          "access_type": "ALL",
+          "used_columns": [
+            "id",
+            "customer_id"
+          ],
+          "rows_examined_per_scan": 1000,
+          "rows_produced_per_join": 1000,
+          "filtered": "100.00",
+          "cost_info": {
+            "read_cost": "400.00",
+            "eval_cost": "100.00",
+            "prefix_cost": "500.00",
+            "data_read_per_join": "80000"
+          }
+        }
+      },
+      {
+        "table": {
+          "table_name": "events",
+          "access_type": "ALL",
+          "used_columns": [
+            "id",
+            "order_id",
+            "kind"
+          ],
+          "attached_condition": "(`events`.`order_id` = `orders`.`id`)",
+          "rows_examined_per_scan": 50000,
+          "rows_produced_per_join": 50000,
+          "filtered": "100.00",
+          "cost_info": {
+            "read_cost": "8000.00",
+            "eval_cost": "2000.00",
+            "prefix_cost": "10500.00",
+            "data_read_per_join": "4000000"
+          }
+        }
+      }
+    ]
+  }
+}
