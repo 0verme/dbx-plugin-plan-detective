@@ -224,16 +224,17 @@ https://raw.githubusercontent.com/t8y2/dbx/plugin-sdk-v1/plugins/manifest.schema
 - `https://raw.githubusercontent.com/t8y2/dbx/main/plugins/manifest.schema.json` 返回 200。
 - 影响：编辑器/校验器无法解析 manifest schema。未擅自改为 `main`。
 
-### 4.3 发布 workflow 引用了不存在的 ref
+### 4.3 发布 workflow 引用了不存在的 ref（v0.3.0 发布准备已修正）
 
-`.github/workflows/plugin-release.yml`（官方模板原样生成）：
+`.github/workflows/plugin-release.yml`（官方模板 0.1.9 原样生成）：
 
 ```yaml
 uses: t8y2/dbx/.github/workflows/plugin-release-reusable.yml@plugin-sdk-v1
 ```
 
-- `plugin-sdk-v1` ref 不存在（见 4.2），该 reusable workflow 在 `main` 上确实存在。
-- 影响：发 release 时此 workflow 会因 ref 无法解析而失败。未擅自改为 `main`。
+- 实测 `plugin-sdk-v1` 在 `t8y2/dbx` 中既不是分支也不是 tag（见 4.2），发 release 时该 workflow 会因 ref 无法解析而直接失败。
+- v0.3.0 发布准备按上游当前模板（`plugins/sdk/cli/templates/frontend/github/plugin-release.yml`，`CLI_VERSION = 0.1.9`）改为 `@plugin-cli-v0.1.9`，并把 `plugin-cli-version` 对齐为 `0.1.9`（原模板硬编码的是 `0.1.6`）。
+- 该 tag 真实存在；其 reusable workflow 与 `main` / `v0.6.17` 上的版本只差 toolchain 安装守卫与 npm cache 步骤，`publish` job（校验 `.artifact.json`、拒绝 `signature.json`、上传 `release-candidates.json`）一致。
 
 ### 4.4 `dbx-plugin dev` 在 Windows 上无法执行 UI build 命令
 
@@ -254,16 +255,16 @@ Build failed (exit 1)
 
 官方模板 README 使用 `../../../../GETTING_STARTED.zh-CN.md` 指向 DBX 主仓内文件，在独立插件仓库中为坏链接。本仓库 README 已改写为上游公开地址。
 
-### 4.6 版本差异观察
+### 4.6 模板硬编码的 CLI 版本（v0.3.0 发布准备已对齐）
 
-模板生成的 workflow 固定 `plugin-cli-version: 0.1.6`，初始化使用 `0.1.9`（两者在 npm 上均存在）。如后续出现打包行为差异，需先核对 CLI 版本。
+模板生成的 workflow 固定 `plugin-cli-version: 0.1.6`，初始化时实际使用 `0.1.9`。v0.3.0 发布准备已把 ref 与 `plugin-cli-version` 统一为 `0.1.9`（npm `latest`），与上游当前模板 `{{CLI_VERSION}}` 的写法一致。
 
 ## 5. 待办
 
 1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
 2. **发布路径**：#9692 已合并但尚未进入 release；在包含 Host API 1.2 的 DBX release 可用前，插件在旧版 DBX 上会因 `engines.host_api ^1.2` 被宿主拒绝加载（这是预期行为）。
 3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、更多 metrics / rules、UI 扩展。
-4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
+4. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
 ## 6. 相关文档
 

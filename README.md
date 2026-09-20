@@ -292,3 +292,7 @@ dbx-plugin package .
 - [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) —— 上游能力缺口与提案（历史记录）
 - [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md) —— downstream design note
 - 上游插件开发指南：<https://dbxio.com/en/docs/plugin-development>
+
+## License
+
+Apache-2.0
