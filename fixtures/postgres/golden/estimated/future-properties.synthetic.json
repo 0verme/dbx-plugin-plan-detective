@@ -268,14 +268,12 @@
       "relation": null,
       "estimatedRows": 42
     },
-    "highestIncrementalCost": {
-      "nodeId": "0",
-      "kind": "nested_loop",
-      "nodeType": "Nested Loop",
-      "relation": null,
-      "incrementalCost": 110.2,
-      "totalCost": 120.5
-    }
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "withheld",
+      "reason": "UNVERIFIED_COST_FLOW"
+    },
+    "highestIncrementalCost": null
   },
   "findings": [],
   "hotspots": {

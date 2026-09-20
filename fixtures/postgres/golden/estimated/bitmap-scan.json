@@ -176,6 +176,11 @@
       "relation": "pd_fix_events",
       "estimatedRows": 15728
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
       "nodeId": "0",
       "kind": "bitmap_heap_scan",

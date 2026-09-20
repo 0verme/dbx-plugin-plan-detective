@@ -176,6 +176,11 @@
       "relation": null,
       "estimatedRows": 200000
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
       "nodeId": "0",
       "kind": "sort",

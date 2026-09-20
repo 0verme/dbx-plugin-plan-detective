@@ -32,7 +32,8 @@ Plan Diff / UI
 | Plan Adapter | 校验 Host response 并映射为 `RawPlanInput` | Plan Detective |
 | Parser Registry | 按 database family 选择结构化 parser；无 parser 的方言 raw-only | Plan Detective |
 | Normalized Plan | 数据库无关的计划模型（节点、代价、行数、过滤等） | Plan Detective |
-| Metrics Engine | 计算指标（节点数、深度、scan/join/sort 计数、最大行数、最高增量代价等） | Plan Detective |
+| Metrics Engine | 计算指标（节点数、深度、scan/join/sort 计数、最大行数、最高增量代价等）；代价指标先经 PostgreSQL 归因门控 | Plan Detective |
+| PostgreSQL 代价归因 | `analyzePostgresCost()`：判断 `Total Cost` 是否可按子树累加，供 Metrics 与 Hotspots 共用 | Plan Detective |
 | Hotspot Analysis | 基于 NormalizedPlan + Metrics 聚合确定性注意力信号（engine-aware，无综合评分） | Plan Detective |
 | Rule Engine | 基于指标与计划结构产出确定性结论 | Plan Detective |
 | Findings | 结论 + Evidence（observation 语义，不是命令） | Plan Detective |
@@ -45,7 +46,7 @@ Plan Diff / UI
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
 已实现：parser registry + PostgreSQL / MySQL 结构化 parser；其余 6 个方言 raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
-已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号）
+已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
 未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI
@@ -189,7 +190,8 @@ src/
 ├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
 │   ├── parsers/                # parser registry + postgres parser 声明
-│   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值 / PostgreSQL 代价归因边界）
+│   ├── cost/                   # PostgreSQL 代价归因边界（analyzePostgresCost，Metrics + Hotspots 共用）
+│   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
 ├── app.css                     # 设计 tokens 与共享基础样式
 ├── components/                 # 按业务责任拆分的 Svelte 组件

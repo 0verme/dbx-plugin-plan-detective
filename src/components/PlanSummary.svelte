@@ -43,6 +43,9 @@
             {#if highlight.detail}
               <span class="hl-detail">{highlight.detail}</span>
             {/if}
+            {#if highlight.note}
+              <span class="hl-note">{highlight.note}</span>
+            {/if}
           </button>
         </li>
       {/each}
@@ -157,5 +160,12 @@
     color: var(--pd-muted);
     font-size: 11px;
     text-align: right;
+  }
+
+  .hl-note {
+    grid-column: 1 / -1;
+    color: var(--pd-muted);
+    font-size: 11px;
+    line-height: 1.4;
   }
 </style>

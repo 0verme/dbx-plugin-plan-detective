@@ -89,9 +89,10 @@ src/core/parsers/            parser registry：database family → structured pa
 src/core/postgres/           PostgreSQL JSON parser
 src/core/mysql/              MySQL EXPLAIN FORMAT=JSON parser
 src/core/normalize/          NormalizedPlan（Plan IR）
-src/core/metrics/            deterministic metrics
+src/core/metrics/            deterministic metrics（代价指标先过 PostgreSQL 归因门控）
+src/core/cost/               PostgreSQL 代价归因边界（Metrics 与 Hotspots 共用）
 src/core/rules/              deterministic findings
-src/core/hotspots/           deterministic hotspot analysis（信号聚合 / 阈值 / PG 代价归因边界）
+src/core/hotspots/           deterministic hotspot analysis（信号聚合 / 阈值）
 src/lib/analysis-session.js  Host → Parser → IR → Rules / Hotspots 编排（可注入 fake bridge 测试）
 src/components/              UI（ConnectionContext / SqlInput / PlanTree / Hotspots / Findings / RawPlan …）
 ```
@@ -188,7 +189,9 @@ IR 映射规则：
 
 **MySQL cost 与 PostgreSQL cost 不可直接比较。** `query_cost` / `prefix_cost` / `read_cost` / `eval_cost`
 属于 MySQL 自己的 cost model，`prefix_cost` 还是 join prefix 的累计值。本轮不把它们映射到 IR 的
-`totalCost`，因此 PostgreSQL 的绝对代价阈值不会在 MySQL 计划上误触发。规则适用性：
+`totalCost`，因此 PostgreSQL 的绝对代价阈值不会在 MySQL 计划上误触发；Metrics 也不会为 MySQL 输出
+PostgreSQL 语义的 `highestIncrementalCost`（`metrics.costAttribution.status = "not-applicable"`，
+Plan Summary 不渲染该 highlight）。规则适用性：
 
 | rule | MySQL 行为 |
 | --- | --- |

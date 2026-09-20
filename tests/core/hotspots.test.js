@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { analyzePlan } from "../../src/core/analyze.js";
 import { computeHotspots } from "../../src/core/hotspots/compute-hotspots.js";
-import { analyzePostgresCost, selfCostOf } from "../../src/core/hotspots/self-cost.js";
+import { analyzePostgresCost, selfCostOf } from "../../src/core/cost/postgres-cost.js";
 import { HOTSPOT } from "../../src/core/hotspots/thresholds.js";
 import { computeMetrics } from "../../src/core/metrics/compute-metrics.js";
 import { analyzeRawPlan } from "../../src/core/parsers/index.js";

@@ -396,6 +396,11 @@
       "relation": null,
       "estimatedRows": 14093
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
       "nodeId": "0.1.0",
       "kind": "seq_scan",

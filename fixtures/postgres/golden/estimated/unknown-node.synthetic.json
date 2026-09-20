@@ -178,14 +178,12 @@
       "relation": null,
       "estimatedRows": 1000
     },
-    "highestIncrementalCost": {
-      "nodeId": "0",
-      "kind": "unknown",
-      "nodeType": "Future Shuffle Node",
-      "relation": null,
-      "incrementalCost": 7.5,
-      "totalCost": 12.5
-    }
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "withheld",
+      "reason": "UNVERIFIED_COST_FLOW"
+    },
+    "highestIncrementalCost": null
   },
   "findings": [],
   "hotspots": {

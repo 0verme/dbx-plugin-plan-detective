@@ -318,14 +318,12 @@
       "relation": null,
       "estimatedRows": 200000
     },
-    "highestIncrementalCost": {
-      "nodeId": "0.1",
-      "kind": "seq_scan",
-      "nodeType": "Seq Scan",
-      "relation": "pd_fix_events",
-      "incrementalCost": 7494.01,
-      "totalCost": 7494.01
-    }
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "withheld",
+      "reason": "PLAN_CONTAINS_SUBPLAN"
+    },
+    "highestIncrementalCost": null
   },
   "findings": [
     {

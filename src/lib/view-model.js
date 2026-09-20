@@ -34,10 +34,24 @@ const SUMMARY_ROWS = Object.freeze([
 ]);
 
 /**
+ * Display copy for `metrics.costAttribution.reason`. The Core decides whether
+ * PostgreSQL cost attribution is safe; the UI only translates the stable
+ * reason code, exactly like the Hotspot panel does for `hotspots.cost`.
+ */
+const COST_ATTRIBUTION_NOTES = Object.freeze({
+  NO_PLAN_COST: "计划未报告根节点 Total Cost，无法归因自代价。",
+  MISSING_NODE_COST: "计划存在缺失 Total Cost 的节点，缺失值不按 0 处理，自代价不可归因。",
+  PLAN_CONTAINS_SUBPLAN:
+    "计划包含 InitPlan / SubPlan：父节点 Total Cost 不按子节点累加，自代价不可归因。",
+  UNVERIFIED_COST_FLOW: "部分节点缺少可验证的 Parent Relationship，自代价归因不可靠。",
+  NO_ATTRIBUTABLE_COST: "该计划没有可归因的自代价节点（根节点截断了子节点代价）。",
+});
+
+/**
  * @param {import("../core/metrics/compute-metrics.js").PlanMetrics} metrics
  * @returns {{
  *   rows: Array<{ key: string, label: string, hint: string, value: string|null }>,
- *   highlights: Array<{ key: string, label: string, value: string|null, detail: string|null, node: object|null }>,
+ *   highlights: Array<{ key: string, label: string, value: string|null, detail: string|null, note: string|null, node: object|null }>,
  * }}
  */
 export function buildPlanSummary(metrics) {
@@ -45,8 +59,37 @@ export function buildPlanSummary(metrics) {
     rows: SUMMARY_ROWS.map((row) => ({ ...row, value: formatNumber(metrics?.[row.key]) })),
     highlights: [
       buildHighlight("largestEstimatedRows", "Largest Estimated Rows", metrics?.largestEstimatedRows),
-      buildHighlight("highestIncrementalCost", "Highest Incremental Cost", metrics?.highestIncrementalCost),
-    ],
+      buildHighestIncrementalCostHighlight(metrics),
+    ].filter((highlight) => highlight !== null),
+  };
+}
+
+/**
+ * `Highest Incremental Cost` is a PostgreSQL cumulative-cost metric. The Core
+ * publishes whether that attribution is safe through `metrics.costAttribution`;
+ * the UI never inspects InitPlan / SubPlan / Limit itself.
+ *
+ * - `available`: the value and its node, exactly as Core reported them;
+ * - `withheld`: no value, plus the Core reason as display copy;
+ * - `not-applicable`: the highlight is omitted (MySQL has its own cost model,
+ *   and no PostgreSQL incremental cost is invented for it);
+ * - missing attribution (legacy metrics): keep the previous mapping.
+ *
+ * @param {import("../core/metrics/compute-metrics.js").PlanMetrics} metrics
+ */
+function buildHighestIncrementalCostHighlight(metrics) {
+  const attribution = metrics?.costAttribution ?? null;
+  if (attribution?.status === "not-applicable") return null;
+
+  const highlight = buildHighlight("highestIncrementalCost", "Highest Incremental Cost", metrics?.highestIncrementalCost);
+  if (attribution?.status !== "withheld") return highlight;
+
+  return {
+    ...highlight,
+    value: null,
+    detail: null,
+    note: COST_ATTRIBUTION_NOTES[attribution.reason] ?? "该计划的 PostgreSQL 代价归因不可靠，已停用该指标。",
+    node: null,
   };
 }
 
@@ -57,7 +100,7 @@ export function buildPlanSummary(metrics) {
  */
 function buildHighlight(key, label, summary) {
   if (summary === null || summary === undefined || typeof summary !== "object") {
-    return { key, label, value: null, detail: null, node: null };
+    return { key, label, value: null, detail: null, note: null, node: null };
   }
 
   const isCost = key === "highestIncrementalCost";
@@ -69,6 +112,7 @@ function buildHighlight(key, label, summary) {
     label,
     value,
     detail,
+    note: null,
     node: {
       nodeId: summary.nodeId,
       nodeType: summary.nodeType,

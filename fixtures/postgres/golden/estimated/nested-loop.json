@@ -322,13 +322,18 @@
       "relation": null,
       "estimatedRows": 20
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
-      "nodeId": "0.1.0",
-      "kind": "index_scan",
-      "nodeType": "Index Scan",
-      "relation": "pd_fix_orders",
-      "incrementalCost": 155.28,
-      "totalCost": 155.28
+      "nodeId": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loop",
+      "relation": null,
+      "incrementalCost": 152.97,
+      "totalCost": 165.5
     }
   },
   "findings": [],

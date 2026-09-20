@@ -79,7 +79,7 @@ test("buildNodeInspector renders MySQL engine-specific fields and no PostgreSQL 
   assert.equal(blockFields.get("Query Cost"), "660");
 });
 
-test("buildPlanSummary keeps MySQL cost rows empty instead of showing a fabricated value", () => {
+test("buildPlanSummary omits the PostgreSQL incremental-cost highlight for MySQL", () => {
   const summary = buildPlanSummary(groupingAnalysis.metrics);
   const rows = new Map(summary.rows.map((row) => [row.key, row.value]));
 
@@ -88,7 +88,12 @@ test("buildPlanSummary keeps MySQL cost rows empty instead of showing a fabricat
   assert.equal(rows.get("nodeCount"), "3");
   assert.equal(rows.get("scanCount"), "1");
   assert.equal(rows.get("aggregateCount"), "1");
-  assert.equal(summary.highlights.find((highlight) => highlight.key === "highestIncrementalCost").value, null);
+  assert.equal(groupingAnalysis.metrics.costAttribution.status, "not-applicable");
+  assert.deepEqual(
+    summary.highlights.map((highlight) => highlight.key),
+    ["largestEstimatedRows"],
+    "PostgreSQL incremental cost is not a MySQL metric and must not appear",
+  );
 });
 
 test("findings keep their node labels and null evidence readable", () => {

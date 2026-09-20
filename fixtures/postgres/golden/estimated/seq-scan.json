@@ -102,6 +102,11 @@
       "relation": "pd_fix_orders",
       "estimatedRows": 927
     },
+    "costAttribution": {
+      "engine": "postgresql",
+      "status": "available",
+      "reason": null
+    },
     "highestIncrementalCost": {
       "nodeId": "0",
       "kind": "seq_scan",

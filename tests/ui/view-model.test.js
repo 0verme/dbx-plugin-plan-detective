@@ -95,6 +95,7 @@ test("buildPlanSummary shows the core metrics verbatim", () => {
   assert.equal(largestRows.node.relation, "pd_fix_events");
   assert.equal(highestCost.value, "3,497");
   assert.equal(highestCost.detail, "node total cost 3,497");
+  assert.equal(highestCost.note, null, "an available attribution needs no disclaimer");
 });
 
 test("buildPlanSummary tolerates missing metric values without inventing numbers", () => {
@@ -104,6 +105,7 @@ test("buildPlanSummary tolerates missing metric values without inventing numbers
     rootEstimatedRows: null,
     largestEstimatedRows: null,
     highestIncrementalCost: null,
+    costAttribution: null,
   });
   const byKey = new Map(summary.rows.map((row) => [row.key, row.value]));
 
@@ -111,6 +113,31 @@ test("buildPlanSummary tolerates missing metric values without inventing numbers
   assert.equal(byKey.get("rootEstimatedRows"), null);
   assert.equal(summary.highlights.every((highlight) => highlight.value === null && highlight.node === null), true);
   assert.equal(buildPlanSummary({}).rows.length, 11);
+});
+
+test("buildPlanSummary renders a withheld cost attribution as an unavailable value with the Core reason", () => {
+  const summary = buildPlanSummary({
+    ...largeSeqScanAnalysis.metrics,
+    costAttribution: { engine: "postgresql", status: "withheld", reason: "PLAN_CONTAINS_SUBPLAN" },
+    highestIncrementalCost: null,
+  });
+  const highlight = summary.highlights.find((entry) => entry.key === "highestIncrementalCost");
+
+  assert.equal(highlight.value, null, "a withheld attribution must not show a number");
+  assert.equal(highlight.detail, null);
+  assert.equal(highlight.node, null);
+  assert.match(highlight.note, /InitPlan \/ SubPlan/);
+});
+
+test("buildPlanSummary never re-derives trust: a withheld attribution hides the value", () => {
+  const summary = buildPlanSummary({
+    ...largeSeqScanAnalysis.metrics,
+    costAttribution: { engine: "postgresql", status: "withheld", reason: "UNVERIFIED_COST_FLOW" },
+  });
+  const highlight = summary.highlights.find((entry) => entry.key === "highestIncrementalCost");
+
+  assert.equal(highlight.value, null);
+  assert.equal(highlight.node, null);
 });
 
 /* -------------------------------------------------------------------- tree -- */

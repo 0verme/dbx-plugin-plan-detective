@@ -1,4 +1,5 @@
-import { depthOf, flattenNodes, incrementalCostOf } from "../tree.js";
+import { analyzePostgresCost } from "../cost/postgres-cost.js";
+import { depthOf, flattenNodes } from "../tree.js";
 
 /**
  * Deterministic plan metrics.
@@ -7,6 +8,11 @@ import { depthOf, flattenNodes, incrementalCostOf } from "../tree.js";
  * no ranking and no judgement: judgement belongs to the rules. Every value is
  * derived from fields the plan actually reported, and stays `null` when the
  * input did not.
+ *
+ * Cost-derived values first pass the PostgreSQL attribution envelope in
+ * `../cost/postgres-cost.js`. When that envelope is not safe for the plan, the
+ * metric is `null` and `costAttribution` states why, instead of publishing a
+ * number the planner's own accounting does not support.
  */
 
 const SCAN_KINDS = new Set([
@@ -34,6 +40,12 @@ const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
  * @typedef {NodeSummary & { estimatedRows: number }} LargestRowsSummary
  * @typedef {NodeSummary & { incrementalCost: number, totalCost: number }} HighestCostSummary
  *
+ * @typedef {Object} CostAttribution
+ * @property {string} engine database family the cost model belongs to
+ * @property {"available"|"withheld"|"not-applicable"} status `not-applicable`
+ *   means the metric is PostgreSQL-specific and this plan uses another engine
+ * @property {string|null} reason stable reason code, `null` when available
+ *
  * @typedef {Object} PlanMetrics
  * @property {number} nodeCount
  * @property {number} maxDepth
@@ -48,7 +60,11 @@ const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
  * @property {number} aggregateCount includes Group and Aggregate family nodes
  * @property {number} unknownNodeTypeCount
  * @property {LargestRowsSummary|null} largestEstimatedRows
- * @property {HighestCostSummary|null} highestIncrementalCost
+ * @property {CostAttribution} costAttribution whether PostgreSQL cumulative
+ *   cost attribution is safe for this plan; `highestIncrementalCost` is only
+ *   ever filled when this says `available`
+ * @property {HighestCostSummary|null} highestIncrementalCost attributable self
+ *   cost of one node, or `null` when no trustworthy value exists
  */
 
 /**
@@ -57,6 +73,8 @@ const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
  */
 export function computeMetrics(normalized) {
   const nodes = flattenNodes(normalized.root);
+  const totalPlanCost = typeof normalized.root.totalCost === "number" ? normalized.root.totalCost : null;
+  const cost = costAttributionOf(normalized, totalPlanCost);
 
   let scanCount = 0;
   let sequentialScanCount = 0;
@@ -85,10 +103,10 @@ export function computeMetrics(normalized) {
       }
     }
 
-    const incrementalCost = incrementalCostOf(node);
-    if (incrementalCost !== null && typeof node.totalCost === "number") {
-      if (highestIncrementalCost === null || incrementalCost > highestIncrementalCost.incrementalCost) {
-        highestIncrementalCost = { ...summarize(node), incrementalCost, totalCost: node.totalCost };
+    const attributed = cost.byNodeId?.get(node.id);
+    if (attributed !== undefined) {
+      if (highestIncrementalCost === null || attributed.selfCost > highestIncrementalCost.incrementalCost) {
+        highestIncrementalCost = { ...summarize(node), incrementalCost: attributed.selfCost, totalCost: node.totalCost };
       }
     }
   }
@@ -96,7 +114,7 @@ export function computeMetrics(normalized) {
   return {
     nodeCount: nodes.length,
     maxDepth: depthOf(normalized.root),
-    totalEstimatedCost: typeof normalized.root.totalCost === "number" ? normalized.root.totalCost : null,
+    totalEstimatedCost: totalPlanCost,
     rootEstimatedRows: typeof normalized.root.estimatedRows === "number" ? normalized.root.estimatedRows : null,
     scanCount,
     sequentialScanCount,
@@ -107,8 +125,48 @@ export function computeMetrics(normalized) {
     aggregateCount,
     unknownNodeTypeCount: normalized.unknownNodeTypes.length,
     largestEstimatedRows,
+    costAttribution: cost.summary,
     highestIncrementalCost,
   };
+}
+
+/**
+ * Decide whether PostgreSQL cumulative-cost attribution is safe for this plan,
+ * and hand back the attributable self cost per node when it is.
+ *
+ * The Hotspot stage consumes the very same envelope for `hotspots.cost`, so the
+ * two stages can never disagree about whether a plan's cost signal is usable.
+ * Only nodes returned in `byNodeId` may back `highestIncrementalCost`: a child
+ * without a Total Cost is not counted as `0`, and nodes below a truncating node
+ * (a `Limit` with a negative self cost) are not comparable with the root total.
+ *
+ * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized
+ * @param {number|null} totalPlanCost
+ * @returns {{ summary: CostAttribution, byNodeId: Map<string, { selfCost: number, selfCostShare: number }>|null }}
+ */
+function costAttributionOf(normalized, totalPlanCost) {
+  if (normalized.database !== "postgresql") {
+    // Self cost is a PostgreSQL cumulative-Total-Cost concept. MySQL reports
+    // its costs inside `engineSpecific.mysql` and never fills `totalCost`, so
+    // no other family may inherit a PostgreSQL incremental-cost value.
+    return {
+      summary: { engine: normalized.database, status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
+      byNodeId: null,
+    };
+  }
+
+  const attribution = analyzePostgresCost(normalized.root, totalPlanCost);
+  if (attribution.status === "withheld") {
+    return { summary: { engine: "postgresql", status: "withheld", reason: attribution.reason }, byNodeId: null };
+  }
+
+  if (attribution.byNodeId.size === 0) {
+    // The envelope is reliable, but every node truncated its children (for
+    // example a `Limit` root), so no node owns an attributable self cost.
+    return { summary: { engine: "postgresql", status: "withheld", reason: "NO_ATTRIBUTABLE_COST" }, byNodeId: null };
+  }
+
+  return { summary: { engine: "postgresql", status: "available", reason: null }, byNodeId: attribution.byNodeId };
 }
 
 /**

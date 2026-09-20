@@ -816,6 +816,11 @@
       "relation": "orders",
       "estimatedRows": 300
     },
+    "costAttribution": {
+      "engine": "mysql",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
     "highestIncrementalCost": null
   },
   "findings": [],
