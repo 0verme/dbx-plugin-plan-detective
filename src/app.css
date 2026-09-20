@@ -1,0 +1,163 @@
+/* Shared design tokens and primitives for the Plan Detective UI.
+ * Component-specific styles stay in their Svelte components. */
+
+:root {
+  color-scheme: light;
+  --pd-bg: #f4f5f7;
+  --pd-surface: #ffffff;
+  --pd-surface-muted: #f8f9fb;
+  --pd-border: #dcdfe4;
+  --pd-border-strong: #c2c8d0;
+  --pd-text: #171b21;
+  --pd-muted: #5c6672;
+  --pd-accent: #4f46e5;
+  --pd-accent-soft: #eef2ff;
+  --pd-high-fg: #b42318;
+  --pd-high-bg: #fef3f2;
+  --pd-high-border: #fda29b;
+  --pd-warning-fg: #b54708;
+  --pd-warning-bg: #fffaeb;
+  --pd-warning-border: #fec84b;
+  --pd-info-fg: #175cd3;
+  --pd-info-bg: #eff8ff;
+  --pd-info-border: #84caff;
+  --pd-ok-fg: #067647;
+  --pd-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --pd-radius: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --pd-bg: #14161a;
+    --pd-surface: #1d2026;
+    --pd-surface-muted: #23262d;
+    --pd-border: #333942;
+    --pd-border-strong: #4a515c;
+    --pd-text: #e6e8ec;
+    --pd-muted: #9aa4b1;
+    --pd-accent: #8b87f5;
+    --pd-accent-soft: #262454;
+    --pd-high-fg: #fda29b;
+    --pd-high-bg: #3a1d1a;
+    --pd-high-border: #7a271a;
+    --pd-warning-fg: #fec84b;
+    --pd-warning-bg: #3a2a12;
+    --pd-warning-border: #7a4b12;
+    --pd-info-fg: #84caff;
+    --pd-info-bg: #12263f;
+    --pd-info-border: #1849a9;
+    --pd-ok-fg: #75e0a7;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--pd-bg);
+  color: var(--pd-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+kbd,
+pre,
+.mono {
+  font-family: var(--pd-mono);
+}
+
+/* ------------------------------------------------------------------ panels */
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius);
+  background: var(--pd-surface);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--pd-border);
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.hint {
+  color: var(--pd-muted);
+  font-size: 11px;
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--pd-muted);
+}
+
+.muted {
+  color: var(--pd-muted);
+}
+
+/* ------------------------------------------------------------------ badges */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.badge.high {
+  border-color: var(--pd-high-border);
+  background: var(--pd-high-bg);
+  color: var(--pd-high-fg);
+}
+
+.badge.warning {
+  border-color: var(--pd-warning-border);
+  background: var(--pd-warning-bg);
+  color: var(--pd-warning-fg);
+}
+
+.badge.info {
+  border-color: var(--pd-info-border);
+  background: var(--pd-info-bg);
+  color: var(--pd-info-fg);
+}
+
+.badge.offline {
+  border-color: var(--pd-border-strong);
+  background: var(--pd-surface-muted);
+  color: var(--pd-muted);
+}
+
+.badge.synthetic {
+  border-color: var(--pd-warning-border);
+  background: var(--pd-warning-bg);
+  color: var(--pd-warning-fg);
+}
+
+.badge.locally-generated {
+  border-color: var(--pd-border-strong);
+  background: var(--pd-surface-muted);
+  color: var(--pd-muted);
+}

@@ -20,8 +20,8 @@
     {
       "type": "result-view",
       "id": "io.github.0verme.plan-detective.audit-result-view",
-      "label": "Plan Detective Audit (dev)",
-      "description": "Phase 0 Host Capability Audit harness. Development/diagnostic only; no plan analysis."
+      "label": "Plan Detective (dev / fixtures)",
+      "description": "Development entry: Phase 0 host capability audit plus the offline fixture-driven analysis UI. No Host API integration."
     }
   ],
   "localizations": {
@@ -34,8 +34,8 @@
           "description": "由插件提供的 Svelte 沙箱工作台。"
         },
         "io.github.0verme.plan-detective.audit-result-view": {
-          "label": "Plan Detective 审计（开发用）",
-          "description": "Phase 0 Host Capability Audit 诊断页，仅用于开发/审计，不做任何计划分析。"
+          "label": "Plan Detective（开发 / Fixture）",
+          "description": "开发入口：Phase 0 宿主能力审计 + 离线 fixture 分析界面，不接入 DBX Host API。"
         }
       }
     }

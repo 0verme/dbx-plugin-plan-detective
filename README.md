@@ -25,10 +25,12 @@ Plan Detective 负责理解和分析执行计划。
 - Hotspot Analysis ⛔
 - Rule-based Diagnosis ✅（3 条确定性规则）
 - Findings + Evidence ✅
+- Fixture-driven MVP UI ✅（离线 / demo：Fixture → RawPlanInput → Offline Core → UI）
 - Plan Diff ⛔
 
-> ✅ 为 **Phase 0B Offline Core**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现，
-> 仍需等待上游能力落地（`Phase 0 completed · Upstream implementation in progress`）。
+> ✅ 为 **Phase 0B Offline Core + Fixture-driven MVP UI**（fixture-first，不依赖 DBX Host API）；⛔ 为未实现，
+> 仍需等待上游能力落地（`Offline Core implemented · Fixture-driven MVP UI implemented ·
+> Real Host integration blocked on upstream t8y2/dbx#9692 merge / release`）。
 > 实际完成度以 [STATUS.md](STATUS.md) 与 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) 为准。
 
 ## 首批目标数据库
@@ -57,7 +59,7 @@ DWS 暂时视为 PostgreSQL-family 的后续兼容目标，当前不作为第一
 
 ## 当前进度
 
-当前状态：**Phase 0 completed · Upstream implementation in progress**。Phase 0 Host Capability Audit 已于 2026-09-18 完成（历史结论 **BLOCKED — Host API capability gap**）：
+当前状态：**Offline Core implemented · Fixture-driven MVP UI implemented · Real Host integration blocked on upstream t8y2/dbx#9692 merge / release**。Phase 0 Host Capability Audit 已于 2026-09-18 完成（历史结论 **BLOCKED — Host API capability gap**）：
 
 ```text
 DBX 内部有执行计划能力
@@ -67,7 +69,7 @@ DBX 内部有执行计划能力
 
 在真实 DBX `v0.6.16` 宿主中，`host.getContext` 返回空上下文，全部查询/计划/上下文/cancel/timeout 方法名均不存在；DBX 内部 EXPLAIN 可用但插件不可达。完整矩阵与证据见 [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。
 
-该能力缺口已正式提交为 upstream Issue **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（OPEN，已由 `0verme` `/claim`），是当前唯一 canonical contract：一期只请求 **Estimated Plan**（`EXPLAIN ...`）—— 权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` 不属于一期。详见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 与 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
+该能力缺口已正式提交为 upstream Issue **[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)**（OPEN，已由 `0verme` `/claim`），实现 PR 为 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)（等待 review / merge / release），是当前唯一 canonical contract：一期只请求 **Estimated Plan**（`EXPLAIN ...`）—— 权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` 不属于一期。详见 [docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md) 与 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)。
 
 当前 blocker 是 #9675 的实现 / 合并：真实 Host 接入需等待上游落地，本仓库**不会**自行引入数据库 Driver / 连接池 / 凭据管理来绕过。**但这不阻止离线内核开发**：Phase 0B 已落地与 DBX 完全解耦的 fixture-first 分析内核：
 
@@ -83,8 +85,44 @@ PostgreSQL fixture → RawPlanInput → Parser → NormalizedPlan → Metrics �
 离线验证（无需 DBX、无需数据库、无需 `npm install`）：
 
 ```bash
-npm test                                  # 契约 / parser / normalize / metrics / rules / golden
+npm test                                  # 契约 / parser / normalize / metrics / rules / golden / UI view-model
 npm run analyze -- estimated/seq-scan     # 对单个 fixture 跑完整 pipeline
+```
+
+### Fixture-driven MVP UI（离线 / demo）
+
+第一版可用 UI 已落地（Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)），数据链路：
+
+```text
+fixtures/postgres/**  →  RawPlanInput  →  analyzePlan()（现有 Offline Core）  →  view model  →  Svelte UI
+```
+
+- **Fixture Selector**：选择仓库内 fixture；展示 database / databaseVersion / mode / SQL /
+  provenance；synthetic fixture 明确标识为 synthetic。
+- **Plan Summary**：直接展示 Core 已计算的 Metrics（Total Estimated Cost、Root Estimated Rows、
+  Node Count、Max Depth、Scan / Sequential Scan / Index Scan / Join / Sort / Aggregate Count、
+  Unknown Node Type Count，以及 Core 已产出的 largestEstimatedRows / highestIncrementalCost）。
+  没有综合评分、没有 health score。
+- **Findings**：severity / title / summary / rule id / nodeRef / evidence，保持规则的 observation
+  语义与证据（Estimated Plan 不代表 runtime truth）。
+- **Plan Tree + Node Inspector**：嵌套行计划树（可折叠、可选中）；点击节点查看该节点真实报告的
+  字段（nodeType / kind / relation / alias / estimatedRows / startupCost / totalCost / width /
+  filter / join condition / index condition / sort keys / group keys / engineSpecific / extra）。
+  缺失值不显示，不产生 `undefined` / `null` 噪音。
+
+UI 入口顶部的 **Offline / Fixture Mode** 明确标注当前不是产品正式数据源；开发视图仍保留
+Phase 0 Host Capability Audit Harness（“宿主审计（开发）”）。
+
+fixture 通过构建期 Vite 虚拟模块（`scripts/vite-plugin-fixtures.mjs`）从 `fixtures/postgres/**`
+读取，**只嵌入 `.plan.json` 与展示所需的 `.meta.json` 字段**，不包含 golden / `setup.sql` /
+绝对路径；fixture 仍是唯一真相来源，没有把内容复制成手写常量。
+
+边界（本轮严格不变）：不调用 `window.dbxPlugin.explainPlan()` / `host.getPlanCapabilities()`，
+不修改 `manifest.json` 的 `engines.host_api`，不新增 `host.plans:read`，不引入数据库 Driver、
+不执行 EXPLAIN。未来 Host 接入只需新增极薄的 `dbx-adapter`：
+
+```text
+DBX Host Response  →  dbx-adapter  →  RawPlanInput  →  同一套 Core 与 UI
 ```
 
 ## 开发
@@ -96,7 +134,7 @@ npm install
 dbx-plugin dev --path . --port 5190
 ```
 
-UI 从 `src/` 编译到 `ui/`。前端通过宿主注入的 `window.dbxPlugin` 桥接读取 DBX 上下文、语言、主题并调用宿主方法。最终集成测试请使用真实 DBX 宿主。
+UI 从 `src/` 编译到 `ui/`。分析视图为 **Offline / Fixture Mode**，不依赖 DBX 宿主即可运行；`window.dbxPlugin` 仅由开发用宿主审计视图使用，未来 Host 接入也复用这一桥接。最终集成测试请使用真实 DBX 宿主。
 
 > `ui/` 是**必须入库的发布产物**：DBX 官方 release workflow 不执行 `npm install` / `npm run build`，直接运行 `dbx-plugin package .`，因此修改 `src/` 后需要重新构建并提交 `ui/` 变更。`.gitignore` 只忽略 `dist/`、`.dbx-dev/`、`node_modules/` 等本地生成物，不忽略 `ui/`。详见 [AGENTS.md](AGENTS.md) 的 Git 规则。
 
@@ -116,10 +154,12 @@ dbx-plugin package .
 ├── assets/                # 插件图标等静态资源
 ├── docs/                  # 架构 / 计划 / 契约 / Phase 0 审计
 ├── fixtures/              # 离线执行计划样本（postgres 已建立 / mysql 占位）
-├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析）
+├── scripts/               # 开发与测试脚本（golden 生成、fixture 分析、UI fixture 虚拟模块）
 ├── src/                   # Svelte 前端源码
+│   ├── components/        # FixtureSelector / PlanSummary / FindingsList / PlanTree / NodeInspector / HostAudit
 │   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖
-│   └── App.svelte         # Phase 0 Audit Harness（开发用）
+│   ├── lib/               # 纯 UI 逻辑：fixture catalog、view model、格式化
+│   └── App.svelte         # Fixture-driven MVP 分析界面（含开发用宿主审计视图）
 ├── tests/                 # node:test，离线运行
 ├── manifest.json          # DBX 插件清单
 ├── dbx-plugin.toml        # 打包与开发配置

@@ -3,15 +3,15 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-20 |
-| 当前阶段 | **Phase 0B · Offline Plan Core（已实现，PR #6）+ Host 接入 BLOCKED**（`Phase 0 completed · Upstream implementation in progress`；[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 一期 Estimated Plan only） |
+| 当前阶段 | **Phase 0B · Offline Plan Core（已实现，PR #6）+ Phase 0C · Fixture-driven MVP UI（已实现，Issue #7）+ Host 接入 BLOCKED**（`Offline Core implemented · Fixture-driven MVP UI implemented · Real Host integration blocked on upstream t8y2/dbx#9692 merge / release`；[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) 一期 Estimated Plan only，实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)） |
 | 插件版本 | 0.1.0 |
-| 阶段结论 | 当前 blocker = **DBX Estimated Plan Host API 尚未实现 / 合并**（“能力是否存在”已无未知）；离线 Plan Core（parser / normalization / metrics / rules）已实现且不依赖 Host API；真实 Host 接入仍暂停 |
+| 阶段结论 | 当前 blocker = **DBX Estimated Plan Host API 尚未合并 / release**（“能力是否存在”已无未知）；离线 Plan Core（parser / normalization / metrics / rules）与 Fixture-driven MVP UI 已实现且不依赖 Host API；真实 Host 接入仍暂停 |
 
 ## 0. Phase 0 审计结论（2026-09-18）
 
 完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
 
-**上游 contract（2026-09-20）**：Estimated Plan Host API 需求已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)（OPEN，已由 `0verme` `/claim`），是当前唯一 canonical upstream contract：一期只请求 Estimated Plan（`EXPLAIN ...`）、权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` / generic SQL execution **不属于一期**，已移入 Future / historical design。下游对齐说明见 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)（PR #4 已合并）。
+**上游 contract（2026-09-20）**：Estimated Plan Host API 需求已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)（OPEN，已由 `0verme` `/claim`），实现 PR 为 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)（OPEN，等待 review / merge / release），是当前唯一 canonical upstream contract：一期只请求 Estimated Plan（`EXPLAIN ...`）、权限 `host.plans:read`、方法 `host.getPlanCapabilities` / `host.explainPlan`、`mode=estimated`。Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute` / `host.getQueryContext()` / generic SQL execution **不属于一期**，已移入 Future / historical design。下游对齐说明见 [docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)（PR #4 已合并）。
 
 下表为 2026-09-18 审计快照（历史事实）；其中「当前 SQL / result-view」一项已由上游 #9599 修复，见下方上游状态。
 
@@ -42,7 +42,8 @@
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
 | `manifest.json` 合法性 | ✅ 通过（对上游 `main` 分支真实 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（结论 BLOCKED，见第 0 节） |
-| Audit Harness（开发/审计页） | ✅ 已实现（`src/App.svelte`，明确标注 DEVELOPMENT / AUDIT ONLY） |
+| Audit Harness（开发/审计页） | ✅ 已保留为 UI 内的“宿主审计（开发）”视图（`src/components/HostAudit.svelte`；无 DBX 宿主时优雅降级） |
+| Fixture-driven MVP UI（离线 / demo） | ✅ 已实现（Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7)：Fixture Selector / Plan Summary / Findings / Plan Tree / Node Inspector；不接 Host API） |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`，不依赖 DBX Host API） |
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
@@ -58,6 +59,22 @@
 > ⛔ 表示需要独立 Issue（Host 接入类还需等 t8y2/dbx#9675），**不是**待办遗留。
 > Offline Core 的契约、阈值与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；
 > 启动条件、一期 / Future 边界见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) §2.1 与 §3。
+
+### 1.1 Fixture-driven MVP UI 数据链路与边界（2026-09-20）
+
+```text
+fixtures/postgres/** → RawPlanInput → analyzePlan()（现有 Offline Core）→ src/lib/view-model.js → Svelte UI
+```
+
+- 代码：`src/App.svelte`、`src/components/**`、`src/lib/**`、`scripts/vite-plugin-fixtures.mjs`。
+- Fixture 在构建期以虚拟模块嵌入（只含 `.plan.json` + 展示字段，不含 golden / `setup.sql` / 绝对路径），
+  synthetic fixture 保持 synthetic 标识；UI 顶部明确标注 `Offline / Fixture Mode`。
+- **边界确认**：未调用 `window.dbxPlugin.explainPlan()` / `host.getPlanCapabilities()`；未修改
+  `manifest.json` 的 `engines.host_api`（仍为 `1`）；未新增 `host.plans:read`；未引入数据库 Driver；
+  未修改 Core 契约 / 阈值 / golden。
+- `window.dbxPlugin` 仅由开发用“宿主审计”视图使用，不再承担分析数据来源。
+- 未来 #9692 合并 / release 后只新增 `dbx-adapter`（`rawPlan → RawPlanInput`），现有 Core / view model /
+  组件不重写。
 
 ## 2. 本次初始化的实测验证记录
 
@@ -161,8 +178,9 @@ Build failed (exit 1)
 1. ✅ Phase 0 Host Capability Audit 已完成（历史结论 BLOCKED，清单见 [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)）；能力缺口已正式提交为 [#9675](https://github.com/t8y2/dbx/issues/9675)。
 2. 上游反馈状态（2026-09-20 复核）：result-view 缺陷已提交 [#9597](https://github.com/t8y2/dbx/issues/9597) 并由 [#9599](https://github.com/t8y2/dbx/pull/9599) 修复合入上游 `main`（尚未进入 release）。Estimated Plan Host API 已正式提交为 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)，已由 `0verme` `/claim`，是当前唯一 canonical upstream contract；下游设计已收敛（[docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md](docs/upstream/PLUGIN_HOST_PLAN_API_ISSUE.md)，PR #4 已合并；`docs/DBX_HOST_API_GAP_PROPOSAL.md` 已同步）。
 3. 当前 blocker = #9675 的实现 / 合并。上游落地前**暂停真实 Host 接入**；不设计插件侧替代架构、不引入数据库 Driver。
-4. 离线 Plan Core 已由 Phase 0B 落地（PR #6），不受 Host blocker 影响：契约与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；#9675 落地后只需新增 `src/core/adapter/` 将 `rawPlan` 映射为 `RawPlanInput`。
-4. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
+4. 离线 Plan Core 已由 Phase 0B 落地（PR #6），不受 Host blocker 影响：契约与 fixture 约定见 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)；#9692 落地后只需新增 `src/core/adapter/` 将 `rawPlan` 映射为 `RawPlanInput`。
+5. Fixture-driven MVP UI 已由 Issue [#7](https://github.com/0verme/dbx-plugin-plan-detective/issues/7) 落地：可在无 DBX、无数据库环境下演示完整分析链路；后续 UI 扩展（Plan Diff / Canvas 等）仍需独立 Issue。
+6. 就第 4 节上游问题决定处理方式：本地修正 ref / 提 Issue 到 `t8y2/dbx` / 等待上游修复。
 
 ## 6. 相关文档
 
