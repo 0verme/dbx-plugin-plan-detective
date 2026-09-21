@@ -1,12 +1,12 @@
 # DBX Plan Detective
 
-DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性能诊断与 Plan Diff 分析。
+DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性能诊断与结构化 Finding 解释。
 
 | 项目 | 值 |
 | --- | --- |
 | 插件 ID | `io.github.0verme.plan-detective` |
 | Publisher | `0verme` |
-| 当前版本 | `0.4.0` |
+| 当前版本 | `0.5.0` |
 | Host API | `^1.2`（`host.plans:read`） |
 | 模板 | DBX 官方 `svelte`（Svelte + Vite，`universal`，frontend-only） |
 
@@ -26,12 +26,13 @@ Plan Detective 负责理解和分析执行计划。
 - Performance Metrics ✅（确定性基础指标，不含综合评分）
 - Hotspot Analysis ✅（确定性、engine-aware 的注意力列表；PostgreSQL / MySQL 代价语义分开，无综合评分）
 - Rule-based Diagnosis ✅（3 条确定性规则）
-- Plain-language Finding Presentation ✅（`large-sequential-scan` Golden Sample；`zh-CN` / `en`）
-- Findings + Evidence ✅（structured facts + technical evidence）
+- Structured Finding Diagnosis ✅（`Finding facts` → presentation；首个 Golden Sample 为 `large-sequential-scan`；`zh-CN` / `en`）
+- Findings + Evidence ✅（structured facts + technical evidence；未迁移 Finding fallback 到旧 title / summary）
 - Plan Tree / Raw Plan viewer ✅
 - Plan Diff ⛔
 
 > ✅ 为**当前已实现**；⛔ 为未实现。Actual Plan / `EXPLAIN ANALYZE` 明确不在范围内。
+> v0.5.0 引入结构化诊断解释层与基础 i18n：当前仅 `large-sequential-scan` 完整接入，其他 Findings 继续 fallback 到旧 title / summary。诊断基于 Estimated Plan，`severity` 只是规则关注级别，不代表已确认存在运行时性能问题。
 > 实际完成度以 [STATUS.md](STATUS.md) 与 [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md) 为准。
 
 ## 上游契约
