@@ -1,0 +1,22 @@
+{
+  "database": "sqlserver",
+  "mode": "estimated",
+  "format": "xml",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-written synthetic ShowPlanXML: not captured from any SQL Server instance; the element and operator shape follows the documented ShowPlanXML structure.",
+    "reference": "https://learn.microsoft.com/en-us/sql/relational-databases/showplan-logical-and-physical-operators-reference"
+  },
+  "features": ["key-lookup", "nested-index-seek-input", "lookup-flag"],
+  "expect": {
+    "rootNodeType": "Clustered Index Seek",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

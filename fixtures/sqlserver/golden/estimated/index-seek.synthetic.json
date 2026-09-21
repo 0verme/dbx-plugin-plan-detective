@@ -1,0 +1,168 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Clustered Index Seek",
+      "physicalOp": "Clustered Index Seek",
+      "logicalOp": "Clustered Index Seek",
+      "nodeId": 0,
+      "estimatedRows": 1,
+      "estimatedTotalSubtreeCost": 0.0033,
+      "estimateCpu": 0.0001581,
+      "estimateIo": 0.0031,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 24,
+      "parallel": false,
+      "database": "[Sales]",
+      "schema": "[dbo]",
+      "table": "[Orders]",
+      "index": "[PK_Orders]",
+      "alias": "[o]",
+      "indexKind": "Clustered",
+      "storage": "RowStore",
+      "predicate": null,
+      "indexCondition": "Prefix(EQ) [o].OrderID = (42)",
+      "sortKeys": null,
+      "groupKeys": null,
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": null,
+      "operator": {
+        "ordered": true
+      },
+      "children": [],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 0.0033,
+      "estimatedRows": 1,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 0,
+      "cachedPlanSize": 32
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "index_scan",
+      "nodeType": "Clustered Index Seek",
+      "relation": {
+        "name": "Orders",
+        "alias": "o",
+        "indexName": "PK_Orders"
+      },
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 24,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": "Prefix(EQ) [o].OrderID = (42)",
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Clustered Index Seek",
+          "logicalOp": "Clustered Index Seek",
+          "estimatedTotalSubtreeCost": 0.0033,
+          "estimateCpu": 0.0001581,
+          "estimateIo": 0.0031,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 24,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[PK_Orders]",
+          "alias": "[o]",
+          "indexKind": "Clustered",
+          "storage": "RowStore",
+          "operator": {
+            "ordered": true
+          },
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 0.0033,
+            "estimatedRows": 1,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 0,
+            "cachedPlanSize": 32
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "Clustered Index Seek",
+      "relation": "Orders",
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

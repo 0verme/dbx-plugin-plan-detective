@@ -1,0 +1,450 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Sort",
+      "physicalOp": "Sort",
+      "logicalOp": "Sort",
+      "nodeId": 0,
+      "estimatedRows": 120000,
+      "estimatedTotalSubtreeCost": 88.6,
+      "estimateCpu": 12.6,
+      "estimateIo": 0,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 30,
+      "parallel": false,
+      "database": null,
+      "schema": null,
+      "table": null,
+      "index": null,
+      "alias": null,
+      "indexKind": null,
+      "storage": null,
+      "predicate": null,
+      "indexCondition": null,
+      "sortKeys": [
+        "[o].OrderDate ASC",
+        "[o].TotalDue DESC"
+      ],
+      "groupKeys": null,
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": null,
+      "operator": {
+        "distinct": false
+      },
+      "children": [
+        {
+          "nodeType": "Parallelism",
+          "physicalOp": "Parallelism",
+          "logicalOp": "Gather Streams",
+          "nodeId": 1,
+          "estimatedRows": 120000,
+          "estimatedTotalSubtreeCost": 76,
+          "estimateCpu": 1.2,
+          "estimateIo": 0,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 30,
+          "parallel": true,
+          "database": null,
+          "schema": null,
+          "table": null,
+          "index": null,
+          "alias": null,
+          "indexKind": null,
+          "storage": null,
+          "predicate": null,
+          "indexCondition": null,
+          "sortKeys": [
+            "[o].OrderDate ASC"
+          ],
+          "groupKeys": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "operator": {
+            "partitioningType": "NotPartitioned"
+          },
+          "children": [
+            {
+              "nodeType": "Clustered Index Scan",
+              "physicalOp": "Clustered Index Scan",
+              "logicalOp": "Clustered Index Scan",
+              "nodeId": 2,
+              "estimatedRows": 120000,
+              "estimatedTotalSubtreeCost": 74.8,
+              "estimateCpu": 13.2,
+              "estimateIo": 30.4,
+              "estimateRebinds": 0,
+              "estimateRewinds": 0,
+              "estimateExecutions": null,
+              "avgRowSize": 30,
+              "parallel": true,
+              "database": "[Sales]",
+              "schema": "[dbo]",
+              "table": "[Orders]",
+              "index": "[PK_Orders]",
+              "alias": "[o]",
+              "indexKind": "Clustered",
+              "storage": "RowStore",
+              "predicate": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "hashKeysBuild": null,
+              "hashKeysProbe": null,
+              "probeResidual": null,
+              "buildResidual": null,
+              "residual": null,
+              "definedValues": null,
+              "operator": {
+                "ordered": false
+              },
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 88.6,
+      "estimatedRows": 120000,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 8192,
+      "cachedPlanSize": 56
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "sort",
+      "nodeType": "Sort",
+      "relation": null,
+      "estimatedRows": 120000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 30,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": [
+        "[o].OrderDate ASC",
+        "[o].TotalDue DESC"
+      ],
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "parallelism",
+          "nodeType": "Parallelism",
+          "relation": null,
+          "estimatedRows": 120000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 30,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": [
+            "[o].OrderDate ASC"
+          ],
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "index_scan",
+              "nodeType": "Clustered Index Scan",
+              "relation": {
+                "name": "Orders",
+                "alias": "o",
+                "indexName": "PK_Orders"
+              },
+              "estimatedRows": 120000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 30,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "sqlserver",
+                "sqlServer": {
+                  "nodeId": 2,
+                  "physicalOp": "Clustered Index Scan",
+                  "logicalOp": "Clustered Index Scan",
+                  "estimatedTotalSubtreeCost": 74.8,
+                  "estimateCpu": 13.2,
+                  "estimateIo": 30.4,
+                  "estimateRebinds": 0,
+                  "estimateRewinds": 0,
+                  "estimateExecutions": null,
+                  "avgRowSize": 30,
+                  "parallel": true,
+                  "database": "[Sales]",
+                  "schema": "[dbo]",
+                  "table": "[Orders]",
+                  "index": "[PK_Orders]",
+                  "alias": "[o]",
+                  "indexKind": "Clustered",
+                  "storage": "RowStore",
+                  "operator": {
+                    "ordered": false
+                  },
+                  "hashKeysBuild": null,
+                  "hashKeysProbe": null,
+                  "probeResidual": null,
+                  "buildResidual": null,
+                  "residual": null,
+                  "definedValues": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "sqlserver",
+            "sqlServer": {
+              "nodeId": 1,
+              "physicalOp": "Parallelism",
+              "logicalOp": "Gather Streams",
+              "estimatedTotalSubtreeCost": 76,
+              "estimateCpu": 1.2,
+              "estimateIo": 0,
+              "estimateRebinds": 0,
+              "estimateRewinds": 0,
+              "estimateExecutions": null,
+              "avgRowSize": 30,
+              "parallel": true,
+              "database": null,
+              "schema": null,
+              "table": null,
+              "index": null,
+              "alias": null,
+              "indexKind": null,
+              "storage": null,
+              "operator": {
+                "partitioningType": "NotPartitioned"
+              },
+              "hashKeysBuild": null,
+              "hashKeysProbe": null,
+              "probeResidual": null,
+              "buildResidual": null,
+              "residual": null,
+              "definedValues": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Sort",
+          "logicalOp": "Sort",
+          "estimatedTotalSubtreeCost": 88.6,
+          "estimateCpu": 12.6,
+          "estimateIo": 0,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 30,
+          "parallel": false,
+          "database": null,
+          "schema": null,
+          "table": null,
+          "index": null,
+          "alias": null,
+          "indexKind": null,
+          "storage": null,
+          "operator": {
+            "distinct": false
+          },
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 88.6,
+            "estimatedRows": 120000,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 8192,
+            "cachedPlanSize": 56
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 120000,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "sort",
+      "nodeType": "Sort",
+      "relation": null,
+      "estimatedRows": 120000
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Sort",
+        "kind": "sort",
+        "relation": null,
+        "level": "high",
+        "reasons": [
+          {
+            "code": "sqlserver-sort",
+            "level": "high",
+            "statement": "Sort is estimated to sort 120000 rows. The estimate alone does not say whether the sort is required.",
+            "source": "RelOp@EstimateRows",
+            "evidence": {
+              "sortKeys": [
+                "[o].OrderDate ASC",
+                "[o].TotalDue DESC"
+              ],
+              "estimatedRows": 120000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": 0,
+          "nodeType": "Sort",
+          "kind": "sort",
+          "estimatedRows": 120000,
+          "physicalOp": "Sort",
+          "logicalOp": "Sort",
+          "estimatedTotalSubtreeCost": 88.6,
+          "estimateCpu": 12.6,
+          "estimateIo": 0,
+          "avgRowSize": 30,
+          "parallel": false
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.0.0",
+        "nodeId": "0.0.0",
+        "nodeType": "Clustered Index Scan",
+        "kind": "index_scan",
+        "relation": "Orders",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "sqlserver-large-index-scan",
+            "level": "high",
+            "statement": "Clustered Index Scan on Orders is estimated to read 120000 rows through a full Clustered Index Scan (a seek is not reported as a scan signal).",
+            "source": "RelOp@EstimateRows",
+            "evidence": {
+              "physicalOp": "Clustered Index Scan",
+              "estimatedRows": 120000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": 2,
+          "nodeType": "Clustered Index Scan",
+          "kind": "index_scan",
+          "relation": "Orders",
+          "estimatedRows": 120000,
+          "physicalOp": "Clustered Index Scan",
+          "logicalOp": "Clustered Index Scan",
+          "estimatedTotalSubtreeCost": 74.8,
+          "estimateCpu": 13.2,
+          "estimateIo": 30.4,
+          "avgRowSize": 30,
+          "parallel": true,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[PK_Orders]",
+          "alias": "[o]"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

@@ -22,7 +22,7 @@ RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入
 src/core/parsers/（registry：database family → structured parser）
    │
    ▼
-Parser（PostgreSQL / MySQL）       → ParsedPlan（引擎专有、字段完整）
+Parser（PostgreSQL / MySQL / SQL Server） → ParsedPlan（引擎专有、字段完整）
    │
    ▼
 Normalizer                        → NormalizedPlan（数据库无关语义 + engineSpecific）
@@ -67,7 +67,7 @@ interface RawPlanInput {
 
 | 字段 | 必填 | 为什么需要 |
 | --- | --- | --- |
-| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"`；raw-only：`"sqlserver"` / `"oracle"` / `"oceanbase-oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
+| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"`；raw-only：`"oracle"` / `"oceanbase-oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
 | `mode` | 是 | 决定是否期望 Actual 执行字段。`EXPLAIN` → `estimated`，`EXPLAIN ANALYZE` → `actual`。DBX Host API 只返回 estimated；actual 值保留给离线 fixture / 未来契约。 |
 | `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / Doris / QuestDB）。registry 对 family + format 组合判定是否 structured。 |
 | `plan` | 是 | 原始 payload，原样传递。PostgreSQL 必须保留完整顶层 envelope（单元素数组），而不是内部 `Plan` object；text / xml 为字符串。 |
@@ -148,7 +148,7 @@ analyzeRawPlan(rawInput) -> {
 }
 ```
 
-- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`）；跑完整 Core pipeline。
+- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`、`sqlserver` + `xml`）；跑完整 Core pipeline。
 - `raw-only`：`PARSER_NOT_IMPLEMENTED`（family 已知）/ `UNSUPPORTED_FORMAT`（parser 不支持该 format）/ `UNKNOWN_DATABASE`；
   `parsed` / `normalized` / `metrics` 为 `null`，`findings` 为空。UI 展示 Raw Plan 并标注原因，不伪造 parser。
 - 严格入口 `analyzePlan(rawInput)` 对 raw-only 抛 `PlanParseError`，供 fixture / golden 测试使用；
@@ -177,6 +177,7 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | --- | --- | --- | --- |
 | PostgreSQL | `src/core/postgres/parse-json-plan.js` | `src/core/normalize/normalize-postgres.js` | `src/core/parsers/postgres.js` |
 | MySQL | `src/core/mysql/parse-json-plan.js` | `src/core/normalize/normalize-mysql.js` | `src/core/parsers/mysql.js` |
+| SQL Server | `src/core/sqlserver/parse-showplan-xml.js` + `src/core/sqlserver/xml.js` | `src/core/normalize/normalize-sqlserver.js` | `src/core/parsers/sqlserver.js` |
 
 ### 4.1 PostgreSQL
 
@@ -257,6 +258,54 @@ V1 `query_block` 与 V2 `query_plan` 保持独立解析分支，V2 不伪造 V1 
   声明 `actual` 时抛 `MODE_MISMATCH`。
 - **不把 MySQL cost 映射到 PostgreSQL 语义的 `startupCost` / `totalCost`**，原因见第 5 节。
 
+### 4.3 SQL Server
+
+实现：`src/core/sqlserver/parse-showplan-xml.js`（ShowPlanXML 语义）与 `src/core/sqlserver/xml.js`（无依赖 XML 读取）。
+输入是 DBX Host 返回的 ShowPlanXML 字符串（`format: "xml"`），对应 DBX 的 Estimated Plan；插件不建立连接、
+不执行 `SET SHOWPLAN_XML`。
+
+- **XML 读取**：不新增 npm 依赖。浏览器与 `node --test` 都需要可用的 XML 读取能力，而 `DOMParser`
+  在 Node 中不存在，Core 也不能触碰浏览器全局；因此自建一个迭代式（非递归）读取器，支持元素、属性、
+  CDATA、注释、PI、被跳过且从不解析的 DOCTYPE、五个预定义实体与数字字符引用。元素一律按 local name
+  匹配，所以 ShowPlanXML 默认命名空间与带前缀元素都能解析；不实现 DTD / 外部实体 / 命名空间解析 / schema 校验。
+- **Envelope**：必须是一个 `<ShowPlanXML>`，且只有一个带 `QueryPlan` 的 `StmtSimple`。存在多个带计划的
+  `StmtSimple` 时 fail closed（`MULTIPLE_STATEMENTS`），不无声取第一条；没有 QueryPlan 的 `StmtSimple`
+  （例如 SET）不参与唯一性判断。出现 `RunTimeInformation` / `QueryTimeStats` 或声明 `mode: "actual"`
+  时抛 `MODE_MISMATCH`。
+- **Tree 构造**：每个 `RelOp` 的输入是它自己 operator 容器内的 `RelOp` 后代，遇到嵌套 `RelOp` 即停止。
+  这样无需为每个算子维护表：`NestedLoops` / `Hash` / `Merge` / `Sort` / `Concat` / `Spool` /
+  `Parallelism`、以及 `IndexScan Lookup="1"` 的嵌套输入都能正确挂树，未知 operator 容器也不会丢掉子树。
+  `Child RelOp` 顺序即 ShowPlanXML 顺序（Nested Loops 的第一个输入是 outer）。
+
+| ShowPlanXML | ParsedSqlServerNode | 说明 |
+| --- | --- | --- |
+| `RelOp@PhysicalOp` / `@LogicalOp` | `physicalOp` / `logicalOp` / `nodeType` | `nodeType` 优先取 `PhysicalOp`，缺失时回退 `LogicalOp`；两者都缺失时保留 label `"RelOp"` |
+| `RelOp@NodeId` / `@EstimateRows` | `nodeId` / `estimatedRows` | |
+| `RelOp@EstimatedTotalSubtreeCost` | `estimatedTotalSubtreeCost` | **子树累计代价**，不映射到 `totalCost` |
+| `RelOp@EstimateCPU` / `@EstimateIO` | `estimateCpu` / `estimateIo` | 节点自身估算，同样不映射到 `totalCost` / `startupCost` |
+| `RelOp@EstimateRebinds` / `@EstimateRewinds` / `@EstimateExecutions` | 同名字段 | |
+| `RelOp@AvgRowSize` | `avgRowSize` | normalizer 映射为中立 `width` |
+| `RelOp@Parallel` | `parallel` | SQL Server 布尔 `0` / `1` |
+| `RelOp@Lookup` 与 `IndexScan@Ordered` | `operator.lookup` / `operator.ordered` | 写操作容器的配置标志，未知属性进入 `extra` |
+| `Object@Database/Schema/Table/Index/Alias/IndexKind/Storage` | 同名字段 | normalizer 只把去括号后的 table / alias / index 放到中立 `relation`，原始值保留在 engineSpecific |
+| `Predicate` 内的 `ScalarOperator@ScalarString` | `predicate` | normalizer 映射为中立 `filter` |
+| `SeekPredicates` 的 `Prefix` / `StartRange` / `EndRange` | `indexCondition` | 保留 `ScanType`、range 列与 range 表达式，确定性拼接 |
+| `OrderBy` / `OrderByColumn@Ascending` | `sortKeys` | 保留 ` ASC` / ` DESC` |
+| `StreamAggregate/GroupBy` 的 `ColumnReference` | `groupKeys` | |
+| `Hash/HashKeysBuild` / `HashKeysProbe` | `hashKeysBuild` / `hashKeysProbe` | 保持数组，不拼成单一字符串 |
+| `Hash/ProbeResidual`、`Hash/BuildResidual`、`Merge/Residual` | `probeResidual` / `buildResidual` / `residual` | 中立 `joinCondition` 保持 `null` |
+| `ComputeScalar/DefinedValues/DefinedValue` | `definedValues` | 保留 `ScalarString` 列表 |
+| `Sort@Distinct`、`Top/TopSort@RowCount` / `@IsPercent`、`Merge@ManyToMany`、`Parallelism@PartitioningType` | `operator.*` | 仅固定的一组算子配置，不复制整段 XML |
+| `RelOp` 未映射属性 | `extra` | 包括存在但无法解释为数字 / 布尔的原值（例如 `EstimateRows="many"`） |
+
+- **代价语义**：`EstimatedTotalSubtreeCost` 是子树累计值，`EstimateCPU` / `EstimateIO` 是节点自身估算；
+  两者都属于 SQL Server 自己的 cost model。本轮不把任何一项映射到 `startupCost` / `totalCost`，也不
+  用父子相减推算 self cost；Metrics 报告 `costAttribution.status = "not-applicable"`，Hotspots 不生成
+  代价占比信号。代价仅作为 `engineSpecific.sqlServer` 证据展示。
+- **失败模型**：`MALFORMED_XML`（XML 读取失败，带 line / column）、`MALFORMED_PLAN`（根元素不对、
+  没有带 QueryPlan 的语句 / 没有根 RelOp、payload 不是字符串）、`MULTIPLE_STATEMENTS`、`MODE_MISMATCH`。
+  缺失 `EstimateRows` / cost / `Object` / `Predicate` 不会失败，对应字段为 `null`。
+
 ## 5. NormalizedPlan
 
 实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）与
@@ -264,7 +313,7 @@ V1 `query_block` 与 V2 `query_plan` 保持独立解析分支，V2 不伪造 V1 
 
 ```text
 NormalizedPlan {
-  database: "postgresql" | "mysql",
+  database: "postgresql" | "mysql" | "sqlserver",
   mode, format,
   root: NormalizedNode,
   unknownNodeTypes: string[]   // 排序去重，便于测试与 UI 提示
@@ -281,7 +330,7 @@ NormalizedPlan {
 | `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null` |
 | `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点） |
 | `actualRows` / `actualStartupTime` / `actualTotalTime` / `loops` | `number \| null` | Actual 字段 |
-| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL 恒为 `null`（MySQL cost 在 `engineSpecific.mysql`，语义不可直接比较） |
+| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL 与 SQL Server 恒为 `null`（各自的 cost 在 `engineSpecific` 下，语义不可直接比较） |
 | `width` | `number \| null` | Plan Width |
 | `filter` | `string \| null` | 过滤谓词 |
 | `joinType` | `string \| null` | Inner / Left / … |
@@ -304,6 +353,15 @@ NormalizedPlan {
 `groupItems`、`estimatedTotalCost`、`jsonSchemaVersion`）、`extra`。
 **不为了"统一"丢弃数据库专有信息。**
 
+`engineSpecific`（SQL Server）：`database`、`sqlServer`（`nodeId`、`physicalOp`、`logicalOp`、
+`estimatedTotalSubtreeCost`、`estimateCpu`、`estimateIo`、`estimateRebinds`、`estimateRewinds`、
+`estimateExecutions`、`avgRowSize`、`parallel`、`database`、`schema`、`table`、`index`、`alias`、
+`indexKind`、`storage`、`operator`、`hashKeysBuild`、`hashKeysProbe`、`probeResidual`、`buildResidual`、
+`residual`、`definedValues`，根节点额外带 `statement` / `queryPlan`）、`extra`。SQL Server 中立
+`relation` 的 table / alias / index 会去掉一层 `[ ]` 引用（保留 `engineSpecific` 原始值），使树标签
+与其它引擎一致。
+**不为了"统一"丢弃数据库专有信息。**
+
 `kind` 主要映射：
 
 | kind | PostgreSQL 节点 |
@@ -318,7 +376,7 @@ NormalizedPlan {
 | `append` / `result` / `subquery_scan` / `values_scan` / `function_scan` / `cte_scan` / `modify_table` / … | 常见辅助节点 |
 | `unknown` | 未登记类型；`nodeType` 与 `unknownNodeTypes` 记录原始值 |
 
-MySQL 侧追加的 kind（现有 metrics / rules 不依赖）：
+MySQL / SQL Server 侧追加的 kind（现有 metrics / rules 不依赖）：
 
 | kind | MySQL 结构 |
 | --- | --- |
@@ -330,6 +388,22 @@ MySQL 侧追加的 kind（现有 metrics / rules 不依赖）：
 | `sort` / `aggregate` / `unique` | `ordering_operation` / `grouping_operation` / `duplicates_removal` |
 | `append` / `setop` / `result` | `union_result` / `intersect_result` + `except_result` / `unary_result` |
 | `materialize` / `subquery` | `materialized_from_subquery` / `*_subqueries` 数组 |
+
+SQL Server 侧追加的 kind：
+
+| kind | SQL Server `PhysicalOp` |
+| --- | --- |
+| `seq_scan` | `Table Scan` |
+| `index_scan` | `Clustered Index Scan` / `Index Scan` / `Columnstore Index Scan` / `Clustered Index Seek` / `Index Seek`（seek 通过 `physicalOp` 区分，不单独造 seek kind） |
+| `lookup` | `Key Lookup` / `RID Lookup` |
+| `hash_join` / `merge_join` / `nested_loop` | `Hash Match` + Join 类 `LogicalOp` / `Merge Join` / `Nested Loops` |
+| `hash_match` | `Hash Match` 的非 Join / 非 Aggregate 用法（如 Union） |
+| `aggregate` | `Stream Aggregate`、`Hash Match` + `LogicalOp = Aggregate` |
+| `sort` / `limit` | `Sort` / `Top N Sort`、`Top` |
+| `compute_scalar` / `filter` | `Compute Scalar` / `Filter` |
+| `append` / `parallelism` / `spool` | `Concatenation` / `Parallelism` / `Table Spool` / `Index Spool` / `Row Count Spool` |
+| `values_scan` | `Constant Scan` |
+| `unknown` | 未登记 `PhysicalOp`；`nodeType` 与 `unknownNodeTypes` 记录原始值，子树完整保留 |
 
 NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测试，且不依赖 UI。
 
@@ -358,7 +432,7 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 ```text
 costAttribution.status = "available"       归因可靠，highestIncrementalCost 可展示
                        = "withheld"        边界不成立或没有可归因节点，指标为 null
-                       = "not-applicable"  MySQL 等非 PostgreSQL 计划，不进入该语义
+                       = "not-applicable"  MySQL / SQL Server 等非 PostgreSQL 计划，不进入该语义
 ```
 
 withheld reason（与 `hotspots.cost.reason` 同一套）：
@@ -370,7 +444,7 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `PLAN_CONTAINS_SUBPLAN` | 含 InitPlan / SubPlan，父代价按 `cost_subplan()` 计入，不按子树累加 |
 | `UNVERIFIED_COST_FLOW` | 缺失或未知 `Parent Relationship`，代价流向无法验证 |
 | `NO_ATTRIBUTABLE_COST` | 边界可靠，但没有任何可归因节点（例如根节点自身截断子节点） |
-| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL 使用自己的 cost model |
+| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server 使用各自的 cost model |
 
 单节点负自代价（如 `Limit` 截断子节点）时，该节点及其子树不参与归因，祖先仍可归因；
 `src/core/tree.js` 的 `incrementalCostOf` 作为 legacy 路径继续服务 Findings，
@@ -390,13 +464,13 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `nested-loop-large-inner` | `nested_loop` | 外层估算行数 ≥ 10 且内层估算行数 ≥ 10 000 | `warning` |
 | | | 内层估算行数 ≥ 100 000 | `high` |
 
-MySQL 适用性（cost 语义见上）：
+MySQL / SQL Server 适用性（cost 语义见上）：
 
-| rule | MySQL |
-| --- | --- |
-| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） |
-| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） |
-| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） |
+| rule | MySQL | SQL Server |
+| --- | --- | --- |
+| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） |
+| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） |
+| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） |
 
 规则措辞纪律：
 
@@ -446,7 +520,11 @@ Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命�
 
 ```ts
 HotspotAnalysis {
-  cost: { engine: "postgresql" | "mysql", status: "available" | "withheld", reason: string | null },
+  cost: {
+    engine: "postgresql" | "mysql" | "sqlserver",
+    status: "available" | "withheld" | "not-applicable",
+    reason: string | null,
+  },
   items: Hotspot[],
 }
 
@@ -464,13 +542,15 @@ raw-only 方言的 `hotspots` 为 `null`（与 `metrics` / `normalized` 一致�
 
 | reason code | 引擎 | 依据 | 档位 |
 | --- | --- | --- | --- |
-| `large-sequential-scan` | PostgreSQL / MySQL | `kind = seq_scan`；PG `Plan Rows`，MySQL `rows_examined_per_scan` | ≥ 10 000 `warning`；≥ 100 000 `high` |
-| `nested-loop-amplification` | PostgreSQL / MySQL | 外层 × 内层估算行数 | 外层 ≥ 10 且内层 ≥ 10 000 `warning`；内层 ≥ 100 000 `high` |
+| `large-sequential-scan` | PostgreSQL / MySQL / SQL Server | `kind = seq_scan`；PG `Plan Rows`，MySQL `rows_examined_per_scan`，SQL Server `EstimateRows` | ≥ 10 000 `warning`；≥ 100 000 `high` |
+| `nested-loop-amplification` | PostgreSQL / MySQL / SQL Server | 外层 × 内层估算行数 | 外层 ≥ 10 且内层 ≥ 10 000 `warning`；内层 ≥ 100 000 `high` |
 | `cost-concentration` | PostgreSQL | 节点自身增量代价 / 根 Total Cost（PostgreSQL cost units） | ≥ 25% `warning`；≥ 50% `high` |
 | `mysql-rows-examined` | MySQL | 非 `ALL` 访问的 `rows_examined_per_scan` | ≥ 10 000 / ≥ 100 000 |
 | `mysql-filtered-out` | MySQL | `filtered` 低且 `rows_examined_per_scan` 大 | `≤ 10%` 且 ≥ 1 000 行；`≤ 1%` 且 ≥ 100 000 行 |
 | `mysql-cost-concentration` | MySQL | 同一 query block 内 ≥ 2 个有代价访问的 `(read_cost + eval_cost) / query_cost`（MySQL cost units） | ≥ 25% / ≥ 50% |
 | `mysql-filesort` / `mysql-temporary-table` / `mysql-join-buffer` | MySQL | `using_filesort` / `using_temporary_table` / `using_join_buffer` + 子树最大估算行数 | ≥ 10 000 / ≥ 100 000 |
+| `sqlserver-large-index-scan` | SQL Server | `PhysicalOp` 为 `Index Scan` / `Clustered Index Scan` 且 `EstimateRows` 大；seek 不算 | ≥ 10 000 `warning`；≥ 100 000 `high` |
+| `sqlserver-sort` | SQL Server | `kind = sort` 且 `EstimateRows` 大；仅提示“值得看”，不断定 sort 必须移除 | ≥ 10 000 `warning`；≥ 100 000 `high` |
 
 PostgreSQL 代价归因安全边界（`cost.status = "withheld"`，只用行数信号）：
 
@@ -483,7 +563,8 @@ PostgreSQL 代价归因安全边界（`cost.status = "withheld"`，只用行数�
 
 即使计划整体可归因，单个节点自代价为负（`Limit` 会截断子节点代价）时，该节点及其子树也不产生占比信号；
 祖先节点不受影响。MySQL 侧不做任何子节点相减，只用 `read_cost + eval_cost` 相对最近外层 query block `query_cost` 的占比，
-且只在同一 block 内 ≥ 2 个有代价访问时输出（单表 block 恒为 100%，无区分度）。
+且只在同一 block 内 ≥ 2 个有代价访问时输出（单表 block 恒为 100%，无区分度）。SQL Server 侧不生成任何代价占比信号：
+`EstimatedTotalSubtreeCost` 是子树累计值，`cost.status = "not-applicable"`，只用行数信号。
 
 ## 7. Fixture Convention
 
@@ -507,19 +588,32 @@ fixtures/mysql/                     # 仅 estimated；全部为 shape-verified s
 │   └── <name>.synthetic.meta.json
 └── golden/
     └── estimated/<name>.synthetic.json
+
+fixtures/sqlserver/                 # 仅 estimated；全部为 synthetic ShowPlanXML
+├── README.md
+├── estimated/
+│   ├── <name>.synthetic.plan.xml # 原始 ShowPlanXML 字符串
+│   └── <name>.synthetic.meta.json
+└── golden/
+    └── estimated/<name>.synthetic.json
 ```
 
-- `.plan.json` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
+- `.plan.json` / `.plan.xml` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
+  XML fixture 以纯文本提交，loader 不做 JSON.parse，保留 host 返回的原始字符串边界。
 - `.meta.json` 的 `expect` 记录该 fixture 要钉住的行为：
   `rootNodeType` / `hasActualFields` / `minDepth` / `findingRuleIds`（实际触发的 rule id 集合，
   没有触发则为 `[]`）；可选 `hotspotNodeRefs`（`analysis.hotspots.items` 的 node id 顺序，未声明则不校验）。
 - 一个 fixture 只验证一个主要行为，优先小而可人工核对。
 - 合成 fixture 必须在文件名中标记 `.synthetic`。
 - MySQL 只有 `estimated/`：Host API 不提供 MySQL actual plan，MySQL `EXPLAIN ANALYZE` 也不是该 JSON 形状。
+- SQL Server 只有 `estimated/`：Host API 只提供 Estimated Plan，`RunTimeInformation` / `QueryTimeStats`
+  等 Actual 专属元素会让 parser 抛 `MODE_MISMATCH`；fixture 的 `format` 必须是 `xml`。
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
 当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
-MySQL 11 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）。
+MySQL 13 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）；
+SQL Server 14 个，全部为 synthetic ShowPlanXML（本机无 SQL Server 实例；形状对照公开 schema 与文档，
+明细见 `fixtures/sqlserver/README.md`）。
 
 ## 8. Fixture Provenance
 
@@ -542,13 +636,13 @@ MySQL 11 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/RE
 每个 fixture 的 golden 固定整条离线 pipeline：
 
 ```text
-.plan.json ──loadFixture（校验 metadata → RawPlanInput）
+.plan.json / .plan.xml ──loadFixture（校验 metadata → RawPlanInput）
       │
       ▼ analyzePlan()
 { parsed, normalized, metrics, findings, hotspots }
       │
       ▼ deepStrictEqual
-fixtures/postgres/golden/<mode>/<name>.json
+fixtures/<database>/golden/<mode>/<name>.json
 ```
 
 - `npm test` 对每个 fixture 逐 stage 比较；不一致即失败，并提示重新生成命令。
@@ -566,9 +660,11 @@ npm run test:update-goldens   # 有意变更 pipeline 后重新生成 golden
 npm run analyze -- estimated/seq-scan   # 开发用：对单个 fixture 跑完整 pipeline
 ```
 
-覆盖范围：契约校验、PostgreSQL / MySQL parser 字段映射与错误路径、estimated / actual 不混淆、未知节点与未知字段、
+覆盖范围：契约校验、PostgreSQL / MySQL / SQL Server parser 字段映射与错误路径（含 XML namespace / malformed XML /
+多 statement / 未知 operator / 缺失字段）、estimated / actual 不混淆、未知节点与未知字段、
 NormalizedPlan 语义与 id、Metrics 计数与增量代价、3 条规则的正反例与阈值边界、
-Hotspot 契约 / PostgreSQL 代价归因边界（Limit 截断、InitPlan / SubPlan、缺失代价）/ MySQL 行数与 cost_info 信号 / 排序稳定性、
+Hotspot 契约 / PostgreSQL 代价归因边界（Limit 截断、InitPlan / SubPlan、缺失代价）/ MySQL 行数与 cost_info 信号 /
+SQL Server `EstimateRows` 行数信号与成本 not-applicable、排序稳定性、
 Findings 契约、golden 五 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
 
 ## 11. 明确不在本轮范围
@@ -576,7 +672,7 @@ Findings 契约、golden 五 stage、determinism 与 JSON 可序列化、Plan Co
 本轮（Offline Core vertical slice）不实现：`dbx-adapter` 的真实 Host wiring（仅 `DBX response → RawPlanInput`
 离线契约已实现，见第 2.1 节）、Execution Plan 扩展点集成、
 DBX Host API 调用、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
-SQL Server / Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
+Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
 文本计划 parser、Plan Diff、History、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
 以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
@@ -592,3 +688,14 @@ SQL Server / Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQ
 > 它**消费同一份契约**，没有修改本文的 Parser / NormalizedPlan / Metrics / Rules / Findings 语义、
 > 阈值与 golden；fixture 仍在构建期从 `fixtures/postgres/**` 读取，未复制为代码常量。
 > UI 层禁止事项（Host API、Driver、Plan Canvas、评分、AI）与 Core 一致。
+
+> 更新（2026-09-21，Phase 3.1 · SQL Server ShowPlanXML Structured Parser）：
+> SQL Server 已从 raw-only 升级为 structured：新增 `src/core/sqlserver/**`（无依赖 XML 读取 + ShowPlanXML RelOp 映射）、
+> `src/core/normalize/normalize-sqlserver.js` 与 `src/core/parsers/sqlserver.js`（registry：`sqlserver` + `xml`）。
+> `EstimatedTotalSubtreeCost` / `EstimateCPU` / `EstimateIO` 保留在 `engineSpecific.sqlServer`，**不**映射到
+> `startupCost` / `totalCost`，`costAttribution.status = "not-applicable"`；Hotspots 新增 SQL Server 行数信号
+> （`sqlserver-large-index-scan` / `sqlserver-sort`），不生成任何代价占比信号。
+> 新增 14 个 synthetic ShowPlanXML fixture（含 object / seek predicate / sort key / hash key / residual / defined value
+> / unknown operator / 缺失字段 / Top / Concatenation / Parallelism 覆盖）与对应 golden；root-only 的规则集合扩为
+> 3 条（`large-sequential-scan` / `expensive-sort` / `nested-loop-large-inner`）对 SQL Server 的适用范围已在第 6 节标注。
+> Actual Plan / RunTimeInformation / Plan Diff / AI / SQL Rewrite 仍不在范围内。

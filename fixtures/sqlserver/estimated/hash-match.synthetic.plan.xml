@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.539" Build="16.0.1000.6">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementId="1" StatementType="SELECT" StatementSubTreeCost="3.42" StatementEstRows="5000" StatementOptmLevel="FULL">
+          <QueryPlan DegreeOfParallelism="1" MemoryGrant="3072" CachedPlanSize="64">
+            <RelOp NodeId="0" PhysicalOp="Hash Match" LogicalOp="Inner Join" EstimateRows="5000" EstimateIO="0" EstimateCPU="0.45" AvgRowSize="35" EstimatedTotalSubtreeCost="3.42" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="Name"/>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+              </OutputList>
+              <Hash>
+                <DefinedValues/>
+                <HashKeysBuild>
+                  <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="CustomerID"/>
+                </HashKeysBuild>
+                <HashKeysProbe>
+                  <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="CustomerID"/>
+                </HashKeysProbe>
+                <ProbeResidual>
+                  <ScalarOperator ScalarString="[Sales].[dbo].[Orders].[Status] as [o].[Status]='OPEN'"/>
+                </ProbeResidual>
+                <RelOp NodeId="1" PhysicalOp="Clustered Index Scan" LogicalOp="Clustered Index Scan" EstimateRows="2000" EstimateIO="0.6" EstimateCPU="0.22" AvgRowSize="20" EstimatedTotalSubtreeCost="0.82" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+                  <OutputList>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="CustomerID"/>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="Name"/>
+                  </OutputList>
+                  <IndexScan Ordered="0" ForcedIndex="0" ForceSeek="0" ForceScan="0" NoExpandHint="0" Storage="RowStore">
+                    <DefinedValues>
+                      <DefinedValue>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="CustomerID"/>
+                      </DefinedValue>
+                      <DefinedValue>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Customers]" Alias="[c]" Column="Name"/>
+                      </DefinedValue>
+                    </DefinedValues>
+                    <Object Database="[Sales]" Schema="[dbo]" Table="[Customers]" Index="[PK_Customers]" Alias="[c]" IndexKind="Clustered" Storage="RowStore"/>
+                  </IndexScan>
+                </RelOp>
+                <RelOp NodeId="2" PhysicalOp="Index Scan" LogicalOp="Index Scan" EstimateRows="8000" EstimateIO="1.6" EstimateCPU="0.35" AvgRowSize="15" EstimatedTotalSubtreeCost="2.15" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+                  <OutputList>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="CustomerID"/>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="Status"/>
+                  </OutputList>
+                  <IndexScan Ordered="0" ForcedIndex="0" ForceSeek="0" ForceScan="0" NoExpandHint="0" Storage="RowStore">
+                    <DefinedValues>
+                      <DefinedValue>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                      </DefinedValue>
+                      <DefinedValue>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="CustomerID"/>
+                      </DefinedValue>
+                      <DefinedValue>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="Status"/>
+                      </DefinedValue>
+                    </DefinedValues>
+                    <Object Database="[Sales]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_CustomerID]" Alias="[o]" IndexKind="NonClustered" Storage="RowStore"/>
+                  </IndexScan>
+                </RelOp>
+              </Hash>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

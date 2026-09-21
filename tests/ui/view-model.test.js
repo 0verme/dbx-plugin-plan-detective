@@ -376,6 +376,12 @@ test("buildHotspotViews explains withheld cost signals but never changes them", 
   assert.match(describeHotspotCost({ status: "withheld", reason: "PLAN_CONTAINS_SUBPLAN" }), /InitPlan/);
   assert.match(describeHotspotCost({ status: "withheld", reason: "NO_QUERY_COST" }), /query_cost/);
   assert.match(describeHotspotCost({ status: "withheld", reason: "MISSING_NODE_COST" }), /Total Cost/);
+  assert.match(
+    describeHotspotCost({ status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }),
+    /SQL Server/,
+    "a plan outside the shared cost model explains why cost signals are absent",
+  );
+  assert.match(describeHotspotCost({ status: "not-applicable", reason: "SOMETHING_NEW" }), /行数信号/);
 
   const view = buildHotspotViews({ cost: { engine: "postgresql", status: "withheld", reason: "MISSING_NODE_COST" }, items: [] });
   assert.match(view.costNote, /Total Cost/);

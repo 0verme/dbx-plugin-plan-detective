@@ -1,0 +1,22 @@
+{
+  "database": "sqlserver",
+  "mode": "estimated",
+  "format": "xml",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-written synthetic ShowPlanXML: not captured from any SQL Server instance; the element and operator shape follows the documented ShowPlanXML structure, omitting EstimateRows / costs / Object on purpose.",
+    "reference": "https://learn.microsoft.com/en-us/sql/relational-databases/showplan-logical-and-physical-operators-reference"
+  },
+  "features": ["missing-estimate-rows", "missing-costs", "missing-object", "constant-scan", "graceful-degradation"],
+  "expect": {
+    "rootNodeType": "Filter",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

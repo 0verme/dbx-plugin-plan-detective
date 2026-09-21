@@ -147,8 +147,10 @@ export function computeMetrics(normalized) {
 function costAttributionOf(normalized, totalPlanCost) {
   if (normalized.database !== "postgresql") {
     // Self cost is a PostgreSQL cumulative-Total-Cost concept. MySQL reports
-    // its costs inside `engineSpecific.mysql` and never fills `totalCost`, so
-    // no other family may inherit a PostgreSQL incremental-cost value.
+    // its costs inside `engineSpecific.mysql`, SQL Server reports cumulative
+    // subtree and per-node costs inside `engineSpecific.sqlServer`, and neither
+    // fills `totalCost`, so no other family may inherit a PostgreSQL
+    // incremental-cost value.
     return {
       summary: { engine: normalized.database, status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
       byNodeId: null,

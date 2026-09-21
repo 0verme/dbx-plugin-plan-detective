@@ -3,9 +3,9 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-21 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）+ v0.5.3 Plan Detective 插件图标更新（已实现）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.5.4（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ **Phase 3.1 · SQL Server ShowPlanXML 结构化（本轮实现，尚未合并）** + v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）**；上游 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.6.0（未发布；manifest 已升级，`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL / SQL Server structured；Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
 ## 0. 当前状态
@@ -98,6 +98,32 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 - 测试：`tests/core/hotspots.test.js`、`tests/postgres/hotspot-fixtures.test.js`、
   `tests/mysql/hotspot-fixtures.test.js` + UI view-model；`npm test` 586/586。
 
+### 0.2.4 SQL Server ShowPlanXML 结构化（Phase 3.1，2026-09-21，未合并）
+
+```text
+DBX Host（dbType: "sqlserver" / format: "xml" / Estimated ShowPlanXML）
+→ RawPlanInput → parseSqlServerShowPlanXml → normalizeSqlServerPlan → NormalizedPlan
+→ Metrics → 现有 Rules → Hotspots → Plan Tree / Node Inspector / Findings
+```
+
+- 新增 `src/core/sqlserver/xml.js`（无依赖、迭代式 XML 读取；按 local name 匹配，默认命名空间与带前缀元素
+均能解析；malformed 抛 `MALFORMED_XML` + line/column）与 `src/core/sqlserver/parse-showplan-xml.js`（RelOp 映射）。
+- 新增 `src/core/normalize/normalize-sqlserver.js`、`src/core/parsers/sqlserver.js`；registry 变为
+  `postgresql + json` / `mysql + json` / `sqlserver + xml`，`STRUCTURED_DATABASES` 三项。
+- Tree：每个 `RelOp` 的输入取自其 operator 容器内的 `RelOp` 后代（遇到嵌套 RelOp 停止），覆盖
+  `NestedLoops` / `Hash` / `Merge` / `Sort` / `Concat` / `Spool` / `Parallelism` 与 `IndexScan Lookup="1"`；
+  未知 operator 保留 label + 完整子树（进入 `unknownNodeTypes`）。
+- 代价：`EstimatedTotalSubtreeCost` / `EstimateCPU` / `EstimateIO` 只进 `engineSpecific.sqlServer`，**不**映射到
+  `startupCost` / `totalCost`；`costAttribution.status = "not-applicable"`；不生成 self-cost / 占比 hotspot。
+- Hotspots：新增行数信号 `sqlserver-large-index-scan`（仅 `Index Scan` / `Clustered Index Scan`，seek 不算）与
+  `sqlserver-sort`（`EstimateRows` 达阈值）；`large-sequential-scan` / `nested-loop-amplification` 复用 engine-neutral 行数逻辑。
+- Findings：不新增 SQL Server 专用 rule；`large-sequential-scan` 与 `nested-loop-large-inner` 按行数适用，
+  `expensive-sort` 因无 PostgreSQL 代价数据保持静默。
+- Fixture：新增 `fixtures/sqlserver/` 14 个 synthetic ShowPlanXML（`estimated/`，`.plan.xml` + `.meta.json`）+ 对应 golden；
+  本机无 SQL Server 实例，形状对照公开 schema / 文档，provenance 见 `fixtures/sqlserver/README.md`。
+- 测试：`tests/sqlserver/**`（xml / parser / normalizer / fixtures+golden / analysis / hotspot / view-model）+ 既有测试适配；
+  fixture loader 支持 `xml` 格式与 `.plan.xml`。
+
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
 完整矩阵、逐项证据、真实 DBX 运行实测记录：[docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)。上游能力缺口与一期 API 提案：[docs/DBX_HOST_API_GAP_PROPOSAL.md](docs/DBX_HOST_API_GAP_PROPOSAL.md)。
@@ -162,7 +188,7 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
-| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL structured；其余方言 raw-only） |
+| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL / SQL Server structured；其余方言 raw-only） |
 | **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Hotspots / Findings / Plan Tree / Node Inspector / Raw Plan |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`） |
 | Fixture-driven 开发 UI | ✅ 保留为开发模式（不进入生产路径） |
@@ -170,8 +196,8 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
-| Execution Plan Parsing | ✅ PostgreSQL / MySQL structured；其余 6 方言 raw-only（不伪造 parser） |
-| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL；公共字段 + `engineSpecific`） |
+| Execution Plan Parsing | ✅ PostgreSQL / MySQL / SQL Server structured；其余 5 方言 raw-only（不伪造 parser） |
+| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL / SQL Server；公共字段 + `engineSpecific`） |
 | Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
 | Hotspot Analysis | ✅ 已实现（确定性、engine-aware 注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号；无综合评分） |
 | Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
@@ -219,7 +245,7 @@ src/lib/analysis-session.js → UI
 | --- | --- | --- |
 | PostgreSQL | json | structured（`EXPLAIN (FORMAT JSON)`） |
 | MySQL | json | structured（`EXPLAIN FORMAT=JSON`；Estimated only） |
-| SQL Server | xml | raw only |
+| SQL Server | xml | structured（Estimated ShowPlanXML；无依赖 XML parser；代价不映射到 PostgreSQL 语义） |
 | Oracle | text | raw only |
 | OceanBase Oracle | json | raw only |
 | Doris | text | raw only |

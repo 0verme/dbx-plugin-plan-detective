@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.539" Build="16.0.1000.6">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementId="1" StatementType="SELECT">
+          <QueryPlan>
+            <RelOp NodeId="0" PhysicalOp="Filter" LogicalOp="Filter">
+              <OutputList/>
+              <Filter StartupExpression="0">
+                <RelOp NodeId="1" PhysicalOp="Constant Scan" LogicalOp="Constant Scan">
+                  <OutputList>
+                    <ColumnReference Column="Expr1000"/>
+                  </OutputList>
+                  <ConstantScan/>
+                </RelOp>
+                <Predicate>
+                  <ScalarOperator ScalarString="(1)=(1)"/>
+                </Predicate>
+              </Filter>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

@@ -15,10 +15,13 @@
  *   envelope in ../cost/postgres-cost.js;
  * - MySQL signals read MySQL's own reported values: `rows_examined_per_scan`,
  *   `rows_produced_per_join`, `filtered`, access type, operation flags and
- *   `cost_info` inside one query block.
+ *   `cost_info` inside one query block;
+ * - SQL Server signals read `EstimateRows` from engine-specific plan nodes; no
+ *   SQL Server cost is used, because `EstimatedTotalSubtreeCost` is a
+ *   cumulative subtree cost in SQL Server's own cost model.
  *
- * There is no combined score and no cross-engine comparison: PostgreSQL and
- * MySQL cost numbers never meet. Ordering is a stated attention order
+ * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL
+ * and SQL Server cost numbers never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -53,8 +56,8 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql",
- *   status: "available"|"withheld",
+ *   engine: "postgresql"|"mysql"|"sqlserver",
+ *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
  * @property {Hotspot[]} items attention-ordered hotspots
@@ -67,7 +70,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  */
 export function computeHotspots(normalized, metrics) {
   const database = normalized.database;
-  const cost = database === "postgresql" ? postgresCost(normalized.root, metrics) : mysqlCost(normalized.root);
+  const cost = costContextFor(normalized, metrics);
 
   /** @type {Array<{ hotspot: Hotspot, order: number }>} */
   const found = [];
@@ -76,6 +79,7 @@ export function computeHotspots(normalized, metrics) {
     const reasons = [];
     if (database === "postgresql") collectPostgresReasons(node, cost, reasons);
     if (database === "mysql") collectMySqlReasons(node, cost, reasons);
+    if (database === "sqlserver") collectSqlServerReasons(node, reasons);
     collectNeutralReasons(node, database, reasons);
     if (reasons.length === 0) return;
 
@@ -94,6 +98,24 @@ export function computeHotspots(normalized, metrics) {
 }
 
 /* ------------------------------------------------------------ cost context -- */
+
+/**
+ * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
+ * attribution; MySQL has its own block-scoped model; SQL Server does not feed
+ * its subtree costs into any cost signal this round, so the stage reports
+ * `not-applicable` instead of inventing an attribution.
+ *
+ * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized
+ * @param {import("../metrics/compute-metrics.js").PlanMetrics} metrics
+ */
+function costContextFor(normalized, metrics) {
+  if (normalized.database === "postgresql") return postgresCost(normalized.root, metrics);
+  if (normalized.database === "mysql") return mysqlCost(normalized.root);
+  return {
+    summary: { engine: normalized.database, status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
+    byNodeId: new Map(),
+  };
+}
 
 /**
  * PostgreSQL attribution summary for the plan. The per-node map is consumed by
@@ -203,8 +225,62 @@ function collectNeutralReasons(node, database, reasons) {
   const largeScan = largeSequentialScanReason(node, database);
   if (largeScan !== null) reasons.push(largeScan);
 
-  const amplification = nestedLoopAmplificationReason(node);
+  const amplification = nestedLoopAmplificationReason(node, database);
   if (amplification !== null) reasons.push(amplification);
+}
+
+/**
+ * SQL Server row signals. Both read `EstimateRows` and stay inside the nodes
+ * that carry it; a seek is deliberately not signalled, because a seek is not
+ * evidence of a problem.
+ *
+ * @param {import("../normalize/normalize-sqlserver.js").NormalizedNode} node
+ * @param {HotspotReason[]} reasons
+ */
+function collectSqlServerReasons(node, reasons) {
+  const sqlServer = node.engineSpecific?.sqlServer ?? {};
+  const { warningEstimatedRows, highEstimatedRows } = HOTSPOT.sqlserverLargeOperations;
+
+  const physicalOp = sqlServer.physicalOp;
+  if (node.kind === "index_scan" && (physicalOp === "Index Scan" || physicalOp === "Clustered Index Scan")) {
+    const estimatedRows = numberOrNull(node.estimatedRows);
+    const level = estimatedRows === null ? null : levelFor(estimatedRows, warningEstimatedRows, highEstimatedRows);
+    if (level !== null) {
+      reasons.push({
+        code: "sqlserver-large-index-scan",
+        level,
+        statement:
+          `${describeNode(node)} is estimated to read ${estimatedRows} rows through a full ${physicalOp} ` +
+          "(a seek is not reported as a scan signal).",
+        source: "RelOp@EstimateRows",
+        evidence: {
+          physicalOp,
+          estimatedRows,
+          thresholds: { warningEstimatedRows, highEstimatedRows },
+        },
+      });
+    }
+  }
+
+  if (node.kind === "sort") {
+    const estimatedRows = numberOrNull(node.estimatedRows);
+    const level = estimatedRows === null ? null : levelFor(estimatedRows, warningEstimatedRows, highEstimatedRows);
+    if (level !== null) {
+      reasons.push({
+        code: "sqlserver-sort",
+        level,
+        statement:
+          `${describeNode(node)} is estimated to sort ${estimatedRows} rows. ` +
+          "The estimate alone does not say whether the sort is required.",
+        source: "RelOp@EstimateRows",
+        evidence: {
+          sortKeys: node.sortKeys,
+          estimatedRows,
+          thresholds: { warningEstimatedRows, highEstimatedRows },
+        },
+      });
+    }
+  }
 }
 
 /**
@@ -300,13 +376,17 @@ function largeSequentialScanReason(node, database) {
   if (level === null) return null;
 
   const isMySql = database === "mysql";
+  const isSqlServer = database === "sqlserver";
+  const source = isMySql ? "table.rows_examined_per_scan" : isSqlServer ? "RelOp@EstimateRows" : "Plan Rows";
   return {
     code: "large-sequential-scan",
     level,
     statement: isMySql
       ? `${describeNode(node)} is estimated to examine ${estimatedRows} rows per scan (access_type = ALL).`
-      : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
-    source: isMySql ? "table.rows_examined_per_scan" : "Plan Rows",
+      : isSqlServer
+        ? `${describeNode(node)} is estimated to read ${estimatedRows} rows through a full table scan.`
+        : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
+    source,
     evidence: {
       estimatedRows,
       thresholds: { warningEstimatedRows, highEstimatedRows },
@@ -316,9 +396,10 @@ function largeSequentialScanReason(node, database) {
 
 /**
  * @param {import("../normalize/normalize-postgres.js").NormalizedNode} node
+ * @param {string} database
  * @returns {HotspotReason|null}
  */
-function nestedLoopAmplificationReason(node) {
+function nestedLoopAmplificationReason(node, database) {
   if (node.kind !== "nested_loop") return null;
   const [outer, inner] = node.children;
   if (outer === undefined || inner === undefined) return null;
@@ -338,7 +419,7 @@ function nestedLoopAmplificationReason(node) {
     statement:
       `Nested Loop is estimated to drive ${outerEstimatedRows} outer rows into ${innerEstimatedRows} inner rows each, ` +
       `about ${estimatedRowComparisons} estimated row comparisons.`,
-    source: "Plan Rows",
+    source: database === "sqlserver" ? "RelOp@EstimateRows" : "Plan Rows",
     evidence: {
       outerNodeRef: outer.id,
       innerNodeRef: inner.id,
@@ -533,6 +614,29 @@ function nodeSnapshot(node, database, cost) {
     if (attribution !== undefined) {
       evidence.selfCost = attribution.selfCost;
       evidence.selfCostShare = attribution.selfCostShare;
+    }
+    return evidence;
+  }
+
+  if (database === "sqlserver") {
+    const sqlServer = node.engineSpecific?.sqlServer ?? {};
+    const engineValues = {
+      nodeId: sqlServer.nodeId,
+      physicalOp: sqlServer.physicalOp,
+      logicalOp: sqlServer.logicalOp,
+      estimatedTotalSubtreeCost: sqlServer.estimatedTotalSubtreeCost,
+      estimateCpu: sqlServer.estimateCpu,
+      estimateIo: sqlServer.estimateIo,
+      avgRowSize: sqlServer.avgRowSize,
+      parallel: sqlServer.parallel,
+      database: sqlServer.database,
+      schema: sqlServer.schema,
+      table: sqlServer.table,
+      index: sqlServer.index,
+      alias: sqlServer.alias,
+    };
+    for (const [key, value] of Object.entries(engineValues)) {
+      if (value !== null && value !== undefined) evidence[key] = value;
     }
     return evidence;
   }

@@ -1,0 +1,423 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Nested Loops",
+      "physicalOp": "Nested Loops",
+      "logicalOp": "Inner Join",
+      "nodeId": 0,
+      "estimatedRows": 50000,
+      "estimatedTotalSubtreeCost": 652.4,
+      "estimateCpu": 5,
+      "estimateIo": 0,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 30,
+      "parallel": false,
+      "database": null,
+      "schema": null,
+      "table": null,
+      "index": null,
+      "alias": null,
+      "indexKind": null,
+      "storage": null,
+      "predicate": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": null,
+      "operator": null,
+      "children": [
+        {
+          "nodeType": "Index Scan",
+          "physicalOp": "Index Scan",
+          "logicalOp": "Index Scan",
+          "nodeId": 1,
+          "estimatedRows": 1000,
+          "estimatedTotalSubtreeCost": 10.3,
+          "estimateCpu": 0.2,
+          "estimateIo": 10.1,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 15,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[IX_Orders_Status]",
+          "alias": "[o]",
+          "indexKind": "NonClustered",
+          "storage": "RowStore",
+          "predicate": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "operator": {
+            "ordered": false
+          },
+          "children": [],
+          "extra": {}
+        },
+        {
+          "nodeType": "Clustered Index Seek",
+          "physicalOp": "Clustered Index Seek",
+          "logicalOp": "Clustered Index Seek",
+          "nodeId": 2,
+          "estimatedRows": 50000,
+          "estimatedTotalSubtreeCost": 642.1,
+          "estimateCpu": 1.5,
+          "estimateIo": 20.2,
+          "estimateRebinds": 999,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 18,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Customers]",
+          "index": "[PK_Customers]",
+          "alias": "[c]",
+          "indexKind": "Clustered",
+          "storage": "RowStore",
+          "predicate": null,
+          "indexCondition": "StartRange(GE) [c].CustomerID = [Sales].[dbo].[Orders].[CustomerID] as [o].[CustomerID]",
+          "sortKeys": null,
+          "groupKeys": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "operator": {
+            "ordered": true
+          },
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 652.4,
+      "estimatedRows": 50000,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 0,
+      "cachedPlanSize": 72
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loops",
+      "relation": null,
+      "estimatedRows": 50000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 30,
+      "filter": null,
+      "joinType": "Inner Join",
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "Index Scan",
+          "relation": {
+            "name": "Orders",
+            "alias": "o",
+            "indexName": "IX_Orders_Status"
+          },
+          "estimatedRows": 1000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 15,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlserver",
+            "sqlServer": {
+              "nodeId": 1,
+              "physicalOp": "Index Scan",
+              "logicalOp": "Index Scan",
+              "estimatedTotalSubtreeCost": 10.3,
+              "estimateCpu": 0.2,
+              "estimateIo": 10.1,
+              "estimateRebinds": 0,
+              "estimateRewinds": 0,
+              "estimateExecutions": null,
+              "avgRowSize": 15,
+              "parallel": false,
+              "database": "[Sales]",
+              "schema": "[dbo]",
+              "table": "[Orders]",
+              "index": "[IX_Orders_Status]",
+              "alias": "[o]",
+              "indexKind": "NonClustered",
+              "storage": "RowStore",
+              "operator": {
+                "ordered": false
+              },
+              "hashKeysBuild": null,
+              "hashKeysProbe": null,
+              "probeResidual": null,
+              "buildResidual": null,
+              "residual": null,
+              "definedValues": null
+            },
+            "extra": {}
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "index_scan",
+          "nodeType": "Clustered Index Seek",
+          "relation": {
+            "name": "Customers",
+            "alias": "c",
+            "indexName": "PK_Customers"
+          },
+          "estimatedRows": 50000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 18,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": "StartRange(GE) [c].CustomerID = [Sales].[dbo].[Orders].[CustomerID] as [o].[CustomerID]",
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlserver",
+            "sqlServer": {
+              "nodeId": 2,
+              "physicalOp": "Clustered Index Seek",
+              "logicalOp": "Clustered Index Seek",
+              "estimatedTotalSubtreeCost": 642.1,
+              "estimateCpu": 1.5,
+              "estimateIo": 20.2,
+              "estimateRebinds": 999,
+              "estimateRewinds": 0,
+              "estimateExecutions": null,
+              "avgRowSize": 18,
+              "parallel": false,
+              "database": "[Sales]",
+              "schema": "[dbo]",
+              "table": "[Customers]",
+              "index": "[PK_Customers]",
+              "alias": "[c]",
+              "indexKind": "Clustered",
+              "storage": "RowStore",
+              "operator": {
+                "ordered": true
+              },
+              "hashKeysBuild": null,
+              "hashKeysProbe": null,
+              "probeResidual": null,
+              "buildResidual": null,
+              "residual": null,
+              "definedValues": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Nested Loops",
+          "logicalOp": "Inner Join",
+          "estimatedTotalSubtreeCost": 652.4,
+          "estimateCpu": 5,
+          "estimateIo": 0,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 30,
+          "parallel": false,
+          "database": null,
+          "schema": null,
+          "table": null,
+          "index": null,
+          "alias": null,
+          "indexKind": null,
+          "storage": null,
+          "operator": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 652.4,
+            "estimatedRows": 50000,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 0,
+            "cachedPlanSize": 72
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 50000,
+    "scanCount": 2,
+    "sequentialScanCount": 0,
+    "indexScanCount": 2,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "nested_loop",
+      "nodeType": "Nested Loops",
+      "relation": null,
+      "estimatedRows": 50000
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "nested-loop-large-inner:0",
+      "ruleId": "nested-loop-large-inner",
+      "severity": "warning",
+      "title": "Nested loop with a large inner estimate",
+      "summary": "Nested Loop is estimated to combine 1000 outer rows with an inner side estimated at 50000 rows, about 50000000 estimated row comparisons. The inner side is expected to be re-scanned for every outer row. These are planner estimates; no runtime loop count is available for this plan.",
+      "nodeRef": "0",
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "Nested Loops",
+        "relation": null,
+        "estimatedRows": 50000,
+        "estimatedTotalCost": null,
+        "outerNodeRef": "0.0",
+        "innerNodeRef": "0.1",
+        "outerEstimatedRows": 1000,
+        "innerEstimatedRows": 50000,
+        "estimatedRowComparisons": 50000000,
+        "actualLoops": null,
+        "estimateOnly": true,
+        "thresholds": {
+          "minOuterEstimatedRows": 10,
+          "warningInnerEstimatedRows": 10000,
+          "highInnerEstimatedRows": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Nested Loops",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "nested-loop-amplification",
+            "level": "warning",
+            "statement": "Nested Loop is estimated to drive 1000 outer rows into 50000 inner rows each, about 50000000 estimated row comparisons.",
+            "source": "RelOp@EstimateRows",
+            "evidence": {
+              "outerNodeRef": "0.0",
+              "innerNodeRef": "0.1",
+              "outerEstimatedRows": 1000,
+              "innerEstimatedRows": 50000,
+              "estimatedRowComparisons": 50000000,
+              "thresholds": {
+                "minOuterEstimatedRows": 10,
+                "warningInnerEstimatedRows": 10000,
+                "highInnerEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": 0,
+          "nodeType": "Nested Loops",
+          "kind": "nested_loop",
+          "estimatedRows": 50000,
+          "physicalOp": "Nested Loops",
+          "logicalOp": "Inner Join",
+          "estimatedTotalSubtreeCost": 652.4,
+          "estimateCpu": 5,
+          "estimateIo": 0,
+          "avgRowSize": 30,
+          "parallel": false
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}
