@@ -1,7 +1,9 @@
 <script>
   /**
-   * Findings: the primary business area. Renders the rules' observations and
-   * their evidence verbatim; the UI adds no advice and no severity of its own.
+   * Findings: the primary user-facing diagnosis area. Structured findings
+   * show a localized explanation first; legacy findings keep their old copy.
+   * Evidence remains available as technical detail and the UI never changes
+   * severity or re-runs rule logic.
    */
   let { views = [], counts = { total: 0 }, selectedNodeRef = null, onSelectNode = () => {} } = $props();
 </script>
@@ -32,9 +34,51 @@
             <span class="finding-rule mono">{view.ruleId}</span>
             <span class="finding-node mono">{view.nodeLabel}</span>
           </button>
-          <p class="finding-summary">{view.summary}</p>
+          {#if view.presentation.structured}
+            <div class="diagnosis">
+              <section class="diagnosis-section">
+                <h3>{view.presentation.labels.summary}</h3>
+                <p>{view.presentation.summary}</p>
+              </section>
+
+              {#if view.presentation.reasons.length > 0}
+                <section class="diagnosis-section">
+                  <h3>{view.presentation.labels.reasons}</h3>
+                  <ul>
+                    {#each view.presentation.reasons as reason (reason)}
+                      <li>{reason}</li>
+                    {/each}
+                  </ul>
+                </section>
+              {/if}
+
+              {#if view.presentation.actions.length > 0}
+                <section class="diagnosis-section">
+                  <h3>{view.presentation.labels.actions}</h3>
+                  <ul>
+                    {#each view.presentation.actions as action (action)}
+                      <li>{action}</li>
+                    {/each}
+                  </ul>
+                </section>
+              {/if}
+
+              {#if view.presentation.caveats.length > 0}
+                <section class="diagnosis-section caveats">
+                  <h3>{view.presentation.labels.caveats}</h3>
+                  <ul>
+                    {#each view.presentation.caveats as caveat (caveat)}
+                      <li>{caveat}</li>
+                    {/each}
+                  </ul>
+                </section>
+              {/if}
+            </div>
+          {:else}
+            <p class="finding-summary">{view.summary}</p>
+          {/if}
           <details class="evidence">
-            <summary>Evidence · {view.evidence.length} 项</summary>
+            <summary>{view.presentation.labels.technicalDetails} · {view.evidenceSummary}</summary>
             <dl class="evidence-list">
               {#each view.evidence as row (row.path)}
                 <div class="evidence-row" style="--depth: {row.depth}">
@@ -146,6 +190,43 @@
     margin: 0;
     padding: 8px 10px;
     font-size: 12px;
+  }
+
+  .diagnosis {
+    padding: 2px 10px 8px;
+  }
+
+  .diagnosis-section {
+    padding: 6px 0;
+  }
+
+  .diagnosis-section + .diagnosis-section {
+    border-top: 1px dashed var(--pd-border);
+  }
+
+  .diagnosis-section h3 {
+    margin: 0 0 2px;
+    color: var(--pd-muted);
+    font-size: 11px;
+    font-weight: 650;
+  }
+
+  .diagnosis-section p,
+  .diagnosis-section ul {
+    margin: 0;
+    font-size: 12px;
+  }
+
+  .diagnosis-section ul {
+    padding-left: 18px;
+  }
+
+  .diagnosis-section li + li {
+    margin-top: 2px;
+  }
+
+  .diagnosis-section.caveats {
+    color: var(--pd-muted);
   }
 
   .evidence {

@@ -54,6 +54,18 @@ export const largeSequentialScanRule = {
           title: "Large sequential scan",
           summary: summarize(node, estimatedRows, incrementalCost),
           node,
+          facts: {
+            database: normalized.database,
+            mode: normalized.mode,
+            runtimeVerified: normalized.mode === "actual",
+            nodeType: node.nodeType,
+            relation: node.relation?.name ?? null,
+            estimatedRows: node.estimatedRows,
+            estimatedTotalCost: node.totalCost,
+            incrementalCost,
+            accessType: node.engineSpecific?.mysql?.accessType ?? null,
+            hasFilter: node.filter !== null && node.filter !== undefined,
+          },
           evidence: nodeEvidence(node, {
             incrementalCost,
             filter: node.filter,

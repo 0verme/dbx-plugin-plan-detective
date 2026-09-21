@@ -243,6 +243,18 @@
       "title": "Large sequential scan",
       "summary": "Table Scan on events with no filter reported is estimated to read 240000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
       "nodeRef": "0.0",
+      "facts": {
+        "database": "mysql",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "Table Scan",
+        "relation": "events",
+        "estimatedRows": 240000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": "ALL",
+        "hasFilter": false
+      },
       "evidence": {
         "nodeId": "0.0",
         "nodeType": "Table Scan",

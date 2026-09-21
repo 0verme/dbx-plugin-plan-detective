@@ -416,6 +416,7 @@ interface Finding {
   title: string;
   summary: string;                         // 中性、基于证据
   nodeRef: string;                         // NormalizedNode.id
+  facts?: Record<string, unknown>;       // optional structured facts for Presentation
   evidence: {
     nodeId: string;
     nodeType: string;
@@ -427,8 +428,12 @@ interface Finding {
 }
 ```
 
+`facts` 是可选的、可 JSON 序列化的规则事实；它不保存翻译后的句子。Issue [#26](https://github.com/0verme/dbx-plugin-plan-detective/issues/26) 首个迁移的 `large-sequential-scan` facts 包含 database / mode / runtimeVerified、节点与 relation、estimatedRows、cost、MySQL accessType 和 hasFilter。Rule 仍负责判断事实，`src/lib/finding-presentation.js` 才负责按 locale 生成 `summary`、`reasons`、`actions`、`caveats`。
+
+`title` / `summary` / `evidence` 保留为兼容字段。没有 `facts` 或没有对应 Presenter 的旧 Finding 回退到原 title / summary，页面不会因部分迁移而失败。`zh-CN` / `en` message catalog 只承载句式与插值，不承载阈值、severity 触发或 runtime truth 判断。
+
 `info` 为纯观察档，当前 3 条规则未使用；契约允许规则后续按需选择。
-`createFinding` 会校验 severity / title / summary / node / evidence，非法输入抛 `TypeError`。
+`createFinding` 会校验 severity / title / summary / node / evidence，以及存在时的 facts 容器，非法输入抛 `TypeError`。
 
 统一入口：`src/core/analyze.js` 的 `analyzePlan(rawInput)` 返回
 `{ parsed, normalized, metrics, findings, hotspots }`；未来 adapter 与 UI 只调用它即可。

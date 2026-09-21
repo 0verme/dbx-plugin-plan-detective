@@ -26,7 +26,8 @@ Plan Detective 负责理解和分析执行计划。
 - Performance Metrics ✅（确定性基础指标，不含综合评分）
 - Hotspot Analysis ✅（确定性、engine-aware 的注意力列表；PostgreSQL / MySQL 代价语义分开，无综合评分）
 - Rule-based Diagnosis ✅（3 条确定性规则）
-- Findings + Evidence ✅
+- Plain-language Finding Presentation ✅（`large-sequential-scan` Golden Sample；`zh-CN` / `en`）
+- Findings + Evidence ✅（structured facts + technical evidence）
 - Plan Tree / Raw Plan viewer ✅
 - Plan Diff ⛔
 
@@ -73,11 +74,13 @@ parser registry（PostgreSQL / MySQL 结构化；其余 raw-only）
     ↓
 NormalizedPlan（Plan IR）
     ↓
-deterministic rules → Findings
+deterministic rules → Structured Findings（facts + legacy fields）
+    ↓
+Diagnosis / Finding Presentation → i18n（`zh-CN` / `en`）
     ↓
 deterministic hotspots（注意力列表，与 Findings 分层）
     ↓
-Findings + Hotspots + Plan Tree + Raw Plan
+Localized Findings + Hotspots + Plan Tree + Raw Plan
 ```
 
 分层目录：
@@ -94,6 +97,8 @@ src/core/cost/               PostgreSQL 代价归因边界（Metrics 与 Hotspot
 src/core/rules/              deterministic findings
 src/core/hotspots/           deterministic hotspot analysis（信号聚合 / 阈值）
 src/lib/analysis-session.js  Host → Parser → IR → Rules / Hotspots 编排（可注入 fake bridge 测试）
+src/lib/finding-presentation.js  Structured facts → localized diagnosis；旧 Finding fallback
+src/lib/i18n/                  `zh-CN` / `en` message catalog、interpolation、fallback
 src/components/              UI（ConnectionContext / SqlInput / PlanTree / Hotspots / Findings / RawPlan …）
 ```
 
@@ -295,6 +300,8 @@ dbx-plugin package .
 │   ├── core/              # Plan Core：无 UI / 无 DBX / 无数据库依赖（adapter / parsers / normalize / metrics / rules / hotspots）
 │   ├── host/              # DBX Host Plan API adapter（唯一接触 window.dbxPlugin 的模块）
 │   ├── lib/               # 纯 UI 逻辑：analysis session、view model、fixture catalog、格式化
+│   │   ├── finding-presentation.js # structured Finding → summary / reasons / actions / caveats
+│   │   └── i18n/           # zh-CN / en message catalog + fallback
 │   └── App.svelte         # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
 ├── tests/                 # node:test，离线运行（core / host / lib / ui / postgres / mysql）
 ├── manifest.json          # DBX 插件清单（host_api ^1.2、host.plans:read）

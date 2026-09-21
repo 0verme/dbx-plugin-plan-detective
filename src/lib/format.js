@@ -5,18 +5,30 @@
  * output, and these helpers only turn them into compact, readable strings.
  */
 
-const numberFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+const numberFormatters = new Map();
+
+/** @param {string} locale */
+function numberFormatter(locale = "en-US") {
+  const key = locale === "en" ? "en-US" : locale;
+  let formatter = numberFormatters.get(key);
+  if (formatter === undefined) {
+    formatter = new Intl.NumberFormat(key, { maximumFractionDigits: 2 });
+    numberFormatters.set(key, formatter);
+  }
+  return formatter;
+}
 
 /**
  * Format a finite number with thousands separators and at most two decimals.
  *
  * @param {unknown} value
+ * @param {string} [locale]
  * @returns {string|null} `null` when the value is not a finite number, so the
  *   caller can decide whether to omit the row or show a placeholder.
  */
-export function formatNumber(value) {
+export function formatNumber(value, locale = "en-US") {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  return numberFormatter.format(value);
+  return numberFormatter(locale).format(value);
 }
 
 /**
