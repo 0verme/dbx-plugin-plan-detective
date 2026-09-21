@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-21 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.5.1（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.5.2（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
