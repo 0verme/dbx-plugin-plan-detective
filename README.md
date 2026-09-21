@@ -6,7 +6,7 @@ DBX Plan Detective 是一个 DBX 插件，用于 SQL 执行计划的解析、性
 | --- | --- |
 | 插件 ID | `io.github.0verme.plan-detective` |
 | Publisher | `0verme` |
-| 当前版本 | `0.5.2` |
+| 当前版本 | `0.5.3` |
 | Host API | `^1.2`（`host.plans:read`） |
 | 模板 | DBX 官方 `svelte`（Svelte + Vite，`universal`，frontend-only） |
 
