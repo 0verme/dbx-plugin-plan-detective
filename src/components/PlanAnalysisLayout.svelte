@@ -81,7 +81,7 @@
     }
 
     .inspector-column {
-      grid-column: 1 / -1;
+      grid-column: 2;
     }
   }
 
