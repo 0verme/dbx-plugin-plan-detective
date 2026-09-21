@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-21 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）+ v0.5.3 Plan Detective 插件图标更新（已实现）+ v0.5.4 DBX 最低版本收紧（准备中）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）+ v0.5.3 Plan Detective 插件图标更新（已实现）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
 | 插件版本 | 0.5.4（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
@@ -115,13 +115,19 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | Actual Plan | ❌ | `INTERNAL_ONLY`（PG/SQL Server）/ `NOT_AVAILABLE`（MySQL） | 不属于当前一期 |
 | timeout / cancel | ❌ | `INTERNAL_ONLY` | 插件侧只有 sidecar RPC 超时（≤ 120s），与查询超时无关 |
 
-### 0.6 v0.5.4 DBX 最低版本收紧（准备中，2026-09-21）
+### 0.6 v0.5.4 DBX 最低版本收紧 / Release（2026-09-21）
 
 - 本轮为 patch release：版本 `0.5.3 → 0.5.4`，仅将最低 DBX 版本从 `>=0.5.68` 收紧为 `>=0.6.18`。
 - 保持 `engines.host_api: ^1.2` 与 `host.plans:read`；不修改 parser、metrics、hotspot、findings、UI 行为或 Plan API 调用逻辑。
 - 原因：DBX v0.6.18 正式包含只读 Estimated Plan Host API，对应上游 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)。
-- 本地验证：`npm test` 629/629；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 生成 unsigned `universal` candidate，包内 manifest identity / engines / permission 校验通过。
+- Release commit：`c2d1a5d02ede4605eb3bebf4df66ea550fe8d59b`；annotated tag `v0.5.4` 已推送。
+- GitHub Release：[DBX Plan Detective v0.5.4](https://github.com/0verme/dbx-plugin-plan-detective/releases/tag/v0.5.4)，非 draft / 非 prerelease。
+- Workflow：[Release DBX plugin · 35573439237](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/35573439237)，success；`head_sha` 为 release commit。
+- CI asset：`io.github.0verme.plan-detective-0.5.4-universal.dbxp`，size `62462` bytes，SHA-256 `40d1e087311cc4f3105e46194a8ad71b4611fba323a9ffd94277eaefc3dec3df`。
+- Metadata：`release-candidates.json`，size `559` bytes，SHA-256 `111d2012f04674a18352c9534d10275e17373c8e0cf5f8f935d5cf5b852b5398`；target `universal`，package metadata / manifest / permission contract 匹配 `0.5.4`。
+- Gate：`npm test` 629/629；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .`、`git diff --check` 与 Release artifact validation 通过；`.dbxp` 包内无 `signature.json`。
 - Host Smoke：**NOT RUN** — 当前环境无可用 DBX Desktop Host；不构成功能不变的 patch release blocker。
+- DBX Store：首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 已创建；candidate 仅使用上述 v0.5.4 Release 实际下载并校验的数据，等待 maintainer review / `/sign`。
 
 ### 0.5 v0.5.3 Icon Release（2026-09-21）
 
@@ -150,7 +156,7 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | --- | --- |
 | 官方 Svelte + Vite 项目骨架 | ✅ 已初始化 |
 | UI 构建（`npm run build`） | ✅ 通过（本轮复跑） |
-| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.4 本地 unsigned universal candidate；CI Release artifact 待发布） |
+| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.4 unsigned universal candidate；CI Release artifact 已核验） |
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
 | `manifest.json` 合法性 | ✅ 通过（`dbx >=0.6.18` / `host_api ^1.2` / `host.plans:read`，对上游 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
@@ -313,10 +319,11 @@ Build failed (exit 1)
 
 ## 5. 待办
 
-1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
-2. **宿主兼容边界**：v0.5.4 将按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
-3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
-4. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
+1. **真实 DBX 宿主端到端手测**（需要 DBX v0.6.18 / Host API 1.2+）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
+2. **DBX Store 首次收录**：PR [#112](https://github.com/t8y2/dbx-store/pull/112) 等待 maintainer review、`/sign`、protected signing workflow 和最终 catalog 生成；本仓库不管理 Store signing key。
+3. **宿主兼容边界**：v0.5.4 已按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
+4. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
+5. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
 ## 6. 相关文档
 
