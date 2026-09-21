@@ -1,0 +1,33 @@
+{
+  "database": "mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: redacted MySQL 9.5 JSON Explain V2 single-table payload based on the DBX v0.6.18 + MySQL 9.5.0 integration shape; names and SQL are non-production.",
+    "reference": "https://dev.mysql.com/doc/refman/9.5/en/explain.html"
+  },
+  "features": [
+    "json_schema_version 2.0",
+    "query_plan root",
+    "table access path",
+    "schema_name",
+    "used_columns",
+    "estimated_rows"
+  ],
+  "expect": {
+    "rootNodeType": "Table Scan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [
+      "large-sequential-scan"
+    ],
+    "hotspotNodeRefs": [
+      "0"
+    ]
+  }
+}

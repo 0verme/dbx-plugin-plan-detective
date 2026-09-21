@@ -213,13 +213,22 @@ ParsedPlan { database, format, mode, root: ParsedPlanNode }
 
 ### 4.2 MySQL
 
-实现：`src/core/mysql/parse-json-plan.js`。契约来源是 DBX Host 实际返回的
+实现：`src/core/mysql/parse-json-plan.js`（V1）与
+`src/core/mysql/parse-json-plan-v2.js`（V2）。契约来源是 DBX Host 实际返回的
 `EXPLAIN FORMAT=JSON`（`t8y2/dbx/main` `crates/dbx-sql/src/query_execution_sql.rs` 生成该语句，
 `estimated_plan_format(Mysql) == Json`；`plugin_plan.rs` 固定 `ExplainFormat::Json` 且从不 `analyze`）。
+V1 `query_block` 与 V2 `query_plan` 保持独立解析分支，V2 不伪造 V1 容器。
 
 | MySQL JSON | ParsedMySqlNode | 说明 |
 | --- | --- | --- |
-| `query_block` | `structure: "query_block"` / `nodeType: "Query Block"` | 根与嵌套 query block |
+| `query_block` | `structure: "query_block"` / `nodeType: "Query Block"` | V1 根与嵌套 query block |
+| `query_plan` + `json_schema_version: "2.x"` | `structure: "query_plan"` / access-path `nodeType` | MySQL JSON Explain V2 根 access path；V2 使用独立递归 parser，不创建伪 `query_block` |
+| `query_plan.inputs` / `inputs_from_select_list` | `children` | 按 MySQL writer 顺序递归建立统一 `ParsedPlan` 树；两种数组均受严格数组/对象校验 |
+| V2 `table_name` / `schema_name` / `alias` | `relationName` / `mysql.schemaName` / `mysql.alias` | 表与 schema/alias 信息 |
+| V2 `estimated_rows` | `estimatedRows` | 严格要求有限 number，不接受 numeric string |
+| V2 `condition` / `pushed_index_condition` | `filter` / `indexCondition` | V2 谓词保持字符串 |
+| V2 `join_type` / `join_algorithm` / `join_columns` / `hash_condition` | `mysql.*` | join 证据保留在 MySQL-specific 字段；数组不强行拼为通用字符串 |
+| V2 `used_columns` / `filter_columns` / `sort_fields` / `group_items` | `mysql.*` / `sortKeys` / `groupKeys` | 类型严格校验，未知合法字段进入 `extra` |
 | `table.access_type` | `nodeType` | `ALL` → `Table Scan`、`ref` → `Index Lookup`、`eq_ref` → `Unique Index Lookup`、`range` → `Index Range Scan`、`const/system` → `Const Row Lookup` / `System Row Lookup` 等；未知 access type 原样保留并进入 `unknownNodeTypes` |
 | `table.table_name` / `key` | `relationName` / `indexName` | MySQL JSON 没有 alias |
 | `table.rows_examined_per_scan` | `estimatedRows` | 每次访问该表的估算行数 |
@@ -239,8 +248,11 @@ ParsedPlan { database, format, mode, root: ParsedPlanNode }
 | `cost_info.*` | `mysql.queryCost` / `readCost` / `evalCost` / `prefixCost` / `dataReadPerJoin` / `sortCost` | MySQL cost 是 numeric string，严格解析；未知子键进入 `extra.cost_info` |
 | 其余原生键 | `extra` | 不丢弃；未知结构不会生成假节点 |
 
-- 结构不可信时抛 `PlanParseError`：缺 `query_block`、`nested_loop` 非数组/为空、元素不是对象、
-  数值字段类型不符、`query_specifications` / `*_subqueries` 形状错误等。
+- 结构不可信时抛 `PlanParseError`：V1 缺 `query_block`、V2 缺 `query_plan`/`operation`、
+  `nested_loop`/`inputs` 非数组或为空、元素不是对象、数值字段类型不符、
+  `query_specifications` / `*_subqueries` 形状错误等。
+- V2 必须有 `json_schema_version: "2.x"`；缺失、未知版本、同时出现 V1/V2 根或错误结构均
+  fail closed，不猜测 schema。未知但合法字段进入 `extra`，不静默丢弃。
 - `mode` 只支持 `estimated`：MySQL `EXPLAIN ANALYZE` 返回 TREE 文本而不是该 JSON，
   声明 `actual` 时抛 `MODE_MISMATCH`。
 - **不把 MySQL cost 映射到 PostgreSQL 语义的 `startupCost` / `totalCost`**，原因见第 5 节。
@@ -283,11 +295,13 @@ NormalizedPlan {
 `parallelAware`、`asyncCapable`、`hashCondition`、`mergeCondition`、`joinFilter`、`recheckCondition`、
 `presortedKeys`、`extra`（parser 未映射的原生属性）。
 
-`engineSpecific`（MySQL）：`database`、`mysql`（`structure`、`selectId`、`message`、`accessType`、
+`engineSpecific`（MySQL）：`database`、`mysql`（V1 的 `structure`、`selectId`、`message`、`accessType`、
 `possibleKeys`、`usedKeyParts`、`usedColumns`、`keyLength`、`ref`、`rowsExaminedPerScan`、
 `rowsProducedPerJoin`、`filteredPercent`、`usingIndex`、`usingIndexForGroupBy`、`usingFilesort`、
 `usingTemporaryTable`、`usingJoinBuffer`、`firstMatch`、`dependent`、`cacheable`、`queryCost`、
-`readCost`、`evalCost`、`prefixCost`、`dataReadPerJoin`、`sortCost`）、`extra`。
+`readCost`、`evalCost`、`prefixCost`、`dataReadPerJoin`、`sortCost`，以及 V2 的 `schemaName`、`alias`、
+`joinAlgorithm`、`joinType`、`joinColumns`、`hashCondition`、`filterColumns`、`sortFields`、
+`groupItems`、`estimatedTotalCost`、`jsonSchemaVersion`）、`extra`。
 **不为了"统一"丢弃数据库专有信息。**
 
 `kind` 主要映射：

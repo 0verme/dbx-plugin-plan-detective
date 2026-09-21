@@ -1,0 +1,58 @@
+{
+  "query": "/* select#1 */ select from `sample_db`.`sample_left` join `sample_db`.`sample_right`",
+  "query_plan": {
+    "operation": "Inner hash join (sample_left.id = sample_right.id)",
+    "access_type": "join",
+    "join_type": "inner join",
+    "join_algorithm": "hash",
+    "join_columns": [
+      "sample_left.id",
+      "sample_right.id"
+    ],
+    "hash_condition": [
+      "(sample_left.id = sample_right.id)"
+    ],
+    "estimated_rows": 10,
+    "estimated_total_cost": 12.5,
+    "inputs": [
+      {
+        "operation": "Table scan on sample_left",
+        "table_name": "sample_left",
+        "access_type": "table",
+        "schema_name": "sample_db",
+        "used_columns": [
+          "id",
+          "value"
+        ],
+        "estimated_rows": 100,
+        "estimated_total_cost": 4.5
+      },
+      {
+        "operation": "Filter: (sample_right.active = true)",
+        "access_type": "filter",
+        "condition": "(sample_right.active = true)",
+        "filter_columns": [
+          "sample_right.active"
+        ],
+        "estimated_rows": 20,
+        "estimated_total_cost": 8,
+        "inputs": [
+          {
+            "operation": "Table scan on sample_right",
+            "table_name": "sample_right",
+            "access_type": "table",
+            "schema_name": "sample_db",
+            "used_columns": [
+              "id",
+              "active"
+            ],
+            "estimated_rows": 200,
+            "estimated_total_cost": 7.5
+          }
+        ]
+      }
+    ]
+  },
+  "query_type": "select",
+  "json_schema_version": "2.0"
+}

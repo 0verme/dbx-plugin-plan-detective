@@ -43,6 +43,43 @@ test("analyzeRawPlan reports MySQL structured and fills every pipeline stage", a
   );
 });
 
+test("V2 RawPlanInput reaches normalize, metrics, rules and findings as structured", () => {
+  const rawInput = {
+    database: "mysql",
+    mode: "estimated",
+    format: "json",
+    plan: {
+      query_plan: {
+        operation: "Inner hash join",
+        access_type: "join",
+        join_algorithm: "hash",
+        estimated_rows: 10,
+        inputs: [
+          { operation: "Table scan on sample_table", table_name: "sample_table", access_type: "table", estimated_rows: 101885 },
+          {
+            operation: "Filter: (id > 0)",
+            access_type: "filter",
+            condition: "(id > 0)",
+            estimated_rows: 20,
+            inputs: [{ operation: "Table scan on sample_inner", table_name: "sample_inner", access_type: "table", estimated_rows: 200 }],
+          },
+        ],
+      },
+      json_schema_version: "2.0",
+    },
+  };
+
+  const result = analyzeRawPlan(rawInput);
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "mysql");
+  assert.equal(result.normalized.root.kind, "hash_join");
+  assert.equal(result.normalized.root.children[0].relation.name, "sample_table");
+  assert.equal(result.metrics.joinCount, 1);
+  assert.equal(result.metrics.sequentialScanCount, 2);
+  assert.equal(result.findings.some((finding) => finding.ruleId === "large-sequential-scan"), true);
+  assert.equal(result.hotspots.items.length > 0, true);
+});
+
 test("metrics count MySQL scans, joins, sorts and aggregates through the shared engine", async () => {
   const cases = [
     ["nested-loop-large-inner.synthetic", { scanCount: 2, sequentialScanCount: 2, indexScanCount: 0, joinCount: 1, sortCount: 0, aggregateCount: 0 }],

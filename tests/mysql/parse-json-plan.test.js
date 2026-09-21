@@ -456,3 +456,140 @@ test("does not mutate the raw payload", () => {
 
   assert.deepEqual(raw, snapshot, "the raw input must stay untouched");
 });
+
+test("parses a MySQL JSON V2 single table access path without creating a query_block", () => {
+  const parsed = parseMySqlJsonPlan(
+    mysqlInput({
+      query: "/* select#1 */ select sample columns",
+      query_plan: {
+        operation: "Table scan on sample_table",
+        table_name: "sample_table",
+        access_type: "table",
+        schema_name: "sample_db",
+        used_columns: ["id", "name"],
+        estimated_rows: 101885,
+        estimated_total_cost: 42.5,
+        future_root_field: { preserved: true },
+      },
+      query_type: "select",
+      json_schema_version: "2.0",
+      future_envelope_field: "preserved",
+    }),
+  );
+
+  assert.equal(parsed.root.structure, "query_plan");
+  assert.equal(parsed.root.nodeType, "Table Scan");
+  assert.equal(parsed.root.relationName, "sample_table");
+  assert.equal(parsed.root.estimatedRows, 101885);
+  assert.equal(parsed.root.mysql.accessType, "table");
+  assert.deepEqual(parsed.root.mysql.usedColumns, ["id", "name"]);
+  assert.equal(parsed.root.mysql.schemaName, "sample_db");
+  assert.equal(parsed.root.mysql.estimatedTotalCost, 42.5);
+  assert.equal(parsed.root.mysql.jsonSchemaVersion, "2.0");
+  assert.deepEqual(parsed.root.extra, { future_envelope_field: "preserved", future_root_field: { preserved: true } });
+});
+
+test("recursively preserves V2 inputs order and parent-child relationships", () => {
+  const parsed = parseMySqlJsonPlan(
+    mysqlInput({
+      query_plan: {
+        operation: "Inner hash join",
+        access_type: "join",
+        join_type: "inner join",
+        join_algorithm: "hash",
+        join_columns: ["a.id", "b.id"],
+        hash_condition: ["(a.id = b.id)"],
+        estimated_rows: 10,
+        inputs: [
+          { operation: "Table scan on a", table_name: "a", access_type: "table", estimated_rows: 100 },
+          {
+            operation: "Filter: (b.id > 0)",
+            access_type: "filter",
+            condition: "(b.id > 0)",
+            filter_columns: ["b.id"],
+            estimated_rows: 20,
+            inputs: [{ operation: "Table scan on b", table_name: "b", access_type: "table", estimated_rows: 200 }],
+          },
+        ],
+      },
+      json_schema_version: "2.0",
+    }),
+  );
+
+  assert.equal(parsed.root.nodeType, "Hash Join");
+  assert.equal(parsed.root.mysql.joinType, "inner join");
+  assert.equal(parsed.root.mysql.joinAlgorithm, "hash");
+  assert.deepEqual(parsed.root.mysql.joinColumns, ["a.id", "b.id"]);
+  assert.deepEqual(parsed.root.mysql.hashCondition, ["(a.id = b.id)"]);
+  assert.deepEqual(parsed.root.children.map((node) => node.nodeType), ["Table Scan", "Filter"]);
+  assert.equal(parsed.root.children[0].relationName, "a");
+  assert.equal(parsed.root.children[1].filter, "(b.id > 0)");
+  assert.deepEqual(parsed.root.children[1].mysql.filterColumns, ["b.id"]);
+  assert.equal(parsed.root.children[1].children[0].relationName, "b");
+});
+
+test("preserves unknown V2 node fields and both recursive input arrays", () => {
+  const parsed = parseMySqlJsonPlan(
+    mysqlInput({
+      json_schema_version: "2.0",
+      query_plan: {
+        operation: "Stream",
+        access_type: "stream",
+        future_node_field: { keep: [1, 2] },
+        inputs_from_select_list: [{ operation: "Table scan on select_list", access_type: "table", table_name: "select_list" }],
+        inputs: [{ operation: "Table scan on input", access_type: "table", table_name: "input" }],
+      },
+    }),
+  );
+
+  assert.deepEqual(parsed.root.extra, { future_node_field: { keep: [1, 2] } });
+  assert.deepEqual(parsed.root.children.map((node) => node.relationName), ["select_list", "input"]);
+});
+
+test("fails closed for ambiguous, versionless, unknown-version, and malformed V2 envelopes", () => {
+  const cases = [
+    [
+      "query_plan without schema version",
+      { query_plan: { operation: "Table scan", access_type: "table" } },
+      "MISSING_SCHEMA_VERSION",
+    ],
+    [
+      "unknown schema version",
+      { json_schema_version: "3.0", query_plan: {} },
+      "UNSUPPORTED_SCHEMA_VERSION",
+    ],
+    [
+      "query_plan node has no operation",
+      { json_schema_version: "2.0", query_plan: { access_type: "table", future_secret: "must not leak" } },
+      "MALFORMED_NODE",
+    ],
+    [
+      "mixed V1 and V2 shapes",
+      { query_block: {}, query_plan: {}, json_schema_version: "2.0" },
+      "AMBIGUOUS_SCHEMA",
+    ],
+    [
+      "inputs is not an array",
+      { json_schema_version: "2.0", query_plan: { operation: "Join", access_type: "join", inputs: "not-array" } },
+      "MALFORMED_NODE",
+    ],
+    [
+      "inputs is empty",
+      { json_schema_version: "2.0", query_plan: { operation: "Join", access_type: "join", inputs: [] } },
+      "MALFORMED_NODE",
+    ],
+    [
+      "estimated rows is not numeric",
+      { json_schema_version: "2.0", query_plan: { operation: "Table scan", access_type: "table", estimated_rows: "101885" } },
+      "MALFORMED_NODE",
+    ],
+  ];
+
+  for (const [label, payload, code] of cases) {
+    assert.throws(
+      () => parseMySqlJsonPlan(mysqlInput(payload)),
+      (error) => error instanceof PlanParseError && error.code === code,
+      label,
+    );
+  }
+});

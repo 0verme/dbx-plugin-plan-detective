@@ -14,6 +14,7 @@ import { createSdkBridge } from "../helpers/sdk-bridge.js";
 const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-scan" });
 const postgresRawPlan = postgresFixture.input.plan;
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-loop-large-inner.synthetic" });
+const mysqlV2Fixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-inputs-v2.synthetic" });
 
 function capabilities(overrides = {}) {
   return {
@@ -242,6 +243,23 @@ test("runHostAnalysis runs the structured pipeline for a MySQL host response", a
     mysqlFixture.meta.expect.hotspotNodeRefs,
   );
   assert.equal(session.hostResult.rawPlan, mysqlFixture.input.plan, "the host payload must stay available for the Raw Plan viewer");
+});
+
+test("runHostAnalysis sends a MySQL JSON V2 payload through the unchanged host boundary", async () => {
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => capabilities({ dbType: "mysql", dbVersion: "9.5.0" }),
+    explainPlan: async () => planResult({ dbType: "mysql", dbVersion: "9.5.0", rawPlan: mysqlV2Fixture.input.plan }),
+  });
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "structured");
+  assert.equal(session.rawInput.database, "mysql");
+  assert.equal(session.analysis.normalized.root.kind, "hash_join");
+  assert.equal(session.analysis.normalized.root.children[1].children[0].relation.name, "sample_right");
+  assert.equal(session.analysis.metrics.joinCount, 1);
+  assert.deepEqual(session.analysis.findings, []);
+  assert.deepEqual(session.analysis.hotspots.items, []);
+  assert.equal(session.hostResult.rawPlan, mysqlV2Fixture.input.plan, "the V2 host payload must stay available for the Raw Plan viewer");
 });
 
 test("runHostAnalysis refuses to parse a truncated plan and keeps it for display", async () => {
