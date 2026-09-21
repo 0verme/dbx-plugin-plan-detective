@@ -25,9 +25,15 @@ DBX 当前连接
 
 PostgreSQL 和 MySQL 会进入结构化分析；其他已支持获取 Estimated Plan 的数据库仍可查看 Host 返回的 Raw Plan。
 
+## 主界面
+
+![DBX Plan Detective 主界面](docs/screenshots/02-plan-analysis.png)
+
+> Plan Detective 在 DBX Host Mode 下分析 Estimated Plan，展示 Plan Summary、Findings、Hotspots 与 Plan Tree。
+
 ## 主要功能
 
-- **Estimated Plan 一键分析**：从 DBX 查询结果上下文或 Workbench 发起分析。
+- **Estimated Plan 分析**：从 DBX 查询结果上下文或 Workbench 发起分析。
 - **PostgreSQL 结构化解析**：将 JSON 执行计划整理为统一的计划树和指标。
 - **MySQL JSON Explain 结构化解析**：支持 DBX Host 返回的 `EXPLAIN FORMAT=JSON`。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
@@ -36,12 +42,6 @@ PostgreSQL 和 MySQL 会进入结构化分析；其他已支持获取 Estimated 
 - **中文 / English Finding 解释**：将结构化诊断事实按语言呈现。
 - **Raw Plan 查看**：保留并展示 DBX Host 返回的原始执行计划。
 - **查询结果上下文**：从 DBX 查询结果打开时自动带入 connection、database 和 SQL。
-
-## 截图
-
-当前仓库还没有适合 README 的真实 DBX UI 截图，因此这里不放 mock 图片或不存在的图片链接。截图文件名和采集要求见 [docs/screenshots/README.md](docs/screenshots/README.md)。
-
-计划补充：主工作台 / Overview、Findings / Hotspots、Plan Tree / Raw Plan 三组真实界面截图。
 
 ## 安装
 
@@ -55,7 +55,11 @@ PostgreSQL 和 MySQL 会进入结构化分析；其他已支持获取 Estimated 
 
 ## 使用方法
 
-### 查询结果页（推荐）
+### 从 DBX 查询结果打开
+
+执行 SQL 后，可直接从查询结果工具栏进入 Plan Detective。DBX 会带入当前 connection / database / SQL 上下文。
+
+![从 DBX 查询结果打开 Plan Detective](docs/screenshots/01-result-entry.png)
 
 ```text
 执行 SQL
@@ -67,7 +71,7 @@ PostgreSQL 和 MySQL 会进入结构化分析；其他已支持获取 Estimated 
 
 这是最直接的入口：插件复用当前查询结果的 DBX 上下文，通过 DBX Host Plan API 获取 Estimated Plan。
 
-### Workbench
+### 从 Workbench 打开
 
 ```text
 打开 DBX Plan Detective Workbench
@@ -95,6 +99,8 @@ Plan Detective 不创建数据库连接，也不读取数据库凭据；Workbenc
 这是基于 Estimated Plan 的确定性规则提示，不等于已经确认存在性能故障；`severity` 表示规则的关注级别，不代表真实运行时严重度。加索引也不保证一定能解决该提示。
 
 ## 数据库支持
+
+Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated Plan。支持状态分为结构化分析和 Raw Plan 展示：
 
 | Database | Plan support |
 | --- | --- |
@@ -167,7 +173,7 @@ dbx-plugin package .
 assets/          插件图标等静态资源
 src/             Svelte 前端与 Plan Core 源码
 ui/              已构建、需要入库的 DBX UI 发布产物
-docs/            架构、契约、计划与截图规划
+docs/            架构、契约、计划与截图资源
 fixtures/        离线执行计划样本
 manifest.json    DBX 插件清单
 ```
@@ -179,7 +185,6 @@ manifest.json    DBX 插件清单
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)：RawPlanInput、parser、NormalizedPlan、Metrics、Rules、Findings、Hotspots 与 fixture 约定。
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)：已确认决策、阶段划分与 Future 能力边界。
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)：历史 Host 能力审计记录。
-- [docs/screenshots/README.md](docs/screenshots/README.md)：真实 UI 截图补充计划。
 - [DBX 插件开发指南](https://dbxio.com/en/docs/plugin-development)。
 
 ## License
