@@ -22,6 +22,7 @@
   --pd-info-bg: #eff8ff;
   --pd-info-border: #84caff;
   --pd-ok-fg: #067647;
+  --pd-layout-gap: 16px;
   --pd-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --pd-radius: 8px;
 }

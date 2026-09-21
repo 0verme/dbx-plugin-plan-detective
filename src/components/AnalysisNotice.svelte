@@ -40,7 +40,7 @@
 
 <style>
   .banner {
-    margin: 0 0 10px;
+    margin: 0;
     padding: 8px 10px;
     border: 1px solid var(--pd-border);
     border-left-width: 3px;

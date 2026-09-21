@@ -108,12 +108,14 @@
   .tree {
     max-height: 52vh;
     padding: 4px 0;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .tree-row {
     display: grid;
-    grid-template-columns: 20px minmax(140px, 1fr) auto auto auto;
+    grid-template-columns: 20px minmax(0, 1fr) auto auto auto;
+    min-width: 0;
     gap: 8px;
     align-items: center;
     padding: 3px 10px 3px calc(4px + var(--depth) * 15px);
@@ -163,6 +165,7 @@
   }
 
   .label {
+    min-width: 0;
     overflow-wrap: anywhere;
   }
 
@@ -190,9 +193,9 @@
     white-space: nowrap;
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 899px) {
     .tree-row {
-      grid-template-columns: 20px minmax(120px, 1fr) auto;
+      grid-template-columns: 20px minmax(0, 1fr) auto;
     }
 
     .metric {
