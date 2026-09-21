@@ -4,12 +4,8 @@
   import AnalysisNotice from "./components/AnalysisNotice.svelte";
   import ConnectionContext from "./components/ConnectionContext.svelte";
   import FixtureSelector from "./components/FixtureSelector.svelte";
-  import FindingsList from "./components/FindingsList.svelte";
   import HostAudit from "./components/HostAudit.svelte";
-  import HotspotsList from "./components/HotspotsList.svelte";
-  import NodeInspector from "./components/NodeInspector.svelte";
-  import PlanSummary from "./components/PlanSummary.svelte";
-  import PlanTree from "./components/PlanTree.svelte";
+  import PlanAnalysisLayout from "./components/PlanAnalysisLayout.svelte";
   import RawPlanViewer from "./components/RawPlanViewer.svelte";
   import SqlInput from "./components/SqlInput.svelte";
   import { describePlanApi, resolvePlanBridge } from "./host/index.js";
@@ -292,15 +288,22 @@
     {#if fixtureAnalysis?.error}
       <p class="panel error-panel">分析 fixture 失败：{fixtureAnalysis.error}</p>
     {:else if fixtureAnalysis?.result}
-      <div class="overview">
-        <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-        <HotspotsList view={hotspotViews} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-      </div>
-      <FindingsList views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={selectNode} />
-      <div class="workspace">
-        <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} {hotspotsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
-        <NodeInspector {inspector} nodeFindings={selectedNodeFindings} />
-      </div>
+      <PlanAnalysisLayout
+        {summary}
+        selectedNodeId={selectedNodeId}
+        onSelectNode={selectNode}
+        hotspotView={hotspotViews}
+        hotspotCounts={hotspotCounts}
+        findingViews={findingViews}
+        findingCounts={findingCounts}
+        {rows}
+        collapsed={collapsedIds}
+        {findingsByNodeRef}
+        {hotspotsByNodeRef}
+        {inspector}
+        selectedNodeFindings={selectedNodeFindings}
+        onToggleNode={toggleNode}
+      />
     {:else}
       <p class="panel empty">没有可用的 fixture（{catalogCounts.total} 个）。</p>
     {/if}
@@ -324,7 +327,7 @@
         {/if}
       </section>
     {:else}
-      <div class="host-input">
+      <div class="input-grid">
         <ConnectionContext
           {contextView}
           bind:manualConnectionId
@@ -333,24 +336,34 @@
           {capabilityError}
           onRefresh={refreshCapabilities}
         />
-        <SqlInput bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
+        <div class="sql-workspace">
+          <SqlInput bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
+          <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} />
+        </div>
       </div>
 
-      <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} />
-
       {#if session.status === "structured" && hostStructured}
-        <div class="overview">
-          <PlanSummary {summary} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-          <HotspotsList view={hotspotViews} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={selectNode} />
-        </div>
-        <FindingsList views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={selectNode} />
-        <div class="workspace">
-          <PlanTree {rows} collapsed={collapsedIds} selectedId={selectedNodeId} {findingsByNodeRef} {hotspotsByNodeRef} onSelect={selectNode} onToggle={toggleNode} />
-          <NodeInspector {inspector} nodeFindings={selectedNodeFindings} />
-        </div>
+        <PlanAnalysisLayout
+          {summary}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={selectNode}
+          hotspotView={hotspotViews}
+          hotspotCounts={hotspotCounts}
+          findingViews={findingViews}
+          findingCounts={findingCounts}
+          {rows}
+          collapsed={collapsedIds}
+          {findingsByNodeRef}
+          {hotspotsByNodeRef}
+          {inspector}
+          selectedNodeFindings={selectedNodeFindings}
+          onToggleNode={toggleNode}
+        />
       {/if}
 
-      <RawPlanViewer hostResult={session.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
+      <div class="raw-plan-section">
+        <RawPlanViewer hostResult={session.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
+      </div>
     {/if}
   {/if}
 </div>
@@ -358,6 +371,7 @@
 <style>
   .app {
     max-width: 1680px;
+    min-width: 0;
     margin: 0 auto;
     padding: 14px 16px 28px;
   }
@@ -436,12 +450,22 @@
     font-size: 12px;
   }
 
-  .host-input {
+  .input-grid {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
-    gap: 10px;
+    gap: var(--pd-layout-gap);
     align-items: start;
-    margin-bottom: 10px;
+  }
+
+  .sql-workspace {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: var(--pd-layout-gap);
+  }
+
+  .raw-plan-section {
+    margin-top: var(--pd-layout-gap);
   }
 
   .error-panel {
@@ -454,36 +478,8 @@
     margin: 6px 0 0;
   }
 
-  .overview {
-    display: grid;
-    grid-template-columns: 250px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-    margin-top: 10px;
-  }
-
-  .workspace {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 310px;
-    gap: 10px;
-    align-items: start;
-    margin-top: 10px;
-  }
-
-  @media (max-width: 1180px) {
-    .overview {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  @media (max-width: 900px) {
-    .workspace {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  @media (max-width: 760px) {
-    .host-input {
+  @media (max-width: 899px) {
+    .input-grid {
       grid-template-columns: minmax(0, 1fr);
     }
   }

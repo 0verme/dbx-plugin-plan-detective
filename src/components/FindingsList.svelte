@@ -95,10 +95,6 @@
 </section>
 
 <style>
-  .findings-panel {
-    margin-bottom: 12px;
-  }
-
   .total {
     padding: 0 6px;
     border-radius: 999px;
@@ -115,17 +111,16 @@
   }
 
   .finding-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    max-height: 46vh;
     margin: 0;
     padding: 10px;
-    overflow: auto;
     list-style: none;
   }
 
   .finding {
+    min-width: 0;
     border: 1px solid var(--pd-border);
     border-left: 3px solid var(--pd-border-strong);
     border-radius: 6px;
@@ -264,9 +259,10 @@
     overflow-wrap: anywhere;
   }
 
-  @media (max-width: 900px) {
-    .finding-list {
+  @media (max-width: 899px) {
+    .evidence-row {
       grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
     }
   }
 </style>
