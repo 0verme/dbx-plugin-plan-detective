@@ -4,7 +4,7 @@ DBX 的 SQL 执行计划分析插件。
 
 基于数据库返回的 **Estimated Plan**，对执行计划进行结构化解析、热点定位和确定性诊断，帮助快速发现大表扫描、Nested Loop 放大、Sort 等值得关注的执行计划特征。它提供证据和检查方向，不把估算结果当作真实运行时事实，也不自动改写 SQL。
 
-[![DBX >=0.5.68](https://img.shields.io/badge/DBX-%3E%3D0.5.68-4c8bf5)](https://github.com/t8y2/dbx)
+[![DBX >=0.6.18](https://img.shields.io/badge/DBX-%3E%3D0.6.18-4c8bf5)](https://github.com/t8y2/dbx)
 [![Release](https://img.shields.io/github/v/release/0verme/dbx-plugin-plan-detective)](https://github.com/0verme/dbx-plugin-plan-detective/releases)
 [![License](https://img.shields.io/github/license/0verme/dbx-plugin-plan-detective)](LICENSE)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-structured-336791)](https://www.postgresql.org/)
@@ -47,11 +47,11 @@ PostgreSQL 和 MySQL 会进入结构化分析；其他已支持获取 Estimated 
 
 当前版本已发布到 [GitHub Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases)，但尚未进入 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录；目前以 GitHub Release 的未签名候选包手动安装为主。
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.5.3-universal.dbxp`。
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.5.4-universal.dbxp`。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
 
-运行要求：DBX `>=0.5.68`，并需要支持 Host Plan API 1.2 的宿主。当前插件声明的权限为 `host.plans:read`。
+运行要求：DBX `>=0.6.18`，并需要支持 Host Plan API 1.2 的宿主。当前插件声明的权限为 `host.plans:read`。
 
 ## 使用方法
 

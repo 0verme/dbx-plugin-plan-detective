@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-21 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）+ v0.5.3 Plan Detective 插件图标更新（已实现）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.5.3（`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现，Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现，Issue [#15](https://github.com/0verme/dbx-plugin-plan-detective/issues/15)）+ Phase 2 · Hotspot Analysis（已实现，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）+ v0.5.0 结构化诊断解释层与 Finding i18n（PR [#27](https://github.com/0verme/dbx-plugin-plan-detective/pull/27) 已合并）+ v0.5.1 执行计划分析页 Layout Refactor（PR [#29](https://github.com/0verme/dbx-plugin-plan-detective/pull/29) 已合并）+ v0.5.2 中宽 Node Inspector responsive patch（已实现）+ v0.5.3 Plan Detective 插件图标更新（已实现）+ v0.5.4 DBX 最低版本收紧（准备中）**；上游 [t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675) / 实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.5.4（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL structured；SQL Server / Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
@@ -115,6 +115,14 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | Actual Plan | ❌ | `INTERNAL_ONLY`（PG/SQL Server）/ `NOT_AVAILABLE`（MySQL） | 不属于当前一期 |
 | timeout / cancel | ❌ | `INTERNAL_ONLY` | 插件侧只有 sidecar RPC 超时（≤ 120s），与查询超时无关 |
 
+### 0.6 v0.5.4 DBX 最低版本收紧（准备中，2026-09-21）
+
+- 本轮为 patch release：版本 `0.5.3 → 0.5.4`，仅将最低 DBX 版本从 `>=0.5.68` 收紧为 `>=0.6.18`。
+- 保持 `engines.host_api: ^1.2` 与 `host.plans:read`；不修改 parser、metrics、hotspot、findings、UI 行为或 Plan API 调用逻辑。
+- 原因：DBX v0.6.18 正式包含只读 Estimated Plan Host API，对应上游 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)。
+- 本地验证：`npm test` 629/629；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 生成 unsigned `universal` candidate，包内 manifest identity / engines / permission 校验通过。
+- Host Smoke：**NOT RUN** — 当前环境无可用 DBX Desktop Host；不构成功能不变的 patch release blocker。
+
 ### 0.5 v0.5.3 Icon Release（2026-09-21）
 
 - Release commit：`0506da76132d5126cfb90e4c10fd98f2fc2f42b8`；tag `v0.5.3` 已指向该 commit 并推送。
@@ -142,9 +150,9 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | --- | --- |
 | 官方 Svelte + Vite 项目骨架 | ✅ 已初始化 |
 | UI 构建（`npm run build`） | ✅ 通过（本轮复跑） |
-| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.3 本轮复跑；CI universal artifact 已核验） |
+| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.4 本地 unsigned universal candidate；CI Release artifact 待发布） |
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
-| `manifest.json` 合法性 | ✅ 通过（`host_api ^1.2` / `host.plans:read`，对上游 schema） |
+| `manifest.json` 合法性 | ✅ 通过（`dbx >=0.6.18` / `host_api ^1.2` / `host.plans:read`，对上游 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
@@ -306,7 +314,7 @@ Build failed (exit 1)
 ## 5. 待办
 
 1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
-2. **宿主兼容边界**：v0.5.3 已按现有 `engines.host_api ^1.2` / `host.plans:read` contract 发布；旧版 DBX 仍会因 Host API 下限拒绝加载（这是预期行为）。
+2. **宿主兼容边界**：v0.5.4 将按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
 3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
 4. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
