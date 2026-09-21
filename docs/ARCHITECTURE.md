@@ -1,7 +1,7 @@
 # 架构
 
 本文件记录 DBX Plan Detective 的架构边界与职责划分。
-当前仓库已实现 **Host 分析闭环**（DBX Host Plan API → adapter → parser → IR → rules → UI）与
+当前仓库已实现 **Host 分析闭环**（DBX Host Plan API → adapter → parser → IR → rules → Finding Presentation → UI）与
 **Offline / Fixture 开发模式**。实际完成度见 [../STATUS.md](../STATUS.md)。
 
 ## 1. 目标链路
@@ -17,10 +17,12 @@ Normalized Plan
    ↓
 Metrics Engine
    ↓
-   ├─► Rule Engine → Findings
+   ├─► Rule Engine → Structured Findings
+   │                         ↓
+   │                  Finding Presentation → i18n
    └─► Hotspot Analysis → Hotspots
-   ↓
-Plan Diff / UI
+                              ↓
+                         Plan Diff / UI
 ```
 
 各段职责：
@@ -36,7 +38,8 @@ Plan Diff / UI
 | PostgreSQL 代价归因 | `analyzePostgresCost()`：判断 `Total Cost` 是否可按子树累加，供 Metrics 与 Hotspots 共用 | Plan Detective |
 | Hotspot Analysis | 基于 NormalizedPlan + Metrics 聚合确定性注意力信号（engine-aware，无综合评分） | Plan Detective |
 | Rule Engine | 基于指标与计划结构产出确定性结论 | Plan Detective |
-| Findings | 结论 + Evidence（observation 语义，不是命令） | Plan Detective |
+| Findings | 结构化事实 + 兼容的结论 / Evidence（observation 语义，不是命令） | Plan Detective |
+| Finding Presentation / i18n | 将 facts 按 locale 表达为 summary / reasons / actions / caveats；不判断规则触发 | Plan Detective |
 | Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
 
 ### 当前实现状态（2026-09-20）
@@ -45,7 +48,8 @@ Plan Diff / UI
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
 已实现：parser registry + PostgreSQL / MySQL 结构化 parser；其余 6 个方言 raw-only
-已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Findings
+已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
+已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
 已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
@@ -66,10 +70,13 @@ src/core/adapter/dbx-plan-response.js（dbType → database family，format → 
    ↓
 src/core/parsers/index.js（registry：postgres / mysql structured，其余 raw-only）
    ↓
-src/core/normalize → metrics → rules → findings
+src/core/normalize → metrics → rules → findings（facts + legacy copy）
 src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
    ↓
 src/lib/analysis-session.js（编排，可注入 fake bridge 测试）
+   ↓
+src/lib/finding-presentation.js（facts → locale presentation；旧 Finding fallback）
+src/lib/i18n/（`zh-CN` / `en` catalog、interpolation、fallback）
    ↓
 Svelte components
 ```
@@ -90,7 +97,7 @@ fixture（fixtures/postgres/**；MySQL fixture 由核心测试直接加载）
 RawPlanInput
    ↓ analyzePlan()
 parsed / normalized / metrics / findings / hotspots
-   ↓ src/lib/view-model.js（纯映射，不重算 Core 结果）
+   ↓ src/lib/view-model.js（presentation + 技术细节映射，不重算 Core 结果）
 Svelte components
 ```
 
@@ -127,6 +134,7 @@ UI / rules / metrics 不变。
 - Metrics
 - Hotspot Analysis（确定性信号聚合，无综合评分、无跨数据库比较）
 - Rule Engine / Findings / Evidence
+- Finding Presentation / i18n（当前仅迁移 `large-sequential-scan`）
 - Raw Plan viewer、Plan Tree、Node Inspector
 - （Future）Plan Diff / History / Tuning workflow
 
@@ -200,7 +208,7 @@ src/
 │   ├── AnalysisNotice.svelte   # loading / success / warning / error 状态
 │   ├── PlanSummary.svelte      # Core Metrics 展示（不评分）
 │   ├── HotspotsList.svelte     # Hotspot 注意力列表 + reason/evidence（不重算、不排名）
-│   ├── FindingsList.svelte     # rule findings + evidence
+│   ├── FindingsList.svelte     # structured diagnosis + legacy findings + evidence
 │   ├── PlanTree.svelte         # 嵌套行计划树
 │   ├── NodeInspector.svelte    # 选中节点字段
 │   ├── RawPlanViewer.svelte    # 宿主原始计划（默认折叠，仅展示层截断）
@@ -211,6 +219,8 @@ src/
     ├── host-view-model.js      # 连接上下文 / 能力 / 错误文案 / Raw Plan 格式化
     ├── fixture-catalog.js      # fixture catalog / 筛选 / analyzeFixture()
     ├── view-model.js           # summary / tree / findings / hotspots / inspector 映射
+    ├── finding-presentation.js # facts → localized summary / reasons / actions / caveats
+    ├── i18n/                   # zh-CN / en catalog + locale fallback
     └── format.js               # 展示格式化
 ```
 

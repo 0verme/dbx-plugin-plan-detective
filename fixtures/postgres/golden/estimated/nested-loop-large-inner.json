@@ -270,6 +270,18 @@
       "title": "Large sequential scan",
       "summary": "Seq Scan on pd_fix_events with a filter is estimated to read 66667 rows and accounts for an incremental cost of 4497. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
       "nodeRef": "0.1",
+      "facts": {
+        "database": "postgresql",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "Seq Scan",
+        "relation": "pd_fix_events",
+        "estimatedRows": 66667,
+        "estimatedTotalCost": 4497,
+        "incrementalCost": 4497,
+        "accessType": null,
+        "hasFilter": true
+      },
       "evidence": {
         "nodeId": "0.1",
         "nodeType": "Seq Scan",

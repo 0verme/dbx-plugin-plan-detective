@@ -55,6 +55,32 @@ test("createFinding builds a deterministic finding id from ruleId and nodeRef", 
   assert.deepEqual(finding, again);
 });
 
+test("createFinding preserves optional structured facts and rejects an invalid facts container", () => {
+  const node = normalizedNode();
+  const facts = {
+    database: "mysql",
+    estimatedRows: 101_885,
+    accessType: "ALL",
+    hasFilter: false,
+    runtimeVerified: false,
+  };
+  const finding = createFinding({
+    ruleId: "large-sequential-scan",
+    severity: "high",
+    title: "legacy title",
+    summary: "legacy summary",
+    node,
+    facts,
+    evidence: {},
+  });
+
+  assert.deepEqual(finding.facts, facts);
+  assert.throws(
+    () => createFinding({ ruleId: "r", severity: "info", title: "t", summary: "s", node, facts: [], evidence: {} }),
+    /facts must be an object/,
+  );
+});
+
 test("createFinding accepts every severity in the ladder", () => {
   for (const severity of SEVERITIES) {
     const node = normalizedNode();

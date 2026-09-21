@@ -39,16 +39,17 @@ export function nodeEvidence(node, extra = {}) {
  * @property {string} summary neutral, evidence-based statement
  * @property {string} nodeRef normalized node id the finding is about
  * @property {Record<string, unknown>} evidence
+ * @property {Record<string, unknown>} [facts] structured rule facts for a localized presenter
  */
 
 /**
  * Build a finding. Inputs are validated eagerly so a broken rule fails in tests
  * instead of producing a half-valid finding.
  *
- * @param {{ ruleId: string, severity: string, title: string, summary: string, node: { id: string }, evidence: Record<string, unknown> }} input
+ * @param {{ ruleId: string, severity: string, title: string, summary: string, node: { id: string }, evidence: Record<string, unknown>, facts?: Record<string, unknown> }} input
  * @returns {Finding}
  */
-export function createFinding({ ruleId, severity, title, summary, node, evidence }) {
+export function createFinding({ ruleId, severity, title, summary, node, evidence, facts }) {
   if (typeof ruleId !== "string" || ruleId.length === 0) {
     throw new TypeError("createFinding requires a non-empty ruleId");
   }
@@ -67,6 +68,9 @@ export function createFinding({ ruleId, severity, title, summary, node, evidence
   if (evidence === null || typeof evidence !== "object" || Array.isArray(evidence)) {
     throw new TypeError("createFinding requires an evidence object");
   }
+  if (facts !== undefined && (facts === null || typeof facts !== "object" || Array.isArray(facts))) {
+    throw new TypeError("createFinding facts must be an object when provided");
+  }
 
   return {
     id: `${ruleId}:${node.id}`,
@@ -75,6 +79,7 @@ export function createFinding({ ruleId, severity, title, summary, node, evidence
     title,
     summary,
     nodeRef: node.id,
+    ...(facts === undefined ? {} : { facts }),
     evidence,
   };
 }

@@ -333,6 +333,18 @@
       "title": "Large sequential scan",
       "summary": "Seq Scan on pd_fix_events with no filter reported is estimated to read 200000 rows and accounts for an incremental cost of 3497. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
       "nodeRef": "0.0.0",
+      "facts": {
+        "database": "postgresql",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "Seq Scan",
+        "relation": "pd_fix_events",
+        "estimatedRows": 200000,
+        "estimatedTotalCost": 3497,
+        "incrementalCost": 3497,
+        "accessType": null,
+        "hasFilter": false
+      },
       "evidence": {
         "nodeId": "0.0.0",
         "nodeType": "Seq Scan",
@@ -356,6 +368,18 @@
       "title": "Large sequential scan",
       "summary": "Seq Scan on pd_fix_events with no filter reported is estimated to read 200000 rows and accounts for an incremental cost of 7494.01. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
       "nodeRef": "0.1",
+      "facts": {
+        "database": "postgresql",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "Seq Scan",
+        "relation": "pd_fix_events",
+        "estimatedRows": 200000,
+        "estimatedTotalCost": 7494.01,
+        "incrementalCost": 7494.01,
+        "accessType": null,
+        "hasFilter": false
+      },
       "evidence": {
         "nodeId": "0.1",
         "nodeType": "Seq Scan",

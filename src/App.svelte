@@ -15,6 +15,7 @@
   import { describePlanApi, resolvePlanBridge } from "./host/index.js";
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
   import { analyzeFixture, countByMode, findCatalogEntry, pickDefaultFixture } from "./lib/fixture-catalog.js";
+  import { normalizeLocale } from "./lib/i18n/index.js";
   import {
     describeAnalysisError,
     describeAnalysisNotice,
@@ -55,6 +56,9 @@
   const isDev = import.meta.env.DEV;
 
   let planApi = $state(describePlanApi(bridge));
+  // Finding Presentation follows the host locale; the rest of the existing UI
+  // remains backward-compatible while the message catalog grows incrementally.
+  let diagnosisLocale = $state(normalizeLocale(bridge?.locale));
 
   /* ------------------------------------------------------------- fixtures -- */
 
@@ -101,6 +105,7 @@
     const handleInit = () => {
       syncPlanApi();
       syncContext();
+      diagnosisLocale = normalizeLocale(bridge.locale);
     };
 
     const offContext = typeof bridge.onContext === "function" ? bridge.onContext(syncContext) : null;
@@ -208,7 +213,7 @@
   const rowsById = $derived(indexRowsById(rows));
   const nodesById = $derived(activeAnalysis ? indexNodesById(activeAnalysis.normalized.root) : new Map());
   const summary = $derived(activeAnalysis ? buildPlanSummary(activeAnalysis.metrics) : null);
-  const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById) : []);
+  const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById, diagnosisLocale) : []);
   const findingCounts = $derived(countFindingsBySeverity(activeAnalysis?.findings ?? []));
   const findingsByNodeRef = $derived(groupFindingsByNodeRef(activeAnalysis?.findings ?? []));
   const hotspotViews = $derived(

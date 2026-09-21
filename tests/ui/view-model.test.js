@@ -43,6 +43,9 @@ const actualLoopsAnalysis = analyzePlan(actualLoops.input);
 const expensiveSort = await loadFixture({ mode: "estimated", name: "expensive-sort" });
 const expensiveSortAnalysis = analyzePlan(expensiveSort.input);
 
+const mysqlLargeSeqScan = await loadFixture({ database: "mysql", mode: "estimated", name: "large-table-scan.synthetic" });
+const mysqlLargeSeqScanAnalysis = analyzePlan(mysqlLargeSeqScan.input);
+
 /* ------------------------------------------------------------------ format -- */
 
 test("formatNumber keeps integers readable and trims fractional noise", () => {
@@ -251,6 +254,22 @@ test("buildFindingViews keeps rule semantics and renders node labels", () => {
   const nestedLoopView = views.find((view) => view.ruleId === "nested-loop-large-inner");
   assert.equal(nestedLoopView.summary.includes("estimated row comparisons"), true);
   assert.equal(nestedLoopView.summary.includes("should create an index"), false);
+});
+
+test("buildFindingViews carries localized diagnosis and keeps legacy findings safe", () => {
+  const rowsById = indexRowsById(buildTreeRows(mysqlLargeSeqScanAnalysis.normalized.root));
+  const zhView = buildFindingViews(mysqlLargeSeqScanAnalysis.findings, rowsById, "zh-CN")[0];
+  const enView = buildFindingViews(mysqlLargeSeqScanAnalysis.findings, rowsById, "en")[0];
+  const legacyView = buildFindingViews(nestedLoopAnalysis.findings, nestedLoopRowsById, "en").find(
+    (view) => view.ruleId === "nested-loop-large-inner",
+  );
+
+  assert.equal(zhView.presentation.structured, true);
+  assert.equal(zhView.presentation.summary, "events 预计扫描约 240,000 行。");
+  assert.equal(enView.presentation.locale, "en");
+  assert.equal(enView.presentation.title, "A potentially large full-table scan");
+  assert.equal(legacyView.presentation.structured, false);
+  assert.equal(legacyView.summary.includes("estimated row comparisons"), true);
 });
 
 test("flattenEvidence exposes thresholds with their path and keeps null meaningful", () => {

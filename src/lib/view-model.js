@@ -10,6 +10,8 @@
  */
 
 import { incrementalCostOf } from "../core/index.js";
+import { presentFinding } from "./finding-presentation.js";
+import { createTranslator } from "./i18n/index.js";
 import { formatNumber, formatPercent, formatRawValue } from "./format.js";
 
 /* ---------------------------------------------------------------- summary -- */
@@ -298,18 +300,26 @@ export function groupFindingsByNodeRef(findings) {
 /**
  * @param {import("../core/findings/finding.js").Finding[]} findings
  * @param {Map<string, ReturnType<typeof buildTreeRows>[number]>} rowsById
+ * @param {unknown} [locale]
  */
-export function buildFindingViews(findings, rowsById) {
-  return sortFindings(findings).map((finding) => ({
-    id: finding.id,
-    ruleId: finding.ruleId,
-    severity: finding.severity,
-    title: finding.title,
-    summary: finding.summary,
-    nodeRef: finding.nodeRef,
-    nodeLabel: describeNodeRef(rowsById, finding.nodeRef),
-    evidence: flattenEvidence(finding.evidence),
-  }));
+export function buildFindingViews(findings, rowsById, locale = "zh-CN") {
+  return sortFindings(findings).map((finding) => {
+    const presentation = presentFinding(finding, locale);
+    const evidence = flattenEvidence(finding.evidence);
+    const evidenceSummary = createTranslator(presentation.locale).t("diagnosis.section.evidence", { count: evidence.length });
+    return {
+      id: finding.id,
+      ruleId: finding.ruleId,
+      severity: finding.severity,
+      title: presentation.title,
+      summary: presentation.summary,
+      nodeRef: finding.nodeRef,
+      nodeLabel: describeNodeRef(rowsById, finding.nodeRef),
+      presentation,
+      evidence,
+      evidenceSummary,
+    };
+  });
 }
 
 /**
