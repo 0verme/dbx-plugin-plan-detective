@@ -115,6 +115,17 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | Actual Plan | ❌ | `INTERNAL_ONLY`（PG/SQL Server）/ `NOT_AVAILABLE`（MySQL） | 不属于当前一期 |
 | timeout / cancel | ❌ | `INTERNAL_ONLY` | 插件侧只有 sidecar RPC 超时（≤ 120s），与查询超时无关 |
 
+### 0.5 v0.5.3 Icon Release（2026-09-21）
+
+- Release commit：`0506da76132d5126cfb90e4c10fd98f2fc2f42b8`；tag `v0.5.3` 已指向该 commit 并推送。
+- GitHub Release：[DBX Plan Detective v0.5.3](https://github.com/0verme/dbx-plugin-plan-detective/releases/tag/v0.5.3)，非 draft / 非 prerelease。
+- Workflow：[Release DBX plugin · 35569922070](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/35569922070)，success；`head_sha` 为 release commit。
+- CI asset：`io.github.0verme.plan-detective-0.5.3-universal.dbxp`，size `62460` bytes，SHA-256 `156d02840ab03174af7b1ad1b6d45ab6caafc0c387c9f2065c35675a5217cd04`。
+- Metadata：`release-candidates.json`，size `559` bytes，SHA-256 `18ac01aeb03551c080a1483aa8eca3b5581e6ef23a25cf06e89fc151cf7ef9a4`；target `universal`，package metadata / manifest / icon contract 匹配 `0.5.3`。
+- Gate：`npm test` 629/629；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .`、`git diff --check` 与 CI artifact validation 通过；`.dbxp` 包含 `assets/plugin.svg`。
+- Host Smoke: **NOT RUN** — NAS/Linux 无真实 DBX Desktop Host；Windows 安装与人工验收待发布后执行，不构成发布 blocker。
+- DBX Store candidate：本轮未创建。
+
 ### 0.4 v0.5.2 Patch Release（2026-09-21）
 
 - Release commit：`72d617b3c1dfe289a80a2e27561853325f15730`；tag `v0.5.2` 已指向该 commit 并推送。
@@ -131,7 +142,7 @@ NormalizedPlan + Metrics → computeHotspots → HotspotAnalysis { cost, items }
 | --- | --- |
 | 官方 Svelte + Vite 项目骨架 | ✅ 已初始化 |
 | UI 构建（`npm run build`） | ✅ 通过（本轮复跑） |
-| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.2 本轮复跑；CI universal artifact 已核验） |
+| 打包（`dbx-plugin package`） | ✅ 通过（v0.5.3 本轮复跑；CI universal artifact 已核验） |
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
 | `manifest.json` 合法性 | ✅ 通过（`host_api ^1.2` / `host.plans:read`，对上游 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
@@ -295,7 +306,7 @@ Build failed (exit 1)
 ## 5. 待办
 
 1. **真实 DBX 宿主端到端手测**（需要 release 包含 #9692）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
-2. **宿主兼容边界**：v0.5.2 已按现有 `engines.host_api ^1.2` / `host.plans:read` contract 发布；旧版 DBX 仍会因 Host API 下限拒绝加载（这是预期行为）。
+2. **宿主兼容边界**：v0.5.3 已按现有 `engines.host_api ^1.2` / `host.plans:read` contract 发布；旧版 DBX 仍会因 Host API 下限拒绝加载（这是预期行为）。
 3. 后续增量（独立 Issue）：SQL Server ShowPlanXML parser、文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
 4. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
