@@ -1,10 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="DBX Plan Detective">
   <defs>
-    <linearGradient id="g" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#6d5dfc"/>
-      <stop offset="1" stop-color="#2cc9a7"/>
+    <linearGradient id="bg" x1="8" y1="6" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="0.55" stop-color="#6D5DFC"/>
+      <stop offset="1" stop-color="#4656E8"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="17" y1="14" x2="45" y2="45" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#E9E7FF" stop-opacity="0.92"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="url(#g)"/>
-  <path fill="#fff" d="M20 18h18a10 10 0 0 1 0 20H28v8h-8V18Zm8 8v4h10a2 2 0 1 0 0-4H28Z"/>
+
+  <!-- app tile -->
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+
+  <!-- subtle highlight -->
+  <path d="M11 14C20 7 36 5 49 11" fill="none" stroke="#FFFFFF" stroke-opacity=".13" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- magnifying glass -->
+  <circle cx="29" cy="28" r="14" fill="#FFFFFF" fill-opacity=".08" stroke="url(#glow)" stroke-width="4"/>
+  <path d="M39.3 38.2 50 48.9" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- execution plan tree inside lens -->
+  <path d="M29 20.5v5.2M23 25.7h12M23 25.7v4.5M35 25.7v4.5"
+        fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="26.2" y="17.2" width="5.6" height="5.6" rx="1.6" fill="#FFFFFF"/>
+  <rect x="20.2" y="29.2" width="5.6" height="5.6" rx="1.6" fill="#FFFFFF"/>
+  <rect x="32.2" y="29.2" width="5.6" height="5.6" rx="1.6" fill="#FFFFFF"/>
+
+  <!-- diagnostic accent -->
+  <circle cx="35" cy="32" r="1.2" fill="#6D5DFC"/>
 </svg>
