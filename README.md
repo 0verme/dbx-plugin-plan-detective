@@ -152,12 +152,14 @@ MySQL 的结构化支持基于 DBX Host 实际返回的 **`EXPLAIN FORMAT=JSON`*
   `estimated_plan_format(Mysql) == Json`；`crates/dbx-core/src/query/plugin_plan.rs` 固定
   `ExplainFormat::Json` 且从不设置 `analyze`。Host API 因此返回 `dbType: "mysql"`、
   `format: "json"`、`rawPlan` 为 MySQL JSON 对象。
-- 实现：`src/core/mysql/parse-json-plan.js`（parse）、`src/core/normalize/normalize-mysql.js`
-  （normalize）、`src/core/parsers/mysql.js`（registry 声明）。
+- 实现：`src/core/mysql/parse-json-plan.js`（V1 parse）、`src/core/mysql/parse-json-plan-v2.js`
+  （V2 parse）、`src/core/normalize/normalize-mysql.js`（normalize）、`src/core/parsers/mysql.js`
+  （registry 声明）。V1 `query_block` 与 V2 `query_plan` 使用独立 parser 分支。
 
 当前支持的核心结构：
 
 ```text
+# V1
 query_block
 table（access_type：ALL / index / range / ref / eq_ref / ref_or_null / fulltext / index_merge /
        unique_subquery / index_subquery / const / system）
@@ -168,7 +170,16 @@ union_result / unary_result / intersect_result / except_result
 materialized_from_subquery
 attached_subqueries / optimized_away_subqueries / group_by_subqueries /
 having_subqueries / order_by_subqueries / select_list_subqueries
+
+# V2（MySQL 9.5 JSON Explain）
+json_schema_version: "2.x" + query_plan
+inputs / inputs_from_select_list（递归 access-path tree）
+table / filter / join / sort / aggregate / limit 等 access_type
 ```
+
+V2 缺少 schema version、使用未知版本、与 V1 根结构混合或结构不可信时会 fail closed；未知但合法
+字段保存在 `engineSpecific.extra`，不静默丢弃。V2 的 `estimated_rows` 必须是有限 number，且不
+伪造 V1 的 `query_block`。
 
 IR 映射规则：
 
@@ -185,6 +196,12 @@ IR 映射规则：
 | `grouping_operation` | `kind: aggregate` |
 | `cost_info.*`（字符串数字） | `engineSpecific.mysql`，**不**映射到 `startupCost` / `totalCost` |
 | `query_block.message` / `table.message` / `*_result.message` | `engineSpecific.mysql.message`（如实导出，不丢弃） |
+| V2 `table_name` / `schema_name` / `alias` | `relation.name` / `engineSpecific.mysql.schemaName` / `relation.alias` |
+| V2 `estimated_rows` | `estimatedRows`（严格 numeric） |
+| V2 `condition` / `pushed_index_condition` | `filter` / `indexCondition` |
+| V2 `join_type` / `join_algorithm` / `join_columns` / `hash_condition` | `engineSpecific.mysql.*`；不强行转换数组语义 |
+| V2 `used_columns` / `filter_columns` / `sort_fields` / `group_items` | `engineSpecific.mysql.*` / `sortKeys` / `groupKeys` |
+| `query_plan` / `inputs` | `structure: "query_plan"` + 递归统一 `ParsedPlan` children |
 | 未识别的结构与字段 | `engineSpecific.extra`（不丢弃） |
 
 **MySQL cost 与 PostgreSQL cost 不可直接比较。** `query_cost` / `prefix_cost` / `read_cost` / `eval_cost`

@@ -1,0 +1,20 @@
+{
+  "query": "/* select#1 */ select `sample_db`.`sample_table`.`id` AS `id` from `sample_db`.`sample_table`",
+  "query_plan": {
+    "operation": "Table scan on sample_table",
+    "table_name": "sample_table",
+    "access_type": "table",
+    "schema_name": "sample_db",
+    "used_columns": [
+      "id",
+      "name",
+      "best_time_sec",
+      "first_time_sec",
+      "last_time_sec",
+      "hit_count"
+    ],
+    "estimated_rows": 101885
+  },
+  "query_type": "select",
+  "json_schema_version": "2.0"
+}

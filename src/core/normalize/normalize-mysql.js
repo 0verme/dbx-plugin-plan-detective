@@ -24,8 +24,8 @@
 /**
  * MySQL node label -> stable semantic kind.
  *
- * The MySQL labels come from `src/core/mysql/parse-json-plan.js`; an access
- * type the parser does not recognize is used verbatim as the label and lands in
+ * The MySQL labels come from the V1/V2 MySQL parsers; an access type the parser
+ * does not recognize is used verbatim as the label and lands in
  * `unknown` here, then in `unknownNodeTypes`.
  *
  * `const_scan` and `subquery` are MySQL-side additions to the kind vocabulary;
@@ -57,6 +57,39 @@ const KIND_BY_NODE_TYPE = Object.freeze({
   "Except Result": "setop",
   "Materialized Subquery": "materialize",
   Subquery: "subquery",
+  // MySQL JSON Explain V2 access-path labels.
+  Append: "append",
+  Aggregate: "aggregate",
+  "Count Rows": "aggregate",
+  "Temporary Table Aggregate": "aggregate",
+  Filter: "filter",
+  "Hash Join": "hash_join",
+  "Batched Key Access Join": "join",
+  Join: "join",
+  "Merge Join": "merge_join",
+  Sort: "sort",
+  Limit: "limit",
+  Stream: "stream",
+  Window: "analytic",
+  "Remove Duplicates": "unique",
+  Materialize: "materialize",
+  "Materialize Information Schema": "materialize",
+  "Materialize Table Function": "materialize",
+  "Index Distance Scan": "index_scan",
+  "Index Skip Scan": "index_scan",
+  "Group Index Skip Scan": "index_scan",
+  "Dynamic Index Range Scan": "index_scan",
+  "Multi-Range Index Lookup": "index_scan",
+  "Rows Fetched Before Execution": "const_scan",
+  "Insert Values": "modify_table",
+  "Replace Values": "modify_table",
+  "Delete Rows": "modify_table",
+  "Scan New Records": "modify_table",
+  "Invalidate Materialized Tables": "modify_table",
+  "Zero Rows": "result",
+  "Zero Rows Aggregated": "aggregate",
+  "Row ID Union": "append",
+  "Row ID Intersection": "append",
 });
 
 /**
@@ -74,11 +107,11 @@ const KIND_BY_NODE_TYPE = Object.freeze({
  * @property {number|null} totalCost always null: MySQL costs stay under engineSpecific
  * @property {number|null} width always null
  * @property {string|null} filter
- * @property {string|null} joinType always null: MySQL JSON does not report it
- * @property {string|null} joinCondition always null: MySQL reports join predicates as table conditions
- * @property {string|null} indexCondition
- * @property {string[]|null} sortKeys always null: MySQL JSON does not list them
- * @property {string[]|null} groupKeys always null: MySQL JSON does not list them
+ * @property {string|null} joinType V2 `join_type`, when the access path reports it
+ * @property {string|null} joinCondition always null: V2 keeps condition arrays under MySQL evidence
+ * @property {string|null} indexCondition V1 `index_condition` or V2 `pushed_index_condition`
+ * @property {string[]|null} sortKeys V2 `sort_fields`, when reported
+ * @property {string[]|null} groupKeys V2 `group_items`, when reported
  * @property {NormalizedNode[]} children
  * @property {Record<string, unknown>} engineSpecific MySQL-only fields
  *
@@ -117,14 +150,16 @@ function normalizeNode(node, id, unknownNodeTypes) {
   const kind = KIND_BY_NODE_TYPE[node.nodeType] ?? "unknown";
   if (kind === "unknown") unknownNodeTypes.add(node.nodeType);
 
-  const hasRelation = node.relationName !== null || node.indexName !== null;
+  const mysql = node.mysql ?? {};
+  const alias = typeof mysql.alias === "string" ? mysql.alias : null;
+  const hasRelation = node.relationName !== null || node.indexName !== null || alias !== null;
 
   return {
     id,
     kind,
     nodeType: node.nodeType,
     relation: hasRelation
-      ? { name: node.relationName, alias: null, indexName: node.indexName }
+      ? { name: node.relationName, alias, indexName: node.indexName }
       : null,
     estimatedRows: node.estimatedRows,
     // MySQL estimated plans never carry runtime values; nothing to map.
@@ -138,11 +173,13 @@ function normalizeNode(node, id, unknownNodeTypes) {
     totalCost: null,
     width: null,
     filter: node.filter,
-    joinType: null,
+    joinType: typeof mysql.joinType === "string" ? mysql.joinType : null,
+    // V2 hash conditions are arrays and remain under engineSpecific.mysql;
+    // the neutral field is not populated by coercing them into one string.
     joinCondition: null,
     indexCondition: node.indexCondition,
-    sortKeys: null,
-    groupKeys: null,
+    sortKeys: Array.isArray(mysql.sortFields) ? [...mysql.sortFields] : null,
+    groupKeys: Array.isArray(mysql.groupItems) ? [...mysql.groupItems] : null,
     children: node.children.map((child, index) => normalizeNode(child, `${id}.${index}`, unknownNodeTypes)),
     engineSpecific: {
       database: "mysql",

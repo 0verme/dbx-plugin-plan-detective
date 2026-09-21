@@ -26,7 +26,7 @@ const SCAN_KINDS = new Set([
 ]);
 const INDEX_SCAN_KINDS = new Set(["index_scan", "index_only_scan"]);
 const BITMAP_SCAN_KINDS = new Set(["bitmap_heap_scan", "bitmap_index_scan"]);
-const JOIN_KINDS = new Set(["nested_loop", "hash_join", "merge_join"]);
+const JOIN_KINDS = new Set(["nested_loop", "hash_join", "merge_join", "join"]);
 const SORT_KINDS = new Set(["sort", "incremental_sort"]);
 const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
 

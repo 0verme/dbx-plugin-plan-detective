@@ -180,3 +180,56 @@ test("is deterministic and JSON-serializable", () => {
   assert.deepStrictEqual(first, second);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(first)), first);
 });
+
+test("normalizes V2 access-path fields into the shared tree without promoting MySQL cost", () => {
+  const plan = normalized({
+    json_schema_version: "2.0",
+    query_plan: {
+      operation: "Inner hash join",
+      access_type: "join",
+      join_type: "inner join",
+      join_algorithm: "hash",
+      estimated_rows: 10,
+      estimated_total_cost: 12.5,
+      inputs: [
+        {
+          operation: "Table scan on sample_table",
+          table_name: "sample_table",
+          alias: "st",
+          schema_name: "sample_db",
+          access_type: "table",
+          used_columns: ["id", "name"],
+          estimated_rows: 100,
+        },
+        {
+          operation: "Filter: (id > 0)",
+          access_type: "filter",
+          condition: "(id > 0)",
+          filter_columns: ["id"],
+          estimated_rows: 20,
+          sort_fields: ["id"],
+        },
+      ],
+    },
+  });
+
+  assert.equal(plan.root.kind, "hash_join");
+  assert.equal(plan.root.joinType, "inner join");
+  assert.equal(plan.root.estimatedRows, 10);
+  assert.equal(plan.root.totalCost, null);
+  assert.equal(plan.root.engineSpecific.mysql.estimatedTotalCost, 12.5);
+  assert.deepEqual(plan.root.children.map((node) => node.id), ["0.0", "0.1"]);
+
+  const table = plan.root.children[0];
+  assert.equal(table.kind, "seq_scan");
+  assert.deepEqual(table.relation, { name: "sample_table", alias: "st", indexName: null });
+  assert.equal(table.estimatedRows, 100);
+  assert.equal(table.engineSpecific.mysql.accessType, "table");
+  assert.equal(table.engineSpecific.mysql.schemaName, "sample_db");
+  assert.deepEqual(table.engineSpecific.mysql.usedColumns, ["id", "name"]);
+
+  const filter = plan.root.children[1];
+  assert.equal(filter.kind, "filter");
+  assert.equal(filter.filter, "(id > 0)");
+  assert.deepEqual(filter.sortKeys, ["id"]);
+});

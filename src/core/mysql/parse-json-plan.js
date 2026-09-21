@@ -1,5 +1,6 @@
 import { PlanInputError, PlanParseError } from "../errors.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
+import { parseMySqlJsonPlanV2 } from "./parse-json-plan-v2.js";
 
 /**
  * MySQL `EXPLAIN FORMAT=JSON` parser.
@@ -19,9 +20,12 @@ import { validateRawPlanInput } from "../raw-plan-input.js";
  *   (`query_block` / `nested_loop` / `table` / `ordering_operation` /
  *   `grouping_operation` / `duplicates_removal` / `union_result` /
  *   `materialized_from_subquery` / `cost_info`), used here as a second
- *   independent description of the shape.
+ *   independent description of the V1 shape.
+ * - MySQL Server 9.5's `sql/join_optimizer/explain_access_path.cc`: V2's
+ *   `query_plan` / `inputs` access-path tree and `json_schema_version` 2.x.
  *
- * The parser maps the MySQL structure onto typed fields, keeps every property
+ * V1 and V2 are deliberately separate parser paths. The parser maps each
+ * version onto the same ParsedMySqlNode contract, keeps every property
  * it does not map verbatim in `extra`, and never invents a value:
  *
  * - `rows_examined_per_scan` / `rows_produced_per_join` are numbers in the MySQL
@@ -193,13 +197,79 @@ export function parseMySqlJsonPlan(input) {
     );
   }
 
-  const root = parseQueryBlock(readTopLevelBlock(plan), "query_block");
+  const schema = detectJsonSchema(plan);
+  const root = schema === "v2"
+    ? parseMySqlJsonPlanV2(plan)
+    : parseQueryBlock(readTopLevelBlock(plan), "query_block");
 
   return { database: "mysql", format: "json", mode: "estimated", root };
 }
 
 /**
- * Verify the MySQL JSON envelope: the payload must expose a `query_block`
+ * Detect the MySQL JSON schema without inferring a version from a partial
+ * shape. V1 has `query_block` and no version marker; V2 must carry both a
+ * `query_plan` object and a numeric `2.x` `json_schema_version` string.
+ *
+ * @param {unknown} plan
+ * @returns {"v1"|"v2"}
+ */
+function detectJsonSchema(plan) {
+  if (!isPlainObject(plan)) return "v1";
+
+  const hasQueryBlock = Object.hasOwn(plan, "query_block");
+  const hasQueryPlan = Object.hasOwn(plan, "query_plan");
+  const hasVersion = Object.hasOwn(plan, "json_schema_version");
+
+  if (hasQueryBlock && hasQueryPlan) {
+    throw new PlanParseError(
+      "AMBIGUOUS_SCHEMA",
+      'MySQL JSON plan cannot expose both "query_block" (V1) and "query_plan" (V2).',
+    );
+  }
+
+  if (hasVersion && typeof plan.json_schema_version !== "string") {
+    throw new PlanParseError(
+      "UNSUPPORTED_SCHEMA_VERSION",
+      `MySQL JSON "json_schema_version" must be a string; got ${describeValue(plan.json_schema_version)}.`,
+    );
+  }
+
+  const version = /** @type {string|undefined} */ (plan.json_schema_version);
+  if (version !== undefined && !/^2\.\d+$/.test(version)) {
+    throw new PlanParseError(
+      "UNSUPPORTED_SCHEMA_VERSION",
+      `MySQL JSON schema version ${JSON.stringify(version)} is not supported; expected a 2.x version.`,
+    );
+  }
+
+  if (hasQueryPlan && !hasVersion) {
+    throw new PlanParseError(
+      "MISSING_SCHEMA_VERSION",
+      'MySQL JSON "query_plan" requires a string "json_schema_version" matching "2.x".',
+    );
+  }
+
+  if (version !== undefined) {
+    if (!hasQueryPlan) {
+      throw new PlanParseError(
+        "MALFORMED_PLAN",
+        'MySQL JSON schema version 2.x requires a "query_plan" object.',
+      );
+    }
+    if (!isPlainObject(plan.query_plan)) {
+      throw new PlanParseError(
+        "MALFORMED_PLAN",
+        `MySQL JSON V2 "query_plan" must be an object; got ${describeValue(plan.query_plan)}.`,
+      );
+    }
+    return "v2";
+  }
+
+  return "v1";
+}
+
+/**
+ * Verify the MySQL JSON V1 envelope: the payload must expose a `query_block`
  * object. Anything else is not a MySQL FORMAT=JSON plan and must not be
  * half-parsed into an empty tree.
  *

@@ -3,8 +3,9 @@
 本目录存放 MySQL 执行计划的**离线样本**，作为 Parser、Normalizer、Metrics、Rule Engine 与 UI 的
 一等开发与测试输入。
 
-> **当前状态：11 个 `estimated/` fixture + 对应 golden，已接入结构化 pipeline。**
-> MySQL 的 Estimated Plan 来自 DBX Host 实际返回的 `EXPLAIN FORMAT=JSON`；详见
+> **当前状态：13 个 `estimated/` fixture + 对应 golden，已接入结构化 pipeline。**
+> MySQL 的 Estimated Plan 来自 DBX Host 实际返回的 `EXPLAIN FORMAT=JSON`；V2 fixture 覆盖
+> MySQL 9.5 / DBX v0.6.18 返回的 `query_plan` 形状；详见
 > [docs/PLAN_INPUT_AND_FIXTURES.md](../../docs/PLAN_INPUT_AND_FIXTURES.md) 第 4.2 节。
 
 目录、metadata sidecar、provenance 标记与 Golden Test 约定与 PostgreSQL 相同，见
@@ -28,7 +29,9 @@
   `rows_produced_per_join` / `cost_info`）；
 - DBX Host 契约 `crates/dbx-sql/src/query_execution_sql.rs` 与
   `crates/dbx-core/src/query/plugin_plan.rs`（MySQL 使用 `EXPLAIN FORMAT=JSON`，Host 固定
-  `format: "json"` 且不设置 `analyze`）。
+  `format: "json"` 且不设置 `analyze`）；
+- MySQL 9.5 JSON Explain 文档中的 V2 `query_plan` / `inputs` / `json_schema_version: "2.0"`
+  结构（[官方文档](https://dev.mysql.com/doc/refman/9.5/en/explain.html)）。
 
 表名、行数与 cost 数值是合成测试数据，不是生产数据。`source.reference` 指向上述 MySQL Server 期望输出。
 
@@ -47,6 +50,8 @@
 | `complex-mixed.synthetic` | 带派生表与标量子查询的分组排序 join | ordering + grouping + nested loop + `materialized_from_subquery` + `attached_subqueries`，深度 9 | — |
 | `union-result.synthetic` | `orders UNION users JOIN orders` | `union_result` + `query_specifications`，分支内含 join | — |
 | `future-shape.synthetic` | `SELECT id FROM orders`（未知结构） | 未知 `access_type` / 未知 block key / 未知 `cost_info` key → `unknownNodeTypes` + `extra` 保留 | — |
+| `table-scan-v2.synthetic` | MySQL 9.5 JSON Explain V2 单表访问 | `json_schema_version: "2.0"`、`query_plan`、`schema_name`、`used_columns`、`estimated_rows` | `large-sequential-scan`（high） |
+| `nested-inputs-v2.synthetic` | MySQL 9.5 JSON Explain V2 join | `inputs` 递归、hash join、filter、table scan 叶子、V2 engineSpecific 字段 | — |
 
 `estimated/` 之外没有 `actual/`：Host API 不提供 MySQL actual plan，MySQL `EXPLAIN ANALYZE`
 返回的是 TREE 文本而不是该 JSON 形状，`RawPlanInput` 契约也明确不接受 MySQL actual JSON
@@ -54,8 +59,12 @@
 
 ## 边界条件
 
-- `estimatedRows` 取 `rows_examined_per_scan`（每次访问该表的估算行数）；join 节点的
-  `estimatedRows` 取内层表的 `rows_produced_per_join`（join prefix 累计输出行数）。
+- V1 `estimatedRows` 取 `rows_examined_per_scan`（每次访问该表的估算行数）；join 节点的
+  `estimatedRows` 取内层表的 `rows_produced_per_join`（join prefix 累计输出行数）。V2
+  直接取节点的 numeric `estimated_rows`，并递归 `inputs` / `inputs_from_select_list`，不伪造
+  `query_block`。
+- V1 `query_block` 与 V2 `query_plan` 使用独立 parser 分支；缺版本、未知版本、混合 schema
+  或不可信结构均 fail closed，未知但合法的字段进入 `extra`。
 - `cost_info` 只进入 `engineSpecific.mysql`，**不**映射到 IR 的 `startupCost` / `totalCost`：
   MySQL cost 与 PostgreSQL cost 不可直接比较，`prefix_cost` 还是累计值。
 - 一个样本一个文件；`.plan.json` 保持 JSON 合法（MySQL `end_markers_in_json=on` 的输出带
