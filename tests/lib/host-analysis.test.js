@@ -210,13 +210,13 @@ test("the session waits for init instead of probing a pre-init bridge", async ()
 
 test("runHostAnalysis keeps the raw host result for a raw-only dialect", async () => {
   const bridge = fakeBridge({
-    getPlanCapabilities: async () => capabilities({ dbType: "oracle" }),
-    explainPlan: async () => planResult({ dbType: "oracle", format: "text", rawPlan: "| 0 | SELECT STATEMENT |" }),
+    getPlanCapabilities: async () => capabilities({ dbType: "doris" }),
+    explainPlan: async () => planResult({ dbType: "doris", format: "text", rawPlan: "| 0 | SELECT STATEMENT |" }),
   });
 
   const session = await runHostAnalysis({ ...REQUEST, bridge });
   assert.equal(session.status, "raw-only");
-  assert.equal(session.rawInput.database, "oracle");
+  assert.equal(session.rawInput.database, "doris");
   assert.equal(session.analysis.reasonCode, "PARSER_NOT_IMPLEMENTED");
   assert.deepEqual(session.analysis.findings, []);
   assert.equal(session.hostResult.rawPlan, "| 0 | SELECT STATEMENT |");

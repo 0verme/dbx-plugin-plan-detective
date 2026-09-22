@@ -21,9 +21,12 @@
  * - SQL Server signals read `EstimateRows` from engine-specific plan nodes; no
  *   SQL Server cost is used, because `EstimatedTotalSubtreeCost` is a
  *   cumulative subtree cost in SQL Server's own cost model.
+ * - Oracle signals read `Rows` through the normalized `estimatedRows` field;
+ *   Oracle `Cost` is copied only as evidence and never becomes a shared cost
+ *   signal.
  *
- * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL
- * and SQL Server cost numbers never meet. Ordering is a stated attention order
+ * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL,
+ * SQL Server and Oracle cost numbers never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -58,7 +61,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -103,10 +106,10 @@ export function computeHotspots(normalized, metrics) {
 
 /**
  * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
- * attribution; MySQL has its own block-scoped model; SQL Server and OceanBase
- * Oracle do not feed their own cost / time estimates into any cost signal this
- * round, so the stage reports `not-applicable` instead of inventing an
- * attribution.
+ * attribution; MySQL has its own block-scoped model; SQL Server, OceanBase
+ * Oracle and Oracle do not feed their own cost / time estimates into any cost
+ * signal this round, so the stage reports `not-applicable` instead of inventing
+ * an attribution.
  *
  * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized
  * @param {import("../metrics/compute-metrics.js").PlanMetrics} metrics
@@ -380,6 +383,7 @@ function largeSequentialScanReason(node, database) {
 
   const isMySql = database === "mysql";
   const isSqlServer = database === "sqlserver";
+  const isOracle = database === "oracle";
   const source = estimatedRowsSource(database, {
     mysql: "table.rows_examined_per_scan",
     sqlserver: "RelOp@EstimateRows",
@@ -391,7 +395,9 @@ function largeSequentialScanReason(node, database) {
       ? `${describeNode(node)} is estimated to examine ${estimatedRows} rows per scan (access_type = ALL).`
       : isSqlServer
         ? `${describeNode(node)} is estimated to read ${estimatedRows} rows through a full table scan.`
-        : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
+        : isOracle
+          ? `${describeNode(node)} is estimated to read ${estimatedRows} rows from a full table access.`
+          : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
     source,
     evidence: {
       estimatedRows,
@@ -586,6 +592,7 @@ function estimatedRowsSource(database, sources) {
   if (database === "mysql") return sources.mysql;
   if (database === "sqlserver") return sources.sqlserver;
   if (database === "oceanbase-oracle") return "EST.ROWS";
+  if (database === "oracle") return "Rows";
   return "Plan Rows";
 }
 
@@ -661,6 +668,25 @@ function nodeSnapshot(node, database, cost) {
     };
     for (const [key, value] of Object.entries(engineValues)) {
       if (value !== null && value !== undefined) evidence[key] = value;
+    }
+    return evidence;
+  }
+
+  if (database === "oracle") {
+    const oracle = node.engineSpecific?.oracle ?? {};
+    const engineValues = {
+      oracleId: oracle.id,
+      rawOperation: oracle.rawOperation,
+      bytes: oracle.bytes,
+      cost: oracle.cost,
+      cpuPercent: oracle.cpuPercent,
+      time: oracle.time,
+      predicateMarker: oracle.predicateMarker,
+      predicates: oracle.predicates,
+      planHashValue: oracle.planHashValue,
+    };
+    for (const [key, value] of Object.entries(engineValues)) {
+      if (value !== null && value !== undefined && value !== false) evidence[key] = value;
     }
     return evidence;
   }

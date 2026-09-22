@@ -695,7 +695,7 @@ test("partial and malformed plans degrade without throwing", () => {
 });
 
 test("raw-only databases do not enter structured hotspot analysis", () => {
-  const analysis = analyzeRawPlan({ database: "oracle", mode: "estimated", format: "text", plan: "| 0 | SELECT STATEMENT |" });
+  const analysis = analyzeRawPlan({ database: "doris", mode: "estimated", format: "text", plan: "| 0 | SELECT STATEMENT |" });
 
   assert.equal(analysis.status, "raw-only");
   assert.equal(analysis.hotspots, null);

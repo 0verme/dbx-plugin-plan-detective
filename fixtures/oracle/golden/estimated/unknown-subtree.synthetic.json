@@ -1,0 +1,296 @@
+{
+  "parsed": {
+    "database": "oracle",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SELECT STATEMENT",
+      "rawOperation": "SELECT STATEMENT",
+      "id": 0,
+      "name": null,
+      "estimatedRows": 10,
+      "bytes": 100,
+      "cost": 5,
+      "cpuPercent": 0,
+      "time": "00:00:01",
+      "predicateMarker": false,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "MYSTERY OPERATOR",
+          "rawOperation": "MYSTERY OPERATOR",
+          "id": 1,
+          "name": "MYSTERY",
+          "estimatedRows": 10,
+          "bytes": 100,
+          "cost": 5,
+          "cpuPercent": 0,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "indentation": 2,
+          "children": [
+            {
+              "nodeType": "TABLE ACCESS FULL",
+              "rawOperation": "TABLE ACCESS FULL",
+              "id": 2,
+              "name": "PD_CHILD",
+              "estimatedRows": 10000,
+              "bytes": 100000,
+              "cost": 5,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": null,
+              "indentation": 3,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "planHashValue": 555666777
+  },
+  "normalized": {
+    "database": "oracle",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "SELECT STATEMENT",
+      "relation": null,
+      "estimatedRows": 10,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "unknown",
+          "nodeType": "MYSTERY OPERATOR",
+          "relation": null,
+          "estimatedRows": 10,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "TABLE ACCESS FULL",
+              "relation": {
+                "name": "PD_CHILD",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 10000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "oracle",
+                "oracle": {
+                  "id": 2,
+                  "rawOperation": "TABLE ACCESS FULL",
+                  "name": "PD_CHILD",
+                  "estimatedRows": 10000,
+                  "bytes": 100000,
+                  "cost": 5,
+                  "cpuPercent": 0,
+                  "time": "00:00:01",
+                  "predicateMarker": false,
+                  "predicates": null,
+                  "planHashValue": null,
+                  "extra": {}
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "oracle",
+            "oracle": {
+              "id": 1,
+              "rawOperation": "MYSTERY OPERATOR",
+              "name": "MYSTERY",
+              "estimatedRows": 10,
+              "bytes": 100,
+              "cost": 5,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": null,
+              "planHashValue": null,
+              "extra": {}
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oracle",
+        "oracle": {
+          "id": 0,
+          "rawOperation": "SELECT STATEMENT",
+          "name": null,
+          "estimatedRows": 10,
+          "bytes": 100,
+          "cost": 5,
+          "cpuPercent": 0,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "planHashValue": 555666777,
+          "extra": {}
+        }
+      }
+    },
+    "unknownNodeTypes": [
+      "MYSTERY OPERATOR"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 10,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "TABLE ACCESS FULL",
+      "relation": "PD_CHILD",
+      "estimatedRows": 10000
+    },
+    "costAttribution": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0.0.0",
+      "ruleId": "large-sequential-scan",
+      "severity": "warning",
+      "title": "Large sequential scan",
+      "summary": "TABLE ACCESS FULL on PD_CHILD with no filter reported is estimated to read 10000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.0.0",
+      "facts": {
+        "database": "oracle",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "TABLE ACCESS FULL",
+        "relation": "PD_CHILD",
+        "estimatedRows": 10000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": false
+      },
+      "evidence": {
+        "nodeId": "0.0.0",
+        "nodeType": "TABLE ACCESS FULL",
+        "relation": "PD_CHILD",
+        "estimatedRows": 10000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.0",
+        "nodeId": "0.0.0",
+        "nodeType": "TABLE ACCESS FULL",
+        "kind": "seq_scan",
+        "relation": "PD_CHILD",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "TABLE ACCESS FULL on PD_CHILD is estimated to read 10000 rows from a full table access.",
+            "source": "Rows",
+            "evidence": {
+              "estimatedRows": 10000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0",
+          "nodeType": "TABLE ACCESS FULL",
+          "kind": "seq_scan",
+          "relation": "PD_CHILD",
+          "estimatedRows": 10000,
+          "oracleId": 2,
+          "rawOperation": "TABLE ACCESS FULL",
+          "bytes": 100000,
+          "cost": 5,
+          "cpuPercent": 0,
+          "time": "00:00:01"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}
