@@ -1,0 +1,6 @@
+1 #NSET2: [10, 1, 64]
+2   #CSCN2: [12, 250000, 64]; INDEX100(T_ORDERS); btr_scan(1); need_slct(1); prejudge_iescn(0)
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+2 - filter(T_ORDERS.STATUS = 'OPEN')

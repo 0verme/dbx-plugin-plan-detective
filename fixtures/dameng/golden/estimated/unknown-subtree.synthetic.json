@@ -1,0 +1,200 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 1,
+      "estimatedRows": 1,
+      "bytesPerRow": 64,
+      "detail": null,
+      "predicates": null,
+      "indentation": 2,
+      "children": [
+        {
+          "nodeType": "PX FUTURE SHUFFLE",
+          "operator": "PX FUTURE SHUFFLE",
+          "id": 2,
+          "cost": 1,
+          "estimatedRows": 42,
+          "bytesPerRow": 64,
+          "detail": "worker_count(4); future_flag(TRUE)",
+          "predicates": null,
+          "indentation": 4,
+          "children": [
+            {
+              "nodeType": "CSCN2",
+              "operator": "CSCN2",
+              "id": 3,
+              "cost": 1,
+              "estimatedRows": 42,
+              "bytesPerRow": 64,
+              "detail": "INDEX400(T_EVENTS); btr_scan(1)",
+              "predicates": null,
+              "indentation": 6,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 64,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "unknown",
+          "nodeType": "PX FUTURE SHUFFLE",
+          "relation": null,
+          "estimatedRows": 42,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 64,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "CSCN2",
+              "relation": {
+                "name": "T_EVENTS",
+                "alias": null,
+                "indexName": "INDEX400"
+              },
+              "estimatedRows": 42,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 64,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 3,
+                  "operator": "CSCN2",
+                  "cost": 1,
+                  "estimatedRows": 42,
+                  "bytesPerRow": 64,
+                  "detail": "INDEX400(T_EVENTS); btr_scan(1)",
+                  "predicates": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "PX FUTURE SHUFFLE",
+              "cost": 1,
+              "estimatedRows": 42,
+              "bytesPerRow": 64,
+              "detail": "worker_count(4); future_flag(TRUE)",
+              "predicates": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 1,
+          "estimatedRows": 1,
+          "bytesPerRow": 64,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": [
+      "PX FUTURE SHUFFLE"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "unknown",
+      "nodeType": "PX FUTURE SHUFFLE",
+      "relation": null,
+      "estimatedRows": 42
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

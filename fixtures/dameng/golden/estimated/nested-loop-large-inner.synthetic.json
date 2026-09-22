@@ -1,0 +1,324 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 1,
+      "estimatedRows": 100,
+      "bytesPerRow": 56,
+      "detail": null,
+      "predicates": null,
+      "indentation": 2,
+      "children": [
+        {
+          "nodeType": "NEST LOOP INDEX JOIN2",
+          "operator": "NEST LOOP INDEX JOIN2",
+          "id": 2,
+          "cost": 10,
+          "estimatedRows": 100,
+          "bytesPerRow": 56,
+          "detail": null,
+          "predicates": [
+            "access(C.ID = O.CUSTOMER_ID)"
+          ],
+          "indentation": 4,
+          "children": [
+            {
+              "nodeType": "CSCN2",
+              "operator": "CSCN2",
+              "id": 3,
+              "cost": 1,
+              "estimatedRows": 200,
+              "bytesPerRow": 52,
+              "detail": "INDEX600(T_CUSTOMERS as C); btr_scan(1); need_slct(0)",
+              "predicates": null,
+              "indentation": 6,
+              "children": [],
+              "extra": {}
+            },
+            {
+              "nodeType": "SSEK2",
+              "operator": "SSEK2",
+              "id": 4,
+              "cost": 1,
+              "estimatedRows": 50000,
+              "bytesPerRow": 4,
+              "detail": "scan_type(ASC), IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_range[C.ID,C.ID]",
+              "predicates": null,
+              "indentation": 6,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": 100,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 56,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "nested_loop",
+          "nodeType": "NEST LOOP INDEX JOIN2",
+          "relation": null,
+          "estimatedRows": 100,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 56,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "CSCN2",
+              "relation": {
+                "name": "T_CUSTOMERS",
+                "alias": "C",
+                "indexName": "INDEX600"
+              },
+              "estimatedRows": 200,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 52,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 3,
+                  "operator": "CSCN2",
+                  "cost": 1,
+                  "estimatedRows": 200,
+                  "bytesPerRow": 52,
+                  "detail": "INDEX600(T_CUSTOMERS as C); btr_scan(1); need_slct(0)",
+                  "predicates": null
+                },
+                "extra": {}
+              }
+            },
+            {
+              "id": "0.0.1",
+              "kind": "index_scan",
+              "nodeType": "SSEK2",
+              "relation": {
+                "name": "T_ORDERS",
+                "alias": "O",
+                "indexName": "IDX_ORDERS_CUSTOMER"
+              },
+              "estimatedRows": 50000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 4,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 4,
+                  "operator": "SSEK2",
+                  "cost": 1,
+                  "estimatedRows": 50000,
+                  "bytesPerRow": 4,
+                  "detail": "scan_type(ASC), IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_range[C.ID,C.ID]",
+                  "predicates": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "NEST LOOP INDEX JOIN2",
+              "cost": 10,
+              "estimatedRows": 100,
+              "bytesPerRow": 56,
+              "detail": null,
+              "predicates": [
+                "access(C.ID = O.CUSTOMER_ID)"
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 1,
+          "estimatedRows": 100,
+          "bytesPerRow": 56,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 100,
+    "scanCount": 2,
+    "sequentialScanCount": 1,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.1",
+      "kind": "index_scan",
+      "nodeType": "SSEK2",
+      "relation": "T_ORDERS",
+      "estimatedRows": 50000
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "nested-loop-large-inner:0.0",
+      "ruleId": "nested-loop-large-inner",
+      "severity": "warning",
+      "title": "Nested loop with a large inner estimate",
+      "summary": "Nested Loop is estimated to combine 200 outer rows with an inner side estimated at 50000 rows, about 10000000 estimated row comparisons. The inner side is expected to be re-scanned for every outer row. These are planner estimates; no runtime loop count is available for this plan.",
+      "nodeRef": "0.0",
+      "evidence": {
+        "nodeId": "0.0",
+        "nodeType": "NEST LOOP INDEX JOIN2",
+        "relation": null,
+        "estimatedRows": 100,
+        "estimatedTotalCost": null,
+        "outerNodeRef": "0.0.0",
+        "innerNodeRef": "0.0.1",
+        "outerEstimatedRows": 200,
+        "innerEstimatedRows": 50000,
+        "estimatedRowComparisons": 10000000,
+        "actualLoops": null,
+        "estimateOnly": true,
+        "thresholds": {
+          "minOuterEstimatedRows": 10,
+          "warningInnerEstimatedRows": 10000,
+          "highInnerEstimatedRows": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "NEST LOOP INDEX JOIN2",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "nested-loop-amplification",
+            "level": "warning",
+            "statement": "Nested Loop is estimated to drive 200 outer rows into 50000 inner rows each, about 10000000 estimated row comparisons.",
+            "source": "[cost, rows, bytes-per-row]",
+            "evidence": {
+              "outerNodeRef": "0.0.0",
+              "innerNodeRef": "0.0.1",
+              "outerEstimatedRows": 200,
+              "innerEstimatedRows": 50000,
+              "estimatedRowComparisons": 10000000,
+              "thresholds": {
+                "minOuterEstimatedRows": 10,
+                "warningInnerEstimatedRows": 10000,
+                "highInnerEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "NEST LOOP INDEX JOIN2",
+          "kind": "nested_loop",
+          "estimatedRows": 100,
+          "damengId": 2,
+          "operator": "NEST LOOP INDEX JOIN2",
+          "cost": 10,
+          "bytesPerRow": 56,
+          "predicates": [
+            "access(C.ID = O.CUSTOMER_ID)"
+          ]
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

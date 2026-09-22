@@ -1,0 +1,21 @@
+{
+  "database": "dameng",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Dameng EXPLAIN text for hash join and operation-id predicates; not captured from or executed on Dameng.",
+    "reference": "https://eco.dameng.com/document/dm/zh-cn/pm/query-optimization.html"
+  },
+  "features": ["HASH2 INNER JOIN2", "access predicate", "filter predicate", "index scan"],
+  "expect": {
+    "rootNodeType": "NSET2",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": []
+  }
+}

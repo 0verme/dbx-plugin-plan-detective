@@ -5,8 +5,8 @@
  *
  * The registry is the only place that decides whether a database family has a
  * structured parser. A family without one is not an error: the host can return
- * a perfectly valid estimated plan for Dameng, Doris or QuestDB, and the UI still
- * shows the Raw Plan and the host warnings. What it must not do is
+ * a perfectly valid estimated plan for Doris or QuestDB, and the UI still shows
+ * the Raw Plan and the host warnings. What it must not do is
  * pretend to parse a payload no one has validated against a real sample.
  *
  * Adding a database means adding one parser module here; the UI, rules and
@@ -15,6 +15,7 @@
 
 import { PlanInputError, PlanParseError } from "../errors.js";
 import { computeHotspots } from "../hotspots/compute-hotspots.js";
+import { damengParser } from "./dameng.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
@@ -35,6 +36,7 @@ const PARSERS = new Map([
   [sqlserverParser.database, sqlserverParser],
   [oceanBaseOracleParser.database, oceanBaseOracleParser],
   [oracleParser.database, oracleParser],
+  [damengParser.database, damengParser],
 ]);
 
 /**
@@ -46,7 +48,6 @@ const PARSERS = new Map([
  */
 const PENDING_PARSERS = new Map([
   ["doris", "PARSER_NOT_IMPLEMENTED"],
-  ["dameng", "PARSER_NOT_IMPLEMENTED"],
   ["questdb", "PARSER_NOT_IMPLEMENTED"],
 ]);
 

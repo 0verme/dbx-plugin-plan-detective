@@ -1,0 +1,21 @@
+{
+  "database": "dameng",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Dameng EXPLAIN text with a future operator and preserved child subtree; not captured from or executed on Dameng.",
+    "reference": "https://eco.dameng.com/document/dm/zh-cn/pm/dm8-admin-manual-appendix4.html"
+  },
+  "features": ["unknown operator", "unknown detail", "child subtree preservation"],
+  "expect": {
+    "rootNodeType": "NSET2",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

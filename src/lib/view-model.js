@@ -576,9 +576,10 @@ export function buildNodeInspector(node) {
 }
 
 /**
- * Engine-specific fields. PostgreSQL, MySQL, SQL Server, OceanBase Oracle and
- * Oracle keep their own vocabularies: the panel renders whatever the node's
- * normalizer actually reported and never renames one engine's fields into another's.
+ * Engine-specific fields. PostgreSQL, MySQL, SQL Server, OceanBase Oracle,
+ * Oracle and Dameng keep their own vocabularies: the panel renders whatever
+ * the node's normalizer actually reported and never renames one engine's fields
+ * into another's.
  *
  * @param {Record<string, any>} engine
  * @returns {Array<{ label: string, value: string }|null>}
@@ -588,6 +589,7 @@ function engineFields(engine) {
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
   if (isPlainObject(engine.oceanBase)) return oceanBaseEngineFields(engine.oceanBase);
   if (isPlainObject(engine.oracle)) return oracleEngineFields(engine.oracle);
+  if (isPlainObject(engine.dameng)) return damengEngineFields(engine.dameng);
   return [
     flagField("Parallel Aware", engine.parallelAware),
     flagField("Async Capable", engine.asyncCapable),
@@ -642,6 +644,26 @@ function oracleEngineFields(oracle) {
     flagField("Predicate Marker", oracle.predicateMarker),
     field("Predicates", formatRawValue(oracle.predicates)),
     field("Plan Hash Value", formatNumber(oracle.planHashValue)),
+  ];
+}
+
+/**
+ * Dameng native estimated tuple fields. Dameng `cost` is shown here rather
+ * than as PostgreSQL `Startup Cost` / `Total Cost`; the tuple's second and
+ * third values are the native row and bytes-per-row estimates.
+ *
+ * @param {Record<string, unknown>} dameng
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function damengEngineFields(dameng) {
+  return [
+    field("Operation ID (Id)", formatNumber(dameng.id)),
+    field("Operator", dameng.operator),
+    field("Cost (cost)", formatNumber(dameng.cost)),
+    field("Rows", formatNumber(dameng.estimatedRows)),
+    field("Bytes / Row", formatNumber(dameng.bytesPerRow)),
+    field("Detail", dameng.detail),
+    field("Predicates", formatRawValue(dameng.predicates)),
   ];
 }
 

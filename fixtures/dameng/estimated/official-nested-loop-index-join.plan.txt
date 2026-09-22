@@ -1,0 +1,5 @@
+1   #NSET2: [1, 12, 56]
+2     #PRJT2: [1, 12, 56]; exp_num(2), is_atom(FALSE); INFO_BITS(0); BATCH_EXP_NUM(1); spl_info(NULL)
+3       #NEST LOOP INDEX JOIN2: [1, 12, 56]
+4         #CSCN2: [1, 4, 52]; INDEX33555490(T2 as B); btr_scan(1); need_slct(0); prejudge_iescn(0)
+5         #SSEK2: [1, 3, 4]; scan_type(ASC), IDX_T1_C1(T1 as A), scan_range[B.D1,B.D1], is_global(0)

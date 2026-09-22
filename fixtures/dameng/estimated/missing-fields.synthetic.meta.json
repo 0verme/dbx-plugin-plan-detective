@@ -1,0 +1,22 @@
+{
+  "database": "dameng",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Dameng EXPLAIN text with missing and malformed optional tuple values; not captured from or executed on Dameng.",
+    "reference": "https://eco.dameng.com/document/dm/zh-cn/pm/query-optimization.html"
+  },
+  "features": ["missing tuple values", "malformed numeric value", "fail-soft fields"],
+  "expect": {
+    "rootNodeType": "NSET2",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": ["large-sequential-scan"],
+    "hotspotNodeRefs": ["0.0.0"]
+  }
+}

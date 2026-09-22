@@ -1,0 +1,229 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 10,
+      "estimatedRows": 1,
+      "bytesPerRow": 64,
+      "detail": null,
+      "predicates": null,
+      "indentation": 2,
+      "children": [
+        {
+          "nodeType": "CSCN2",
+          "operator": "CSCN2",
+          "id": 2,
+          "cost": 12,
+          "estimatedRows": 250000,
+          "bytesPerRow": 64,
+          "detail": "INDEX100(T_ORDERS); btr_scan(1); need_slct(1); prejudge_iescn(0)",
+          "predicates": [
+            "filter(T_ORDERS.STATUS = 'OPEN')"
+          ],
+          "indentation": 4,
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 64,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "CSCN2",
+          "relation": {
+            "name": "T_ORDERS",
+            "alias": null,
+            "indexName": "INDEX100"
+          },
+          "estimatedRows": 250000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 64,
+          "filter": "T_ORDERS.STATUS = 'OPEN'",
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "CSCN2",
+              "cost": 12,
+              "estimatedRows": 250000,
+              "bytesPerRow": 64,
+              "detail": "INDEX100(T_ORDERS); btr_scan(1); need_slct(1); prejudge_iescn(0)",
+              "predicates": [
+                "filter(T_ORDERS.STATUS = 'OPEN')"
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 10,
+          "estimatedRows": 1,
+          "bytesPerRow": 64,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "seq_scan",
+      "nodeType": "CSCN2",
+      "relation": "T_ORDERS",
+      "estimatedRows": 250000
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0.0",
+      "ruleId": "large-sequential-scan",
+      "severity": "high",
+      "title": "Large sequential scan",
+      "summary": "CSCN2 on T_ORDERS with a filter is estimated to read 250000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.0",
+      "facts": {
+        "database": "dameng",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "CSCN2",
+        "relation": "T_ORDERS",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": true
+      },
+      "evidence": {
+        "nodeId": "0.0",
+        "nodeType": "CSCN2",
+        "relation": "T_ORDERS",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": "T_ORDERS.STATUS = 'OPEN'",
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0",
+        "nodeId": "0.0",
+        "nodeType": "CSCN2",
+        "kind": "seq_scan",
+        "relation": "T_ORDERS",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "CSCN2 on T_ORDERS is estimated to process 250000 rows from the Dameng plan tuple.",
+            "source": "[cost, rows, bytes-per-row]",
+            "evidence": {
+              "estimatedRows": 250000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0",
+          "nodeType": "CSCN2",
+          "kind": "seq_scan",
+          "relation": "T_ORDERS",
+          "estimatedRows": 250000,
+          "damengId": 2,
+          "operator": "CSCN2",
+          "cost": 12,
+          "bytesPerRow": 64,
+          "detail": "INDEX100(T_ORDERS); btr_scan(1); need_slct(1); prejudge_iescn(0)",
+          "predicates": [
+            "filter(T_ORDERS.STATUS = 'OPEN')"
+          ]
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

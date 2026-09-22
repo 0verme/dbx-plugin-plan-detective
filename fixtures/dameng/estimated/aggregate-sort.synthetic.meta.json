@@ -1,0 +1,22 @@
+{
+  "database": "dameng",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Dameng EXPLAIN text for aggregate, sort and scan operators; not captured from or executed on Dameng.",
+    "reference": "https://eco.dameng.com/document/dm/zh-cn/pm/dm8-admin-manual-appendix4.html"
+  },
+  "features": ["SAGR2", "SORT3", "CSCN2", "aggregate count", "sort count"],
+  "expect": {
+    "rootNodeType": "NSET2",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": ["large-sequential-scan"],
+    "hotspotNodeRefs": ["0.0.0.0"]
+  }
+}

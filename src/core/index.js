@@ -27,6 +27,8 @@ export { parseOceanBaseJsonPlan } from "./oceanbase/parse-json-plan.js";
 export { normalizeOceanBasePlan } from "./normalize/normalize-oceanbase.js";
 export { parseOracleTextPlan } from "./oracle/parse-text-plan.js";
 export { normalizeOraclePlan } from "./normalize/normalize-oracle.js";
+export { parseDamengTextPlan } from "./dameng/parse-text-plan.js";
+export { normalizeDamengPlan } from "./normalize/normalize-dameng.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";

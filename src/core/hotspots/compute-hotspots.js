@@ -23,10 +23,13 @@
  *   cumulative subtree cost in SQL Server's own cost model.
  * - Oracle signals read `Rows` through the normalized `estimatedRows` field;
  *   Oracle `Cost` is copied only as evidence and never becomes a shared cost
- *   signal.
+ *   signal;
+ * - Dameng signals read the `rows` member of the native
+ *   `[cost, rows, bytes-per-row]` tuple; Dameng `cost` is copied only as
+ *   evidence and never becomes a shared cost signal.
  *
  * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL,
- * SQL Server and Oracle cost numbers never meet. Ordering is a stated attention order
+ * SQL Server, OceanBase Oracle, Oracle and Dameng cost numbers never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -61,7 +64,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -107,9 +110,9 @@ export function computeHotspots(normalized, metrics) {
 /**
  * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
  * attribution; MySQL has its own block-scoped model; SQL Server, OceanBase
- * Oracle and Oracle do not feed their own cost / time estimates into any cost
- * signal this round, so the stage reports `not-applicable` instead of inventing
- * an attribution.
+ * Oracle, Oracle and Dameng do not feed their own cost / time estimates into
+ * any cost signal this round, so the stage reports `not-applicable` instead of
+ * inventing an attribution.
  *
  * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized
  * @param {import("../metrics/compute-metrics.js").PlanMetrics} metrics
@@ -384,6 +387,7 @@ function largeSequentialScanReason(node, database) {
   const isMySql = database === "mysql";
   const isSqlServer = database === "sqlserver";
   const isOracle = database === "oracle";
+  const isDameng = database === "dameng";
   const source = estimatedRowsSource(database, {
     mysql: "table.rows_examined_per_scan",
     sqlserver: "RelOp@EstimateRows",
@@ -397,7 +401,9 @@ function largeSequentialScanReason(node, database) {
         ? `${describeNode(node)} is estimated to read ${estimatedRows} rows through a full table scan.`
         : isOracle
           ? `${describeNode(node)} is estimated to read ${estimatedRows} rows from a full table access.`
-          : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
+          : isDameng
+            ? `${describeNode(node)} is estimated to process ${estimatedRows} rows from the Dameng plan tuple.`
+            : `${describeNode(node)} is estimated to return ${estimatedRows} rows.`,
     source,
     evidence: {
       estimatedRows,
@@ -593,6 +599,7 @@ function estimatedRowsSource(database, sources) {
   if (database === "sqlserver") return sources.sqlserver;
   if (database === "oceanbase-oracle") return "EST.ROWS";
   if (database === "oracle") return "Rows";
+  if (database === "dameng") return "[cost, rows, bytes-per-row]";
   return "Plan Rows";
 }
 
@@ -687,6 +694,22 @@ function nodeSnapshot(node, database, cost) {
     };
     for (const [key, value] of Object.entries(engineValues)) {
       if (value !== null && value !== undefined && value !== false) evidence[key] = value;
+    }
+    return evidence;
+  }
+
+  if (database === "dameng") {
+    const dameng = node.engineSpecific?.dameng ?? {};
+    const engineValues = {
+      damengId: dameng.id,
+      operator: dameng.operator,
+      cost: dameng.cost,
+      bytesPerRow: dameng.bytesPerRow,
+      detail: dameng.detail,
+      predicates: dameng.predicates,
+    };
+    for (const [key, value] of Object.entries(engineValues)) {
+      if (value !== null && value !== undefined) evidence[key] = value;
     }
     return evidence;
   }

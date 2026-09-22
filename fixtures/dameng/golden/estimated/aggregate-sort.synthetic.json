@@ -1,0 +1,320 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 3,
+      "estimatedRows": 1,
+      "bytesPerRow": 64,
+      "detail": null,
+      "predicates": null,
+      "indentation": 2,
+      "children": [
+        {
+          "nodeType": "SAGR2",
+          "operator": "SAGR2",
+          "id": 2,
+          "cost": 3,
+          "estimatedRows": 100,
+          "bytesPerRow": 64,
+          "detail": "grp_num(1); sfun_num(1)",
+          "predicates": null,
+          "indentation": 4,
+          "children": [
+            {
+              "nodeType": "SORT3",
+              "operator": "SORT3",
+              "id": 3,
+              "cost": 2,
+              "estimatedRows": 10000,
+              "bytesPerRow": 64,
+              "detail": "sort_key(ORDER_DATE)",
+              "predicates": null,
+              "indentation": 6,
+              "children": [
+                {
+                  "nodeType": "CSCN2",
+                  "operator": "CSCN2",
+                  "id": 4,
+                  "cost": 1,
+                  "estimatedRows": 12000,
+                  "bytesPerRow": 64,
+                  "detail": "INDEX300(T_SALES); btr_scan(1); need_slct(0)",
+                  "predicates": null,
+                  "indentation": 8,
+                  "children": [],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 64,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "aggregate",
+          "nodeType": "SAGR2",
+          "relation": null,
+          "estimatedRows": 100,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 64,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "sort",
+              "nodeType": "SORT3",
+              "relation": null,
+              "estimatedRows": 10000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 64,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "seq_scan",
+                  "nodeType": "CSCN2",
+                  "relation": {
+                    "name": "T_SALES",
+                    "alias": null,
+                    "indexName": "INDEX300"
+                  },
+                  "estimatedRows": 12000,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": 64,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "dameng",
+                    "dameng": {
+                      "id": 4,
+                      "operator": "CSCN2",
+                      "cost": 1,
+                      "estimatedRows": 12000,
+                      "bytesPerRow": 64,
+                      "detail": "INDEX300(T_SALES); btr_scan(1); need_slct(0)",
+                      "predicates": null
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 3,
+                  "operator": "SORT3",
+                  "cost": 2,
+                  "estimatedRows": 10000,
+                  "bytesPerRow": 64,
+                  "detail": "sort_key(ORDER_DATE)",
+                  "predicates": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "SAGR2",
+              "cost": 3,
+              "estimatedRows": 100,
+              "bytesPerRow": 64,
+              "detail": "grp_num(1); sfun_num(1)",
+              "predicates": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 3,
+          "estimatedRows": 1,
+          "bytesPerRow": 64,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 4,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "CSCN2",
+      "relation": "T_SALES",
+      "estimatedRows": 12000
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0.0.0.0",
+      "ruleId": "large-sequential-scan",
+      "severity": "warning",
+      "title": "Large sequential scan",
+      "summary": "CSCN2 on T_SALES with no filter reported is estimated to read 12000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.0.0.0",
+      "facts": {
+        "database": "dameng",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "CSCN2",
+        "relation": "T_SALES",
+        "estimatedRows": 12000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": false
+      },
+      "evidence": {
+        "nodeId": "0.0.0.0",
+        "nodeType": "CSCN2",
+        "relation": "T_SALES",
+        "estimatedRows": 12000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.0.0",
+        "nodeId": "0.0.0.0",
+        "nodeType": "CSCN2",
+        "kind": "seq_scan",
+        "relation": "T_SALES",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "CSCN2 on T_SALES is estimated to process 12000 rows from the Dameng plan tuple.",
+            "source": "[cost, rows, bytes-per-row]",
+            "evidence": {
+              "estimatedRows": 12000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0.0",
+          "nodeType": "CSCN2",
+          "kind": "seq_scan",
+          "relation": "T_SALES",
+          "estimatedRows": 12000,
+          "damengId": 4,
+          "operator": "CSCN2",
+          "cost": 1,
+          "bytesPerRow": 64,
+          "detail": "INDEX300(T_SALES); btr_scan(1); need_slct(0)"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}
