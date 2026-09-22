@@ -21,6 +21,8 @@ export { parsePostgresJsonPlan } from "./postgres/parse-json-plan.js";
 export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";
 export { parseMySqlJsonPlan } from "./mysql/parse-json-plan.js";
 export { normalizeMySqlPlan } from "./normalize/normalize-mysql.js";
+export { parseSqlServerShowPlanXml } from "./sqlserver/parse-showplan-xml.js";
+export { normalizeSqlServerPlan } from "./normalize/normalize-sqlserver.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";

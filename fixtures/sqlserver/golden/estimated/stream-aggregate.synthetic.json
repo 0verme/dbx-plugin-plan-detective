@@ -1,0 +1,265 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Stream Aggregate",
+      "physicalOp": "Stream Aggregate",
+      "logicalOp": "Aggregate",
+      "nodeId": 0,
+      "estimatedRows": 12,
+      "estimatedTotalSubtreeCost": 0.62,
+      "estimateCpu": 0.0003,
+      "estimateIo": 0,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 12,
+      "parallel": false,
+      "database": null,
+      "schema": null,
+      "table": null,
+      "index": null,
+      "alias": null,
+      "indexKind": null,
+      "storage": null,
+      "predicate": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": [
+        "[o].CustomerID"
+      ],
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": [
+        "COUNT(*)"
+      ],
+      "operator": null,
+      "children": [
+        {
+          "nodeType": "Clustered Index Scan",
+          "physicalOp": "Clustered Index Scan",
+          "logicalOp": "Clustered Index Scan",
+          "nodeId": 1,
+          "estimatedRows": 5000,
+          "estimatedTotalSubtreeCost": 0.62,
+          "estimateCpu": 0.4,
+          "estimateIo": 1.5,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 12,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[IX_Orders_CustomerID]",
+          "alias": "[o]",
+          "indexKind": "NonClustered",
+          "storage": "RowStore",
+          "predicate": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "operator": {
+            "ordered": true
+          },
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 0.62,
+      "estimatedRows": 12,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 0,
+      "cachedPlanSize": 40
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "aggregate",
+      "nodeType": "Stream Aggregate",
+      "relation": null,
+      "estimatedRows": 12,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 12,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": [
+        "[o].CustomerID"
+      ],
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "Clustered Index Scan",
+          "relation": {
+            "name": "Orders",
+            "alias": "o",
+            "indexName": "IX_Orders_CustomerID"
+          },
+          "estimatedRows": 5000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 12,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlserver",
+            "sqlServer": {
+              "nodeId": 1,
+              "physicalOp": "Clustered Index Scan",
+              "logicalOp": "Clustered Index Scan",
+              "estimatedTotalSubtreeCost": 0.62,
+              "estimateCpu": 0.4,
+              "estimateIo": 1.5,
+              "estimateRebinds": 0,
+              "estimateRewinds": 0,
+              "estimateExecutions": null,
+              "avgRowSize": 12,
+              "parallel": false,
+              "database": "[Sales]",
+              "schema": "[dbo]",
+              "table": "[Orders]",
+              "index": "[IX_Orders_CustomerID]",
+              "alias": "[o]",
+              "indexKind": "NonClustered",
+              "storage": "RowStore",
+              "operator": {
+                "ordered": true
+              },
+              "hashKeysBuild": null,
+              "hashKeysProbe": null,
+              "probeResidual": null,
+              "buildResidual": null,
+              "residual": null,
+              "definedValues": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Stream Aggregate",
+          "logicalOp": "Aggregate",
+          "estimatedTotalSubtreeCost": 0.62,
+          "estimateCpu": 0.0003,
+          "estimateIo": 0,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 12,
+          "parallel": false,
+          "database": null,
+          "schema": null,
+          "table": null,
+          "index": null,
+          "alias": null,
+          "indexKind": null,
+          "storage": null,
+          "operator": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": [
+            "COUNT(*)"
+          ],
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 0.62,
+            "estimatedRows": 12,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 0,
+            "cachedPlanSize": 40
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 12,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "index_scan",
+      "nodeType": "Clustered Index Scan",
+      "relation": "Orders",
+      "estimatedRows": 5000
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

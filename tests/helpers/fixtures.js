@@ -8,32 +8,58 @@ export const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta
 
 export const POSTGRES_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "postgres");
 export const MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "mysql");
+export const SQLSERVER_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlserver");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
- * existing call sites keep working; MySQL call sites pass `"mysql"` explicitly.
+ * existing call sites keep working; MySQL / SQL Server call sites pass the
+ * family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
   postgresql: POSTGRES_FIXTURES_DIR,
   mysql: MYSQL_FIXTURES_DIR,
+  sqlserver: SQLSERVER_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver"]);
 export const MODES = ["estimated", "actual"];
 /**
- * Modes each database has fixtures for. MySQL supports estimated plans only:
- * the Host API never serves `EXPLAIN ANALYZE` for MySQL, and MySQL's actual
- * plan is a TREE listing rather than this JSON envelope, so there is no
- * `fixtures/mysql/actual` directory by design.
+ * Modes each database has fixtures for. MySQL and SQL Server support estimated
+ * plans only: the Host API never serves an actual plan for them, and neither
+ * has an actual-plan shape this plugin models, so there is no `actual/`
+ * directory for either by design.
  */
 export const MODES_BY_DATABASE = Object.freeze({
   postgresql: ["estimated", "actual"],
   mysql: ["estimated"],
+  sqlserver: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
-const PLAN_SUFFIX = ".plan.json";
+/** Plan file suffix by database family (SQL Server plans are ShowPlanXML strings). */
+const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
+  postgresql: ".plan.json",
+  mysql: ".plan.json",
+  sqlserver: ".plan.xml",
+});
+
+/** RawPlanInput format each fixture family commits. */
+export const FORMAT_BY_DATABASE = Object.freeze({
+  postgresql: "json",
+  mysql: "json",
+  sqlserver: "xml",
+});
+
 const META_SUFFIX = ".meta.json";
+
+/** @param {string} database */
+export function planSuffixFor(database) {
+  const suffix = PLAN_SUFFIX_BY_DATABASE[database];
+  if (suffix === undefined) {
+    throw new Error(`Unknown fixture database ${JSON.stringify(database)}; expected one of ${FIXTURE_DATABASES.join(", ")}.`);
+  }
+  return suffix;
+}
 
 /** @param {string} database */
 function fixturesDir(database) {
@@ -53,10 +79,11 @@ function fixturesDir(database) {
  * @returns {Promise<string[]>}
  */
 export async function listFixtureNames(mode, database = "postgresql") {
+  const planSuffix = planSuffixFor(database);
   const entries = await readdir(path.join(fixturesDir(database), mode));
   return entries
-    .filter((entry) => entry.endsWith(PLAN_SUFFIX))
-    .map((entry) => entry.slice(0, -PLAN_SUFFIX.length))
+    .filter((entry) => entry.endsWith(planSuffix))
+    .map((entry) => entry.slice(0, -planSuffix.length))
     .sort();
 }
 
@@ -81,16 +108,23 @@ export async function listFixtures(database = "postgresql") {
  */
 export async function loadFixture({ database = "postgresql", mode, name }) {
   const dir = path.join(fixturesDir(database), mode);
-  const planPath = path.join(dir, `${name}${PLAN_SUFFIX}`);
+  const planSuffix = planSuffixFor(database);
+  const planPath = path.join(dir, `${name}${planSuffix}`);
   const metaPath = path.join(dir, `${name}${META_SUFFIX}`);
 
   const [planText, metaText] = await Promise.all([readFile(planPath, "utf8"), readFile(metaPath, "utf8")]);
 
   let plan;
-  try {
-    plan = JSON.parse(planText);
-  } catch (error) {
-    throw new Error(`Fixture ${relativeToRepo(planPath)} is not valid JSON: ${error.message}`);
+  if (planSuffix === ".plan.xml") {
+    // XML plans are committed as the exact string the host returns; parsing
+    // them here would hide the boundary the parser is supposed to own.
+    plan = planText;
+  } else {
+    try {
+      plan = JSON.parse(planText);
+    } catch (error) {
+      throw new Error(`Fixture ${relativeToRepo(planPath)} is not valid JSON: ${error.message}`);
+    }
   }
 
   let meta;
@@ -135,8 +169,12 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql`) and must match the fixture directory when known;
- * - `mode` must match the directory the fixture lives in;
+ *   (`postgresql` / `mysql` / `sqlserver`) and must match the fixture directory
+ *   when known;
+ * - `mode` must match the directory the fixture lives in, and each database
+ *   only supports the modes `MODES_BY_DATABASE` lists;
+ * - `format` must match the family's committed payload format (`json` for
+ *   PostgreSQL / MySQL, `xml` for SQL Server);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;
@@ -169,14 +207,19 @@ export function validateFixtureMeta(meta, context = {}) {
   if (!MODES.includes(meta.mode)) {
     problems.push(`mode must be one of ${MODES.join(", ")}; got ${JSON.stringify(meta.mode)}`);
   }
-  if (meta.database === "mysql" && meta.mode !== "estimated") {
-    problems.push('mysql fixtures only support mode "estimated"; MySQL has no actual-plan JSON path');
+  const allowedModes = MODES_BY_DATABASE[meta.database];
+  if (Array.isArray(allowedModes) && !allowedModes.includes(meta.mode)) {
+    problems.push(
+      `${meta.database} fixtures only support mode${allowedModes.length === 1 ? "" : "s"} ` +
+        `${allowedModes.map((mode) => JSON.stringify(mode)).join(", ")}; got ${JSON.stringify(meta.mode)}`,
+    );
   }
   if (context.mode !== undefined && meta.mode !== context.mode) {
     problems.push(`mode ${JSON.stringify(meta.mode)} does not match fixture directory ${JSON.stringify(context.mode)}`);
   }
-  if (meta.format !== "json") {
-    problems.push(`format must be "json"; got ${JSON.stringify(meta.format)}`);
+  const expectedFormat = FORMAT_BY_DATABASE[meta.database];
+  if (expectedFormat !== undefined && meta.format !== expectedFormat) {
+    problems.push(`format must be ${JSON.stringify(expectedFormat)} for ${meta.database} fixtures; got ${JSON.stringify(meta.format)}`);
   }
 
   if (source === undefined) {

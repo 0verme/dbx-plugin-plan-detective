@@ -34,7 +34,7 @@ import { PlanInputError } from "./errors.js";
  */
 
 /** Database families with a structured parser today. */
-export const STRUCTURED_DATABASES = ["postgresql", "mysql"];
+export const STRUCTURED_DATABASES = ["postgresql", "mysql", "sqlserver"];
 
 /**
  * Database families this contract accepts. Mirrors the dialects DBX can return

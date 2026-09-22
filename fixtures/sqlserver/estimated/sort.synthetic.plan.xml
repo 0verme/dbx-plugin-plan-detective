@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.539" Build="16.0.1000.6">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementId="1" StatementType="SELECT" StatementSubTreeCost="88.6" StatementEstRows="120000" StatementOptmLevel="FULL">
+          <QueryPlan DegreeOfParallelism="1" MemoryGrant="8192" CachedPlanSize="56">
+            <RelOp NodeId="0" PhysicalOp="Sort" LogicalOp="Sort" EstimateRows="120000" EstimateIO="0" EstimateCPU="12.6" AvgRowSize="30" EstimatedTotalSubtreeCost="88.6" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="TotalDue"/>
+              </OutputList>
+              <Sort Distinct="0">
+                <OrderBy>
+                  <OrderByColumn Ascending="1">
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                  </OrderByColumn>
+                  <OrderByColumn Ascending="0">
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="TotalDue"/>
+                  </OrderByColumn>
+                </OrderBy>
+                <RelOp NodeId="1" PhysicalOp="Parallelism" LogicalOp="Gather Streams" EstimateRows="120000" EstimateIO="0" EstimateCPU="1.2" AvgRowSize="30" EstimatedTotalSubtreeCost="76.0" Parallel="1" EstimateRebinds="0" EstimateRewinds="0">
+                  <OutputList>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="TotalDue"/>
+                  </OutputList>
+                  <Parallelism PartitioningType="NotPartitioned">
+                    <OrderBy>
+                      <OrderByColumn Ascending="1">
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                      </OrderByColumn>
+                    </OrderBy>
+                    <RelOp NodeId="2" PhysicalOp="Clustered Index Scan" LogicalOp="Clustered Index Scan" EstimateRows="120000" EstimateIO="30.4" EstimateCPU="13.2" AvgRowSize="30" EstimatedTotalSubtreeCost="74.8" Parallel="1" EstimateRebinds="0" EstimateRewinds="0">
+                      <OutputList>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                        <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="TotalDue"/>
+                      </OutputList>
+                      <IndexScan Ordered="0" ForcedIndex="0" ForceSeek="0" ForceScan="0" NoExpandHint="0" Storage="RowStore">
+                        <DefinedValues>
+                          <DefinedValue>
+                            <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                          </DefinedValue>
+                          <DefinedValue>
+                            <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                          </DefinedValue>
+                          <DefinedValue>
+                            <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="TotalDue"/>
+                          </DefinedValue>
+                        </DefinedValues>
+                        <Object Database="[Sales]" Schema="[dbo]" Table="[Orders]" Index="[PK_Orders]" Alias="[o]" IndexKind="Clustered" Storage="RowStore"/>
+                      </IndexScan>
+                    </RelOp>
+                  </Parallelism>
+                </RelOp>
+              </Sort>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

@@ -1,0 +1,213 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Index Scan",
+      "physicalOp": "Index Scan",
+      "logicalOp": "Index Scan",
+      "nodeId": 0,
+      "estimatedRows": 150000,
+      "estimatedTotalSubtreeCost": 45.2,
+      "estimateCpu": 15.1,
+      "estimateIo": 30.1,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 30,
+      "parallel": false,
+      "database": "[Sales]",
+      "schema": "[dbo]",
+      "table": "[Orders]",
+      "index": "[IX_Orders_OrderDate]",
+      "alias": "[o]",
+      "indexKind": "NonClustered",
+      "storage": "RowStore",
+      "predicate": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": null,
+      "operator": {
+        "ordered": false
+      },
+      "children": [],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 45.2,
+      "estimatedRows": 150000,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 2048,
+      "cachedPlanSize": 40
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "index_scan",
+      "nodeType": "Index Scan",
+      "relation": {
+        "name": "Orders",
+        "alias": "o",
+        "indexName": "IX_Orders_OrderDate"
+      },
+      "estimatedRows": 150000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 30,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Index Scan",
+          "logicalOp": "Index Scan",
+          "estimatedTotalSubtreeCost": 45.2,
+          "estimateCpu": 15.1,
+          "estimateIo": 30.1,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 30,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[IX_Orders_OrderDate]",
+          "alias": "[o]",
+          "indexKind": "NonClustered",
+          "storage": "RowStore",
+          "operator": {
+            "ordered": false
+          },
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 45.2,
+            "estimatedRows": 150000,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 2048,
+            "cachedPlanSize": 40
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 150000,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "Index Scan",
+      "relation": "Orders",
+      "estimatedRows": 150000
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Index Scan",
+        "kind": "index_scan",
+        "relation": "Orders",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "sqlserver-large-index-scan",
+            "level": "high",
+            "statement": "Index Scan on Orders is estimated to read 150000 rows through a full Index Scan (a seek is not reported as a scan signal).",
+            "source": "RelOp@EstimateRows",
+            "evidence": {
+              "physicalOp": "Index Scan",
+              "estimatedRows": 150000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": 0,
+          "nodeType": "Index Scan",
+          "kind": "index_scan",
+          "relation": "Orders",
+          "estimatedRows": 150000,
+          "physicalOp": "Index Scan",
+          "logicalOp": "Index Scan",
+          "estimatedTotalSubtreeCost": 45.2,
+          "estimateCpu": 15.1,
+          "estimateIo": 30.1,
+          "avgRowSize": 30,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Orders]",
+          "index": "[IX_Orders_OrderDate]",
+          "alias": "[o]"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

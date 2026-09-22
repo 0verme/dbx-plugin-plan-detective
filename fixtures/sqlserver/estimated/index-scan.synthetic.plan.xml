@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.539" Build="16.0.1000.6">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementId="1" StatementType="SELECT" StatementSubTreeCost="45.2" StatementEstRows="150000" StatementOptmLevel="FULL">
+          <QueryPlan DegreeOfParallelism="1" MemoryGrant="2048" CachedPlanSize="40">
+            <RelOp NodeId="0" PhysicalOp="Index Scan" LogicalOp="Index Scan" EstimateRows="150000" EstimateIO="30.1" EstimateCPU="15.1" AvgRowSize="30" EstimatedTotalSubtreeCost="45.2" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+              </OutputList>
+              <IndexScan Ordered="0" ForcedIndex="0" ForceSeek="0" ForceScan="0" NoExpandHint="0" Storage="RowStore">
+                <DefinedValues>
+                  <DefinedValue>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderID"/>
+                  </DefinedValue>
+                  <DefinedValue>
+                    <ColumnReference Database="[Sales]" Schema="[dbo]" Table="[Orders]" Alias="[o]" Column="OrderDate"/>
+                  </DefinedValue>
+                </DefinedValues>
+                <Object Database="[Sales]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_OrderDate]" Alias="[o]" IndexKind="NonClustered" Storage="RowStore"/>
+              </IndexScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

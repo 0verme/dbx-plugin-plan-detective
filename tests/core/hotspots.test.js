@@ -479,6 +479,82 @@ test("MySQL operation flags need a large subtree and carry the flag value", () =
   assert.match(bufferReason.statement, /using_join_buffer = flat, hash join/);
 });
 
+/** A SQL Server node carrying engine-specific fields. */
+function sqlServerNode(sqlServer, overrides = {}) {
+  return normalizedNode({ engineSpecific: { database: "sqlserver", sqlServer }, ...overrides });
+}
+
+/* --------------------------------------------------------- SQL Server signals -- */
+
+test("SQL Server hotspots use rows only and never PostgreSQL cost semantics", () => {
+  const root = sqlServerNode(
+    { physicalOp: "Table Scan", logicalOp: "Table Scan", estimatedTotalSubtreeCost: 12.5 },
+    {
+      kind: "seq_scan",
+      nodeType: "Table Scan",
+      relation: { name: "Customers", alias: null, indexName: null },
+      estimatedRows: 250_000,
+    },
+  );
+
+  const analysis = run(root, "sqlserver");
+  assert.deepEqual(analysis.cost, { engine: "sqlserver", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" });
+  assert.equal(analysis.items.length, 1);
+  assert.deepEqual(analysis.items[0].reasons.map((reason) => reason.code), ["large-sequential-scan"]);
+  assert.equal(analysis.items[0].reasons[0].source, "RelOp@EstimateRows");
+
+  const evidence = analysis.items[0].evidence;
+  assert.equal(evidence.estimatedTotalSubtreeCost, 12.5, "the SQL Server subtree cost stays engine-specific evidence");
+  assert.equal("estimatedTotalCost" in evidence, false, "PostgreSQL-only evidence must not appear");
+  assert.equal("selfCost" in evidence, false);
+  assert.equal("selfCostShare" in evidence, false);
+});
+
+test("a SQL Server large index scan is a physical-op signal, not a generic index_scan", () => {
+  const scan = (physicalOp, estimatedRows) =>
+    run(
+      sqlServerNode({ physicalOp, logicalOp: physicalOp }, { kind: "index_scan", nodeType: physicalOp, estimatedRows }),
+      "sqlserver",
+    ).items.flatMap((hotspot) => hotspot.reasons.map((reason) => reason.code));
+
+  assert.deepEqual(scan("Index Scan", 150_000), ["sqlserver-large-index-scan"]);
+  assert.deepEqual(scan("Clustered Index Scan", 150_000), ["sqlserver-large-index-scan"]);
+  assert.deepEqual(scan("Index Scan", 5_000), [], "below the row threshold nothing is signalled");
+  assert.deepEqual(scan("Index Seek", 150_000), [], "a seek is not evidence of a problem");
+  assert.deepEqual(scan("Clustered Index Seek", 150_000), [], "a clustered seek is not signalled either");
+});
+
+test("the SQL Server sort signal requires a row magnitude", () => {
+  const sort = (estimatedRows) =>
+    run(
+      sqlServerNode({ physicalOp: "Sort", logicalOp: "Sort" }, { kind: "sort", nodeType: "Sort", estimatedRows, sortKeys: ["[o].OrderDate ASC"] }),
+      "sqlserver",
+    ).items.flatMap((hotspot) => hotspot.reasons.map((reason) => reason.code));
+
+  assert.deepEqual(sort(120_000), ["sqlserver-sort"]);
+  assert.deepEqual(sort(5_000), [], "a small sort is not automatically worth attention");
+});
+
+test("SQL Server nested loop amplification reads the two input estimates", () => {
+  const root = sqlServerNode(
+    { physicalOp: "Nested Loops", logicalOp: "Inner Join" },
+    {
+      kind: "nested_loop",
+      nodeType: "Nested Loops",
+      children: [
+        sqlServerNode({ physicalOp: "Index Seek" }, { id: "0.0", kind: "index_scan", nodeType: "Index Seek", estimatedRows: 1_000 }),
+        sqlServerNode({ physicalOp: "Clustered Index Seek" }, { id: "0.1", kind: "index_scan", nodeType: "Clustered Index Seek", estimatedRows: 50_000 }),
+      ],
+    },
+  );
+
+  const analysis = run(root, "sqlserver");
+  assert.equal(analysis.items.length, 1);
+  assert.deepEqual(analysis.items[0].reasons.map((reason) => reason.code), ["nested-loop-amplification"]);
+  assert.equal(analysis.items[0].reasons[0].source, "RelOp@EstimateRows");
+  assert.equal(analysis.items[0].reasons[0].evidence.estimatedRowComparisons, 50_000_000);
+});
+
 /* --------------------------------------------------------------- ordering -- */
 
 test("hotspots are ordered by level, then by reason count, then by plan pre-order", () => {
@@ -546,7 +622,7 @@ test("partial and malformed plans degrade without throwing", () => {
 });
 
 test("raw-only databases do not enter structured hotspot analysis", () => {
-  const analysis = analyzeRawPlan({ database: "sqlserver", mode: "estimated", format: "xml", plan: "<ShowPlanXML />" });
+  const analysis = analyzeRawPlan({ database: "oracle", mode: "estimated", format: "text", plan: "| 0 | SELECT STATEMENT |" });
 
   assert.equal(analysis.status, "raw-only");
   assert.equal(analysis.hotspots, null);

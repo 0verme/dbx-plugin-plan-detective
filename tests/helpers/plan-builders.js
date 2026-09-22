@@ -60,6 +60,65 @@ export function parsedPlan(overrides = {}) {
   };
 }
 
+/**
+ * @param {Record<string, unknown>} [overrides]
+ * @returns {any} a parsed SQL Server ShowPlanXML node
+ */
+export function parsedSqlServerNode(overrides = {}) {
+  return {
+    nodeType: "Table Scan",
+    physicalOp: "Table Scan",
+    logicalOp: "Table Scan",
+    nodeId: null,
+    estimatedRows: null,
+    estimatedTotalSubtreeCost: null,
+    estimateCpu: null,
+    estimateIo: null,
+    estimateRebinds: null,
+    estimateRewinds: null,
+    estimateExecutions: null,
+    avgRowSize: null,
+    parallel: null,
+    database: null,
+    schema: null,
+    table: null,
+    index: null,
+    alias: null,
+    indexKind: null,
+    storage: null,
+    predicate: null,
+    indexCondition: null,
+    sortKeys: null,
+    groupKeys: null,
+    hashKeysBuild: null,
+    hashKeysProbe: null,
+    probeResidual: null,
+    buildResidual: null,
+    residual: null,
+    definedValues: null,
+    operator: null,
+    children: [],
+    extra: {},
+    ...overrides,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} [overrides]
+ * @returns {any} a parsed SQL Server plan
+ */
+export function parsedSqlServerPlan(overrides = {}) {
+  return {
+    database: "sqlserver",
+    format: "xml",
+    mode: "estimated",
+    root: parsedSqlServerNode(),
+    statement: null,
+    queryPlan: null,
+    ...overrides,
+  };
+}
+
 const ENGINE_SPECIFIC_DEFAULTS = Object.freeze({
   database: "postgresql",
   parentRelationship: null,

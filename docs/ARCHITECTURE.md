@@ -47,10 +47,10 @@ Metrics Engine
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
-已实现：parser registry + PostgreSQL / MySQL 结构化 parser；其余 6 个方言 raw-only
+已实现：parser registry + PostgreSQL / MySQL / SQL Server 结构化 parser；其余 5 个方言 raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
 已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
-已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号）
+已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号 + SQL Server rows 信号）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
 未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI
@@ -68,7 +68,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码）
    ↓
 src/core/adapter/dbx-plan-response.js（dbType → database family，format → RawPlanInput）
    ↓
-src/core/parsers/index.js（registry：postgres / mysql structured，其余 raw-only）
+src/core/parsers/index.js（registry：postgres / mysql / sqlserver structured，其余 raw-only）
    ↓
 src/core/normalize → metrics → rules → findings（facts + legacy copy）
 src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
@@ -92,7 +92,7 @@ Svelte components
 ### Offline / Fixture 数据链路（开发用）
 
 ```text
-fixture（fixtures/postgres/**；MySQL fixture 由核心测试直接加载）
+fixture（fixtures/postgres/**；MySQL / SQL Server fixture 由核心测试与 golden 直接加载）
    ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
 RawPlanInput
    ↓ analyzePlan()
@@ -109,7 +109,7 @@ Fixture / mock 只服务测试、离线 UI 开发与 golden sample，**不进入
 | --- | --- | --- |
 | PostgreSQL | 结构化 | `EXPLAIN (FORMAT JSON)`（`src/core/postgres/**`） |
 | MySQL | 结构化 | `EXPLAIN FORMAT=JSON`（`src/core/mysql/**`；只解析 Estimated JSON，不含 `FORMAT=TRADITIONAL` / `FORMAT=TREE` / MariaDB 方言） |
-| SQL Server | raw only | 宿主返回 ShowPlanXML（format `xml`） |
+| SQL Server | 结构化 | 宿主返回 ShowPlanXML（format `xml`；`src/core/sqlserver/**`；只解析 Estimated ShowPlanXML，不含 Actual / `RunTimeInformation`） |
 | Oracle / OceanBase Oracle | raw only | 宿主返回文本计划（format `text`） |
 | Doris / Dameng / QuestDB | raw only | 宿主返回文本计划（format `text`） |
 
@@ -197,7 +197,8 @@ src/
 │   └── host-plan-errors.js     # HostPlanError + 错误分类
 ├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
-│   ├── parsers/                # parser registry + postgres parser 声明
+│   ├── parsers/                # parser registry + postgres / mysql / sqlserver parser 声明
+│   ├── sqlserver/              # ShowPlanXML 读取与 RelOp 映射（无 dependency XML reader）
 │   ├── cost/                   # PostgreSQL 代价归因边界（analyzePostgresCost，Metrics + Hotspots 共用）
 │   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
@@ -248,7 +249,7 @@ include = ["assets", "ui"]
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
 - Plan Diff / History / 自定义 Plan Canvas / 大型可视化（当前只做嵌套行计划树）
 - AI / LLM
-- SQL Server / Oracle / Doris / Dameng / QuestDB 的结构化 parser（需要真实 sample 后再实现）
+- Oracle / Doris / Dameng / QuestDB 的结构化 parser（需要真实 sample / contract 后再实现）
 - MariaDB / OceanBase MySQL / ADB MySQL 等 MySQL 兼容方言的自动归入（没有 contract 证据，不自动兼容）
 - MySQL `EXPLAIN ANALYZE` / `FORMAT=TREE` / `FORMAT=TRADITIONAL` 文本计划 parser
 

@@ -1,0 +1,243 @@
+{
+  "parsed": {
+    "database": "sqlserver",
+    "format": "xml",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Table Scan",
+      "physicalOp": "Table Scan",
+      "logicalOp": "Table Scan",
+      "nodeId": 0,
+      "estimatedRows": 250000,
+      "estimatedTotalSubtreeCost": 12.5,
+      "estimateCpu": 3.75,
+      "estimateIo": 18.75,
+      "estimateRebinds": 0,
+      "estimateRewinds": 0,
+      "estimateExecutions": null,
+      "avgRowSize": 38,
+      "parallel": false,
+      "database": "[Sales]",
+      "schema": "[dbo]",
+      "table": "[Customers]",
+      "index": null,
+      "alias": "[c]",
+      "indexKind": null,
+      "storage": "RowStore",
+      "predicate": "[Sales].[dbo].[Customers].[Status]='ACTIVE'",
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "hashKeysBuild": null,
+      "hashKeysProbe": null,
+      "probeResidual": null,
+      "buildResidual": null,
+      "residual": null,
+      "definedValues": null,
+      "operator": null,
+      "children": [],
+      "extra": {}
+    },
+    "statement": {
+      "type": "SELECT",
+      "id": 1,
+      "subtreeCost": 12.5,
+      "estimatedRows": 250000,
+      "optimizationLevel": "FULL"
+    },
+    "queryPlan": {
+      "degreeOfParallelism": 1,
+      "memoryGrant": 1024,
+      "cachedPlanSize": 48
+    }
+  },
+  "normalized": {
+    "database": "sqlserver",
+    "mode": "estimated",
+    "format": "xml",
+    "root": {
+      "id": "0",
+      "kind": "seq_scan",
+      "nodeType": "Table Scan",
+      "relation": {
+        "name": "Customers",
+        "alias": "c",
+        "indexName": null
+      },
+      "estimatedRows": 250000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 38,
+      "filter": "[Sales].[dbo].[Customers].[Status]='ACTIVE'",
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "sqlserver",
+        "sqlServer": {
+          "nodeId": 0,
+          "physicalOp": "Table Scan",
+          "logicalOp": "Table Scan",
+          "estimatedTotalSubtreeCost": 12.5,
+          "estimateCpu": 3.75,
+          "estimateIo": 18.75,
+          "estimateRebinds": 0,
+          "estimateRewinds": 0,
+          "estimateExecutions": null,
+          "avgRowSize": 38,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Customers]",
+          "index": null,
+          "alias": "[c]",
+          "indexKind": null,
+          "storage": "RowStore",
+          "operator": null,
+          "hashKeysBuild": null,
+          "hashKeysProbe": null,
+          "probeResidual": null,
+          "buildResidual": null,
+          "residual": null,
+          "definedValues": null,
+          "statement": {
+            "type": "SELECT",
+            "id": 1,
+            "subtreeCost": 12.5,
+            "estimatedRows": 250000,
+            "optimizationLevel": "FULL"
+          },
+          "queryPlan": {
+            "degreeOfParallelism": 1,
+            "memoryGrant": 1024,
+            "cachedPlanSize": 48
+          }
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 250000,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "Table Scan",
+      "relation": "Customers",
+      "estimatedRows": 250000
+    },
+    "costAttribution": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0",
+      "ruleId": "large-sequential-scan",
+      "severity": "high",
+      "title": "Large sequential scan",
+      "summary": "Table Scan on Customers with a filter is estimated to read 250000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0",
+      "facts": {
+        "database": "sqlserver",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "Table Scan",
+        "relation": "Customers",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": true
+      },
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "Table Scan",
+        "relation": "Customers",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": "[Sales].[dbo].[Customers].[Status]='ACTIVE'",
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlserver",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "Table Scan",
+        "kind": "seq_scan",
+        "relation": "Customers",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "Table Scan on Customers is estimated to read 250000 rows through a full table scan.",
+            "source": "RelOp@EstimateRows",
+            "evidence": {
+              "estimatedRows": 250000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": 0,
+          "nodeType": "Table Scan",
+          "kind": "seq_scan",
+          "relation": "Customers",
+          "estimatedRows": 250000,
+          "physicalOp": "Table Scan",
+          "logicalOp": "Table Scan",
+          "estimatedTotalSubtreeCost": 12.5,
+          "estimateCpu": 3.75,
+          "estimateIo": 18.75,
+          "avgRowSize": 38,
+          "parallel": false,
+          "database": "[Sales]",
+          "schema": "[dbo]",
+          "table": "[Customers]",
+          "alias": "[c]"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

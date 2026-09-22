@@ -389,6 +389,8 @@ const HOTSPOT_COST_NOTES = Object.freeze({
     "计划包含 InitPlan / SubPlan / CTE：PostgreSQL 父节点代价不按子节点 Total Cost 累加，已停用代价占比信号。",
   UNVERIFIED_COST_FLOW: "部分节点缺少可验证的 Parent Relationship，代价归因不可靠，已停用代价占比信号。",
   NO_QUERY_COST: "MySQL 计划未报告 query_cost，已停用 MySQL 代价占比信号，仅使用行数与操作标记信号。",
+  NOT_POSTGRES_COST_MODEL:
+    "SQL Server 的 EstimatedTotalSubtreeCost 属于 SQL Server 自己的代价模型，未按 PostgreSQL 语义归因；仅使用行数信号。",
 });
 
 /**
@@ -447,7 +449,13 @@ export function buildHotspotViews(hotspotAnalysis, rowsById, findings = []) {
  * @returns {string|null} display note, or `null` when cost signals are available
  */
 export function describeHotspotCost(cost) {
-  if (cost === null || cost === undefined || cost.status !== "withheld") return null;
+  if (cost === null || cost === undefined) return null;
+  if (cost.status === "not-applicable") {
+    // MySQL reports its own cost signals, so `not-applicable` in practice means
+    // a plan whose engine has no shared cost attribution (SQL Server).
+    return HOTSPOT_COST_NOTES[cost.reason] ?? "该引擎没有可用的共享代价归因，已仅使用行数信号。";
+  }
+  if (cost.status !== "withheld") return null;
   return HOTSPOT_COST_NOTES[cost.reason] ?? "该计划的代价信号不可用，已仅使用行数信号。";
 }
 
@@ -566,15 +574,16 @@ export function buildNodeInspector(node) {
 }
 
 /**
- * Engine-specific fields. PostgreSQL and MySQL keep their own vocabularies:
- * the panel renders whatever the node's normalizer actually reported and never
- * renames one engine's fields into the other's.
+ * Engine-specific fields. PostgreSQL, MySQL and SQL Server keep their own
+ * vocabularies: the panel renders whatever the node's normalizer actually
+ * reported and never renames one engine's fields into another's.
  *
  * @param {Record<string, any>} engine
  * @returns {Array<{ label: string, value: string }|null>}
  */
 function engineFields(engine) {
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
+  if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
   return [
     flagField("Parallel Aware", engine.parallelAware),
     flagField("Async Capable", engine.asyncCapable),
@@ -587,6 +596,52 @@ function engineFields(engine) {
     field("Join Filter", engine.joinFilter),
     field("Recheck Condition", engine.recheckCondition),
     field("Presorted Keys", formatRawValue(engine.presortedKeys)),
+  ];
+}
+
+/**
+ * SQL Server ShowPlanXML fields. Subtree / per-node costs are shown here, not
+ * as PostgreSQL-style costs: they belong to SQL Server's own cost model and are
+ * not comparable with PostgreSQL cost units.
+ *
+ * @param {Record<string, unknown>} sqlServer
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function sqlServerEngineFields(sqlServer) {
+  const operator = isPlainObject(sqlServer.operator) ? sqlServer.operator : {};
+  return [
+    field("Physical Op", sqlServer.physicalOp),
+    field("Logical Op", sqlServer.logicalOp),
+    field("Node ID (ShowPlanXML)", formatNumber(sqlServer.nodeId)),
+    field("Estimated Subtree Cost", formatNumber(sqlServer.estimatedTotalSubtreeCost)),
+    field("Estimate CPU", formatNumber(sqlServer.estimateCpu)),
+    field("Estimate IO", formatNumber(sqlServer.estimateIo)),
+    field("Estimate Rebinds", formatNumber(sqlServer.estimateRebinds)),
+    field("Estimate Rewinds", formatNumber(sqlServer.estimateRewinds)),
+    field("Estimate Executions", formatNumber(sqlServer.estimateExecutions)),
+    flagField("Parallel", sqlServer.parallel),
+    field("Object Database", sqlServer.database),
+    field("Object Schema", sqlServer.schema),
+    field("Object Table", sqlServer.table),
+    field("Object Index", sqlServer.index),
+    field("Object Alias", sqlServer.alias),
+    field("Index Kind", sqlServer.indexKind),
+    field("Storage", sqlServer.storage),
+    flagField("Lookup", operator.lookup),
+    flagField("Ordered", operator.ordered),
+    flagField("Distinct", operator.distinct),
+    field("Top Row Count", formatNumber(operator.topRowCount)),
+    flagField("Many to Many", operator.manyToMany),
+    field("Partitioning Type", operator.partitioningType),
+    field("Hash Keys Build", formatRawValue(sqlServer.hashKeysBuild)),
+    field("Hash Keys Probe", formatRawValue(sqlServer.hashKeysProbe)),
+    field("Probe Residual", sqlServer.probeResidual),
+    field("Build Residual", sqlServer.buildResidual),
+    field("Residual", sqlServer.residual),
+    field("Defined Values", formatRawValue(sqlServer.definedValues)),
+    field("Statement Type", sqlServer.statement?.type),
+    field("Degree of Parallelism", formatNumber(sqlServer.queryPlan?.degreeOfParallelism)),
+    field("Memory Grant", formatNumber(sqlServer.queryPlan?.memoryGrant)),
   ];
 }
 

@@ -15,6 +15,7 @@ const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-
 const postgresRawPlan = postgresFixture.input.plan;
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-loop-large-inner.synthetic" });
 const mysqlV2Fixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-inputs-v2.synthetic" });
+const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 
 function capabilities(overrides = {}) {
   return {
@@ -209,17 +210,40 @@ test("the session waits for init instead of probing a pre-init bridge", async ()
 
 test("runHostAnalysis keeps the raw host result for a raw-only dialect", async () => {
   const bridge = fakeBridge({
-    getPlanCapabilities: async () => capabilities({ dbType: "sqlserver" }),
-    explainPlan: async () =>
-      planResult({ dbType: "sqlserver", format: "xml", rawPlan: "<ShowPlanXML />" }),
+    getPlanCapabilities: async () => capabilities({ dbType: "oracle" }),
+    explainPlan: async () => planResult({ dbType: "oracle", format: "text", rawPlan: "| 0 | SELECT STATEMENT |" }),
   });
 
   const session = await runHostAnalysis({ ...REQUEST, bridge });
   assert.equal(session.status, "raw-only");
-  assert.equal(session.rawInput.database, "sqlserver");
+  assert.equal(session.rawInput.database, "oracle");
   assert.equal(session.analysis.reasonCode, "PARSER_NOT_IMPLEMENTED");
   assert.deepEqual(session.analysis.findings, []);
-  assert.equal(session.hostResult.rawPlan, "<ShowPlanXML />");
+  assert.equal(session.hostResult.rawPlan, "| 0 | SELECT STATEMENT |");
+});
+
+test("runHostAnalysis runs the structured pipeline for a SQL Server ShowPlanXML host response", async () => {
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => capabilities({ dbType: "sqlserver" }),
+    explainPlan: async () => planResult({ dbType: "sqlserver", format: "xml", rawPlan: sqlserverFixture.input.plan }),
+  });
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "structured");
+  assert.equal(session.rawInput.database, "sqlserver");
+  assert.equal(session.rawInput.format, "xml");
+  assert.equal(session.analysis.parser, "sqlserver");
+  assert.equal(session.analysis.normalized.database, "sqlserver");
+  assert.deepEqual(
+    session.analysis.findings.map((finding) => finding.ruleId),
+    sqlserverFixture.meta.expect.findingRuleIds,
+  );
+  assert.equal(session.analysis.hotspots.cost.engine, "sqlserver");
+  assert.deepEqual(
+    session.analysis.hotspots.items.map((hotspot) => hotspot.nodeId),
+    sqlserverFixture.meta.expect.hotspotNodeRefs,
+  );
+  assert.equal(session.hostResult.rawPlan, sqlserverFixture.input.plan, "the XML payload must stay available for the Raw Plan viewer");
 });
 
 test("runHostAnalysis runs the structured pipeline for a MySQL host response", async () => {

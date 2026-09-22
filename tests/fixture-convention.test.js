@@ -8,8 +8,10 @@ import {
   MODES_BY_DATABASE,
   MYSQL_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
+  SQLSERVER_FIXTURES_DIR,
   listFixtures,
   loadAllFixtures,
+  planSuffixFor,
   validateFixtureMeta,
 } from "./helpers/fixtures.js";
 
@@ -51,17 +53,26 @@ test("fixtures/mysql has an estimated directory and no actual directory", async 
   assert.deepEqual(MODES_BY_DATABASE.mysql, ["estimated"]);
 });
 
+test("fixtures/sqlserver has an estimated directory of plan.xml files and no actual directory", async () => {
+  const entries = await readdir(path.join(SQLSERVER_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.xml")), "fixtures/sqlserver/estimated must contain .plan.xml files");
+  await assert.rejects(readdir(path.join(SQLSERVER_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.sqlserver, ["estimated"]);
+  assert.equal(planSuffixFor("sqlserver"), ".plan.xml");
+});
+
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
   for (const database of FIXTURE_DATABASES) {
-    const root = database === "mysql" ? MYSQL_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
+    const root = database === "mysql" ? MYSQL_FIXTURES_DIR : database === "sqlserver" ? SQLSERVER_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
+    const planSuffix = planSuffixFor(database);
     for (const mode of MODES_BY_DATABASE[database]) {
       const entries = await readdir(path.join(root, mode));
-      const plans = entries.filter((entry) => entry.endsWith(".plan.json")).sort();
+      const plans = entries.filter((entry) => entry.endsWith(planSuffix)).sort();
       const metas = entries.filter((entry) => entry.endsWith(".meta.json")).sort();
       assert.deepEqual(
         metas,
-        plans.map((plan) => plan.replace(/\.plan\.json$/, ".meta.json")),
-        `fixtures/${database}/${mode}: .plan.json and .meta.json files must come in pairs`,
+        plans.map((plan) => plan.replace(new RegExp(`\\${planSuffix}$`), ".meta.json")),
+        `fixtures/${database}/${mode}: plan and .meta.json files must come in pairs`,
       );
     }
   }
@@ -118,6 +129,29 @@ test("metadata validation rejects convention violations", () => {
   assert.match(
     validateFixtureMeta({ ...mysqlMeta, mode: "actual" }, { database: "mysql", mode: "actual", name: "x.synthetic" }).join("\n"),
     /mysql fixtures only support mode "estimated"/,
+  );
+
+  const sqlserverMeta = validMeta({
+    database: "sqlserver",
+    format: "xml",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "synthetic", detail: "synthetic fixture: hand-written.", reference: "https://example.com/showplan" },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(sqlserverMeta, { database: "sqlserver", mode: "estimated", name: "x.synthetic" }),
+    [],
+    "a synthetic SQL Server fixture must validate with format xml",
+  );
+  assert.match(
+    validateFixtureMeta({ ...sqlserverMeta, format: "json" }, { database: "sqlserver", mode: "estimated", name: "x.synthetic" }).join("\n"),
+    /format must be "xml" for sqlserver fixtures/,
+  );
+  assert.match(
+    validateFixtureMeta({ ...sqlserverMeta, mode: "actual" }, { database: "sqlserver", mode: "actual", name: "x.synthetic" }).join("\n"),
+    /sqlserver fixtures only support mode "estimated"/,
   );
 
   const synthetic = validMeta({
@@ -187,9 +221,9 @@ test("metadata validation rejects convention violations", () => {
 test("fixtures contain no credential-like fields", async () => {
   const banned = /"(password|passwd|secret|credential|credentials|token|api_?key|connection_?string|conn_?str)"\s*:/i;
   for (const database of FIXTURE_DATABASES) {
+    const root = database === "mysql" ? MYSQL_FIXTURES_DIR : database === "sqlserver" ? SQLSERVER_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
     for (const fixture of await listFixtures(database)) {
-      for (const suffix of [".plan.json", ".meta.json"]) {
-        const root = database === "mysql" ? MYSQL_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
+      for (const suffix of [planSuffixFor(database), ".meta.json"]) {
         const file = path.join(root, fixture.mode, `${fixture.name}${suffix}`);
         const text = await readFile(file, "utf8");
         assert.doesNotMatch(text, banned, `${path.relative(process.cwd(), file)} must not contain credential-like fields`);

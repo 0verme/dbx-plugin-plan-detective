@@ -83,4 +83,15 @@ export const HOTSPOT = Object.freeze({
     warningSubtreeRows: 10_000,
     highSubtreeRows: 100_000,
   }),
+
+  /**
+   * SQL Server row-magnitude signals: a full index scan or a sort whose
+   * `EstimateRows` is large. SQL Server reports no runtime counters in an
+   * estimated plan, so row estimates are the only magnitude used. The same
+   * thresholds as the rule layer keep "large" consistent across stages.
+   */
+  sqlserverLargeOperations: Object.freeze({
+    warningEstimatedRows: LARGE_SEQUENTIAL_SCAN.warningEstimatedRows,
+    highEstimatedRows: LARGE_SEQUENTIAL_SCAN.highEstimatedRows,
+  }),
 });
