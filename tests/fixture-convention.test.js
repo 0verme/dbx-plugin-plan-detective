@@ -10,6 +10,7 @@ import {
   MYSQL_FIXTURES_DIR,
   OCEANBASE_ORACLE_FIXTURES_DIR,
   ORACLE_FIXTURES_DIR,
+  DAMENG_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
   listFixtures,
@@ -81,6 +82,14 @@ test("fixtures/oracle has an estimated directory of plan.txt files and no actual
   await assert.rejects(readdir(path.join(ORACLE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
   assert.deepEqual(MODES_BY_DATABASE.oracle, ["estimated"]);
   assert.equal(planSuffixFor("oracle"), ".plan.txt");
+});
+
+test("fixtures/dameng has an estimated directory of plan.txt files and no actual directory", async () => {
+  const entries = await readdir(path.join(DAMENG_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/dameng/estimated must contain .plan.txt files");
+  await assert.rejects(readdir(path.join(DAMENG_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.dameng, ["estimated"]);
+  assert.equal(planSuffixFor("dameng"), ".plan.txt");
 });
 
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
@@ -219,6 +228,29 @@ test("metadata validation rejects convention violations", () => {
   assert.match(
     validateFixtureMeta({ ...oracleMeta, mode: "actual" }, { database: "oracle", mode: "actual", name: "x.synthetic" }).join("\n"),
     /oracle fixtures only support mode "estimated"/,
+  );
+
+  const damengMeta = validMeta({
+    database: "dameng",
+    format: "text",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "synthetic", detail: "synthetic fixture: hand-written.", reference: null },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(damengMeta, { database: "dameng", mode: "estimated", name: "x.synthetic" }),
+    [],
+    "a synthetic Dameng fixture must validate with format text",
+  );
+  assert.match(
+    validateFixtureMeta({ ...damengMeta, format: "json" }, { database: "dameng", mode: "estimated", name: "x.synthetic" }).join("\n"),
+    /format must be "text" for dameng fixtures/,
+  );
+  assert.match(
+    validateFixtureMeta({ ...damengMeta, mode: "actual" }, { database: "dameng", mode: "actual", name: "x.synthetic" }).join("\n"),
+    /dameng fixtures only support mode "estimated"/,
   );
 
   const synthetic = validMeta({

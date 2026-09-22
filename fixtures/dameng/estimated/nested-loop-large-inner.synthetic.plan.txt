@@ -1,0 +1,8 @@
+1 #NSET2: [1, 100, 56]
+2   #NEST LOOP INDEX JOIN2: [10, 100, 56]
+3     #CSCN2: [1, 200, 52]; INDEX600(T_CUSTOMERS as C); btr_scan(1); need_slct(0)
+4     #SSEK2: [1, 50000, 4]; scan_type(ASC), IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_range[C.ID,C.ID]
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+2 - access(C.ID = O.CUSTOMER_ID)

@@ -1,0 +1,10 @@
+1 #NSET2: [5, 100, 104]
+2   #PRJT2: [5, 100, 104]; exp_num(2), is_atom(FALSE)
+3     #HASH2 INNER JOIN2: [5, 100, 104]; KEY_NUM(1)
+4       #CSCN2: [2, 800, 52]; INDEX200(T_CUSTOMERS as C); btr_scan(1); need_slct(0)
+5       #SSCN2: [2, 100, 52]; IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_type(ASC)
+
+Predicate Information (identified by operation id):
+---------------------------------------------------
+3 - access(C.ID = O.CUSTOMER_ID)
+4 - filter(C.STATUS = 'ACTIVE')

@@ -18,6 +18,7 @@ const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", n
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 const oceanBaseFixture = await loadFixture({ database: "oceanbase-oracle", mode: "estimated", name: "hash-join" });
 const oracleFixture = await loadFixture({ database: "oracle", mode: "estimated", name: "table-scan.synthetic" });
+const damengFixture = await loadFixture({ database: "dameng", mode: "estimated", name: "official-nested-loop-index-join" });
 
 function pendingDialectInput() {
   return createRawPlanInput({
@@ -49,13 +50,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(oracle?.id, "oracle");
   assert.deepEqual(oracle?.formats, ["text"]);
 
-  for (const database of ["doris", "unknown-database"]) {
+  const dameng = getParser("dameng");
+  assert.equal(dameng?.id, "dameng");
+  assert.deepEqual(dameng?.formats, ["text"]);
+
+  for (const database of ["doris", "questdb", "unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng"]);
 });
 
 test("describeParserSupport separates structured, pending and unknown families", () => {
@@ -98,7 +103,14 @@ test("describeParserSupport separates structured, pending and unknown families",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
-  for (const database of ["doris", "dameng", "questdb"]) {
+  assert.deepEqual(describeParserSupport("dameng", "text"), { structured: true, parser: "dameng", reasonCode: null });
+  assert.deepEqual(describeParserSupport("dameng", "json"), {
+    structured: false,
+    parser: "dameng",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  for (const database of ["doris", "questdb"]) {
     assert.deepEqual(
       describeParserSupport(database, "text"),
       { structured: false, parser: "none", reasonCode: "PARSER_NOT_IMPLEMENTED" },
@@ -211,6 +223,25 @@ test("analyzeRawPlan runs the full structured pipeline for Oracle DBMS_XPLAN tex
   assert.deepEqual(result.findings, strict.findings);
 });
 
+test("analyzeRawPlan runs the full structured pipeline for Dameng estimated text", () => {
+  const result = analyzeRawPlan(damengFixture.input);
+
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "dameng");
+  assert.equal(result.reasonCode, null);
+  assert.equal(result.parsed.database, "dameng");
+  assert.equal(result.parsed.format, "text");
+  assert.equal(result.normalized.database, "dameng");
+  assert.equal(result.normalized.root.children[0].kind, "project");
+  assert.equal(result.metrics.costAttribution.status, "not-applicable");
+
+  const strict = analyzePlan(damengFixture.input);
+  assert.deepEqual(result.parsed, strict.parsed);
+  assert.deepEqual(result.normalized, strict.normalized);
+  assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+});
+
 test("analyzeRawPlan returns a raw-only result for a pending dialect", () => {
   const result = analyzeRawPlan(pendingDialectInput());
 
@@ -269,6 +300,13 @@ test("analyzeRawPlan reports a format mismatch instead of silently skipping the 
   assert.equal(oracleResult.status, "raw-only");
   assert.equal(oracleResult.parser, "oracle");
   assert.equal(oracleResult.reasonCode, "UNSUPPORTED_FORMAT");
+
+  const damengResult = analyzeRawPlan(
+    createRawPlanInput({ database: "dameng", mode: "estimated", format: "json", plan: {} }),
+  );
+  assert.equal(damengResult.status, "raw-only");
+  assert.equal(damengResult.parser, "dameng");
+  assert.equal(damengResult.reasonCode, "UNSUPPORTED_FORMAT");
 });
 
 test("analyzePlan stays strict: a raw-only family throws instead of returning empty findings", () => {
@@ -339,6 +377,22 @@ test("a structured parser still fails loudly on a malformed payload", () => {
 
   assert.throws(
     () => analyzeRawPlan(malformedOceanBase),
+    (error) => {
+      assert.ok(error instanceof PlanParseError);
+      assert.equal(error.code, "MALFORMED_PLAN");
+      return true;
+    },
+  );
+
+  const malformedDameng = createRawPlanInput({
+    database: "dameng",
+    mode: "estimated",
+    format: "text",
+    plan: "not a Dameng operation row",
+  });
+
+  assert.throws(
+    () => analyzeRawPlan(malformedDameng),
     (error) => {
       assert.ok(error instanceof PlanParseError);
       assert.equal(error.code, "MALFORMED_PLAN");

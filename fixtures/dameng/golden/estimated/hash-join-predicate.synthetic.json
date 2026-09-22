@@ -1,0 +1,306 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 5,
+      "estimatedRows": 100,
+      "bytesPerRow": 104,
+      "detail": null,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "PRJT2",
+          "operator": "PRJT2",
+          "id": 2,
+          "cost": 5,
+          "estimatedRows": 100,
+          "bytesPerRow": 104,
+          "detail": "exp_num(2), is_atom(FALSE)",
+          "predicates": null,
+          "indentation": 3,
+          "children": [
+            {
+              "nodeType": "HASH2 INNER JOIN2",
+              "operator": "HASH2 INNER JOIN2",
+              "id": 3,
+              "cost": 5,
+              "estimatedRows": 100,
+              "bytesPerRow": 104,
+              "detail": "KEY_NUM(1)",
+              "predicates": [
+                "access(C.ID = O.CUSTOMER_ID)"
+              ],
+              "indentation": 5,
+              "children": [
+                {
+                  "nodeType": "CSCN2",
+                  "operator": "CSCN2",
+                  "id": 4,
+                  "cost": 2,
+                  "estimatedRows": 800,
+                  "bytesPerRow": 52,
+                  "detail": "INDEX200(T_CUSTOMERS as C); btr_scan(1); need_slct(0)",
+                  "predicates": [
+                    "filter(C.STATUS = 'ACTIVE')"
+                  ],
+                  "indentation": 7,
+                  "children": [],
+                  "extra": {}
+                },
+                {
+                  "nodeType": "SSCN2",
+                  "operator": "SSCN2",
+                  "id": 5,
+                  "cost": 2,
+                  "estimatedRows": 100,
+                  "bytesPerRow": 52,
+                  "detail": "IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_type(ASC)",
+                  "predicates": null,
+                  "indentation": 7,
+                  "children": [],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": 100,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 104,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "project",
+          "nodeType": "PRJT2",
+          "relation": null,
+          "estimatedRows": 100,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 104,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "hash_join",
+              "nodeType": "HASH2 INNER JOIN2",
+              "relation": null,
+              "estimatedRows": 100,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 104,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "seq_scan",
+                  "nodeType": "CSCN2",
+                  "relation": {
+                    "name": "T_CUSTOMERS",
+                    "alias": "C",
+                    "indexName": "INDEX200"
+                  },
+                  "estimatedRows": 800,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": 52,
+                  "filter": "C.STATUS = 'ACTIVE'",
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "dameng",
+                    "dameng": {
+                      "id": 4,
+                      "operator": "CSCN2",
+                      "cost": 2,
+                      "estimatedRows": 800,
+                      "bytesPerRow": 52,
+                      "detail": "INDEX200(T_CUSTOMERS as C); btr_scan(1); need_slct(0)",
+                      "predicates": [
+                        "filter(C.STATUS = 'ACTIVE')"
+                      ]
+                    },
+                    "extra": {}
+                  }
+                },
+                {
+                  "id": "0.0.0.1",
+                  "kind": "index_scan",
+                  "nodeType": "SSCN2",
+                  "relation": {
+                    "name": "T_ORDERS",
+                    "alias": "O",
+                    "indexName": "IDX_ORDERS_CUSTOMER"
+                  },
+                  "estimatedRows": 100,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": 52,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "dameng",
+                    "dameng": {
+                      "id": 5,
+                      "operator": "SSCN2",
+                      "cost": 2,
+                      "estimatedRows": 100,
+                      "bytesPerRow": 52,
+                      "detail": "IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_type(ASC)",
+                      "predicates": null
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 3,
+                  "operator": "HASH2 INNER JOIN2",
+                  "cost": 5,
+                  "estimatedRows": 100,
+                  "bytesPerRow": 104,
+                  "detail": "KEY_NUM(1)",
+                  "predicates": [
+                    "access(C.ID = O.CUSTOMER_ID)"
+                  ]
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "PRJT2",
+              "cost": 5,
+              "estimatedRows": 100,
+              "bytesPerRow": 104,
+              "detail": "exp_num(2), is_atom(FALSE)",
+              "predicates": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 5,
+          "estimatedRows": 100,
+          "bytesPerRow": 104,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 5,
+    "maxDepth": 4,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 100,
+    "scanCount": 2,
+    "sequentialScanCount": 1,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "CSCN2",
+      "relation": "T_CUSTOMERS",
+      "estimatedRows": 800
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

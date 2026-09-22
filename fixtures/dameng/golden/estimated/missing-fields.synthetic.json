@@ -1,0 +1,278 @@
+{
+  "parsed": {
+    "database": "dameng",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NSET2",
+      "operator": "NSET2",
+      "id": 1,
+      "cost": 1,
+      "estimatedRows": null,
+      "bytesPerRow": null,
+      "detail": null,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "PRJT2",
+          "operator": "PRJT2",
+          "id": 2,
+          "cost": null,
+          "estimatedRows": null,
+          "bytesPerRow": null,
+          "detail": "no tuple; exp_num(1)",
+          "predicates": null,
+          "indentation": 3,
+          "children": [
+            {
+              "nodeType": "CSCN2",
+              "operator": "CSCN2",
+              "id": 3,
+              "cost": null,
+              "estimatedRows": 20000,
+              "bytesPerRow": 64,
+              "detail": "INDEX500(T_ARCHIVE); btr_scan(1)",
+              "predicates": null,
+              "indentation": 5,
+              "children": [],
+              "extra": {
+                "estimate": "[bad, 20000, 64]"
+              }
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {
+        "estimate": "[1, -, -]"
+      }
+    }
+  },
+  "normalized": {
+    "database": "dameng",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "NSET2",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "project",
+          "nodeType": "PRJT2",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "CSCN2",
+              "relation": {
+                "name": "T_ARCHIVE",
+                "alias": null,
+                "indexName": "INDEX500"
+              },
+              "estimatedRows": 20000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 64,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "dameng",
+                "dameng": {
+                  "id": 3,
+                  "operator": "CSCN2",
+                  "cost": null,
+                  "estimatedRows": 20000,
+                  "bytesPerRow": 64,
+                  "detail": "INDEX500(T_ARCHIVE); btr_scan(1)",
+                  "predicates": null
+                },
+                "extra": {
+                  "estimate": "[bad, 20000, 64]"
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "dameng",
+            "dameng": {
+              "id": 2,
+              "operator": "PRJT2",
+              "cost": null,
+              "estimatedRows": null,
+              "bytesPerRow": null,
+              "detail": "no tuple; exp_num(1)",
+              "predicates": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "dameng",
+        "dameng": {
+          "id": 1,
+          "operator": "NSET2",
+          "cost": 1,
+          "estimatedRows": null,
+          "bytesPerRow": null,
+          "detail": null,
+          "predicates": null
+        },
+        "extra": {
+          "estimate": "[1, -, -]"
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "CSCN2",
+      "relation": "T_ARCHIVE",
+      "estimatedRows": 20000
+    },
+    "costAttribution": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0.0.0",
+      "ruleId": "large-sequential-scan",
+      "severity": "warning",
+      "title": "Large sequential scan",
+      "summary": "CSCN2 on T_ARCHIVE with no filter reported is estimated to read 20000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.0.0",
+      "facts": {
+        "database": "dameng",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "CSCN2",
+        "relation": "T_ARCHIVE",
+        "estimatedRows": 20000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": false
+      },
+      "evidence": {
+        "nodeId": "0.0.0",
+        "nodeType": "CSCN2",
+        "relation": "T_ARCHIVE",
+        "estimatedRows": 20000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "dameng",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0.0.0",
+        "nodeId": "0.0.0",
+        "nodeType": "CSCN2",
+        "kind": "seq_scan",
+        "relation": "T_ARCHIVE",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "CSCN2 on T_ARCHIVE is estimated to process 20000 rows from the Dameng plan tuple.",
+            "source": "[cost, rows, bytes-per-row]",
+            "evidence": {
+              "estimatedRows": 20000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.0.0",
+          "nodeType": "CSCN2",
+          "kind": "seq_scan",
+          "relation": "T_ARCHIVE",
+          "estimatedRows": 20000,
+          "damengId": 3,
+          "operator": "CSCN2",
+          "bytesPerRow": 64,
+          "detail": "INDEX500(T_ARCHIVE); btr_scan(1)"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

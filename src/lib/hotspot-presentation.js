@@ -51,6 +51,7 @@ const COST_NOTE_KEYS = Object.freeze({
 const ENGINE_COST_NOTE_KEYS = Object.freeze({
   "oceanbase-oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseOracleCostModel",
   "oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oracleCostModel",
+  "dameng:NOT_POSTGRES_COST_MODEL": "hotspot.cost.damengCostModel",
 });
 
 /**
@@ -178,7 +179,9 @@ function presentLargeSequentialScan(reason, context, t) {
         ? "hotspot.largeSeqScan.summary.sqlserver"
         : reason?.source === "Rows"
           ? "hotspot.largeSeqScan.summary.oracle"
-          : "hotspot.largeSeqScan.summary.postgres";
+          : reason?.source === "[cost, rows, bytes-per-row]"
+            ? "hotspot.largeSeqScan.summary.dameng"
+            : "hotspot.largeSeqScan.summary.postgres";
 
   return {
     summary: t(key, { target: describeTarget(context, t), rows }),

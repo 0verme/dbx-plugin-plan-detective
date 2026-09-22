@@ -1,0 +1,27 @@
+{
+  "database": "dameng",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": "DM8 documentation example",
+  "capturedAt": "2026-09-22",
+  "captureCommand": "EXPLAIN SELECT A.C1+1,B.D2 FROM T1 A, T2 B WHERE A.C1 = B.D1;",
+  "sql": "SELECT A.C1+1,B.D2 FROM T1 A, T2 B WHERE A.C1 = B.D1;",
+  "source": {
+    "kind": "official",
+    "detail": "Published Dameng DM8 documentation example, transcribed from the execution-plan section. It is a documentation sample, not a capture from a local Dameng instance: it was never executed here, and capturedAt records when the example was transcribed.",
+    "reference": "https://eco.dameng.com/document/dm/zh-cn/pm/query-optimization.html"
+  },
+  "features": [
+    "documented Dameng EXPLAIN text",
+    "nested-loop index join",
+    "operation indentation",
+    "cost rows bytes-per-row tuple",
+    "relation detail with aliases"
+  ],
+  "expect": {
+    "rootNodeType": "NSET2",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": []
+  }
+}
