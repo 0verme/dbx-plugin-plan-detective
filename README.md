@@ -40,6 +40,8 @@ PostgreSQL、MySQL 和 SQL Server 会进入结构化分析；其他已支持获�
 - **SQL Server ShowPlanXML 结构化解析**：支持 DBX Host 返回的 `format: "xml"` Estimated Plan，保留 ShowPlanXML 专有代价与对象信息。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
+- **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
+- **复制 AI 分析提示词**：把当前分析上下文（Database Context / SQL / Plan Summary / Findings / Hotspots / Evidence）在本地打包成结构化 Prompt，由用户自行粘贴到外部 AI 工具；插件不调用任何 AI 服务，也不自动发送任何内容。
 - **Findings 确定性诊断**：针对已实现的规则提供 Finding、证据和检查方向。
 - **中文 / English Finding 解释**：将结构化诊断事实按语言呈现。
 - **Raw Plan 查看**：保留并展示 DBX Host 返回的原始执行计划。
@@ -49,7 +51,7 @@ PostgreSQL、MySQL 和 SQL Server 会进入结构化分析；其他已支持获�
 
 当前版本已发布到 [GitHub Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases)，但尚未进入 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录；目前以 GitHub Release 的未签名候选包手动安装为主。
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.0-universal.dbxp`。
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.1-universal.dbxp`。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
 
