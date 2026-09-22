@@ -424,7 +424,7 @@ DM8 operation 行的形状为：
 | tuple 后的文本 | `detail` | 原文保留；可识别的 `INDEX...(TABLE as ALIAS)` 仅用于 relation 展示 |
 | `Predicate Information` | `predicates` | 按 operation id 关联；只把明确的 `filter(...)` 提升为 neutral `filter`，`access(...)` 等未知语义原样保留 |
 
-- **树构造**：按 operation id 与 `#` 之间的缩进建立 stack；缩进决定 parent，operation id 的数值、顺序或连续性不参与 parent 推断。多根、无 operation row、损坏的 operation row 抛 `MALFORMED_PLAN`。
+- **树构造**：按 `#` 所在显示列（由 operation id 与 `#` 之间的缩进共同确定）建立 stack；缩进决定 parent，operation id 的数值、顺序或连续性不参与 parent 推断。多位数 operation id 仍按 `#` 的绝对列对齐。多根、无 operation row、损坏的 operation row 抛 `MALFORMED_PLAN`。
 - **fail-soft 字段**：缺失 tuple 或 tuple 中的单项为 `-` / `NULL` / 非数字时，对应字段为 `null`；仍可解析的行数 / bytes-per-row 保留，原 tuple 放入 `extra.estimate`。未知 detail / operator 与完整 child subtree 保留。
 - **estimated-only**：`actualRows`、`actualTotalTime`、`loops` 与所有共享 PostgreSQL cost 字段均为 `null`；`mode: "actual"`、`EXPLAIN ANALYZE`、`AUTOTRACE`、`A-ROWS` / `A-TIME` 等标记抛 `MODE_MISMATCH`。
 - **原生 cost 边界**：Metrics 的 `costAttribution` 为 `{ engine: "dameng", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }`；规则 / 热点只使用 `estimatedRows`，不从 Dameng cost 推导自代价或占比。

@@ -12,7 +12,7 @@
       "bytesPerRow": null,
       "detail": null,
       "predicates": null,
-      "indentation": 1,
+      "indentation": 2,
       "children": [
         {
           "nodeType": "PRJT2",
@@ -23,7 +23,7 @@
           "bytesPerRow": null,
           "detail": "no tuple; exp_num(1)",
           "predicates": null,
-          "indentation": 3,
+          "indentation": 4,
           "children": [
             {
               "nodeType": "CSCN2",
@@ -34,7 +34,7 @@
               "bytesPerRow": 64,
               "detail": "INDEX500(T_ARCHIVE); btr_scan(1)",
               "predicates": null,
-              "indentation": 5,
+              "indentation": 6,
               "children": [],
               "extra": {
                 "estimate": "[bad, 20000, 64]"

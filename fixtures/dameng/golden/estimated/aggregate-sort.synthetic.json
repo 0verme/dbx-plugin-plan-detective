@@ -12,7 +12,7 @@
       "bytesPerRow": 64,
       "detail": null,
       "predicates": null,
-      "indentation": 1,
+      "indentation": 2,
       "children": [
         {
           "nodeType": "SAGR2",
@@ -23,7 +23,7 @@
           "bytesPerRow": 64,
           "detail": "grp_num(1); sfun_num(1)",
           "predicates": null,
-          "indentation": 3,
+          "indentation": 4,
           "children": [
             {
               "nodeType": "SORT3",
@@ -34,7 +34,7 @@
               "bytesPerRow": 64,
               "detail": "sort_key(ORDER_DATE)",
               "predicates": null,
-              "indentation": 5,
+              "indentation": 6,
               "children": [
                 {
                   "nodeType": "CSCN2",
@@ -45,7 +45,7 @@
                   "bytesPerRow": 64,
                   "detail": "INDEX300(T_SALES); btr_scan(1); need_slct(0)",
                   "predicates": null,
-                  "indentation": 7,
+                  "indentation": 8,
                   "children": [],
                   "extra": {}
                 }

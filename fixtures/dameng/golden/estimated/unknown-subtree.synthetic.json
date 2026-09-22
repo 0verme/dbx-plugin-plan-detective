@@ -12,7 +12,7 @@
       "bytesPerRow": 64,
       "detail": null,
       "predicates": null,
-      "indentation": 1,
+      "indentation": 2,
       "children": [
         {
           "nodeType": "PX FUTURE SHUFFLE",
@@ -23,7 +23,7 @@
           "bytesPerRow": 64,
           "detail": "worker_count(4); future_flag(TRUE)",
           "predicates": null,
-          "indentation": 3,
+          "indentation": 4,
           "children": [
             {
               "nodeType": "CSCN2",
@@ -34,7 +34,7 @@
               "bytesPerRow": 64,
               "detail": "INDEX400(T_EVENTS); btr_scan(1)",
               "predicates": null,
-              "indentation": 5,
+              "indentation": 6,
               "children": [],
               "extra": {}
             }

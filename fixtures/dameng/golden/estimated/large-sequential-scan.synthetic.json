@@ -12,7 +12,7 @@
       "bytesPerRow": 64,
       "detail": null,
       "predicates": null,
-      "indentation": 1,
+      "indentation": 2,
       "children": [
         {
           "nodeType": "CSCN2",
@@ -25,7 +25,7 @@
           "predicates": [
             "filter(T_ORDERS.STATUS = 'OPEN')"
           ],
-          "indentation": 3,
+          "indentation": 4,
           "children": [],
           "extra": {}
         }

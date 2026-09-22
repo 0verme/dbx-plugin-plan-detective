@@ -131,10 +131,10 @@ export function parseDamengTextPlan(input) {
  * @returns {ParsedDamengNode}
  */
 function parseOperationRow(match) {
-  // DM8 prints the tree depth in the whitespace between the operation id and
-  // `#`; keep any leading whitespace as well for drivers that indent the full
-  // row. The id itself is never used to infer parentage.
-  const indentation = leadingWhitespace(match[1]) + match[3].length;
+  // DM8 aligns `#` in a fixed display column, so the absolute column of `#`
+  // is the stable indentation even when operation ids grow from one to two
+  // digits. The id itself is never used to infer parentage.
+  const indentation = leadingWhitespace(match[1]) + match[2].length + match[3].length;
   const id = Number(match[2]);
   const operator = match[4].trim();
   if (operator.length === 0 || !Number.isSafeInteger(id)) {

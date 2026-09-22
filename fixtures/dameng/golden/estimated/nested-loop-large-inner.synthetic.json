@@ -12,7 +12,7 @@
       "bytesPerRow": 56,
       "detail": null,
       "predicates": null,
-      "indentation": 1,
+      "indentation": 2,
       "children": [
         {
           "nodeType": "NEST LOOP INDEX JOIN2",
@@ -25,7 +25,7 @@
           "predicates": [
             "access(C.ID = O.CUSTOMER_ID)"
           ],
-          "indentation": 3,
+          "indentation": 4,
           "children": [
             {
               "nodeType": "CSCN2",
@@ -36,7 +36,7 @@
               "bytesPerRow": 52,
               "detail": "INDEX600(T_CUSTOMERS as C); btr_scan(1); need_slct(0)",
               "predicates": null,
-              "indentation": 5,
+              "indentation": 6,
               "children": [],
               "extra": {}
             },
@@ -49,7 +49,7 @@
               "bytesPerRow": 4,
               "detail": "scan_type(ASC), IDX_ORDERS_CUSTOMER(T_ORDERS as O), scan_range[C.ID,C.ID]",
               "predicates": null,
-              "indentation": 5,
+              "indentation": 6,
               "children": [],
               "extra": {}
             }

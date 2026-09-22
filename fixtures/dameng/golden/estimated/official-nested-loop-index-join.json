@@ -12,7 +12,7 @@
       "bytesPerRow": 56,
       "detail": null,
       "predicates": null,
-      "indentation": 3,
+      "indentation": 4,
       "children": [
         {
           "nodeType": "PRJT2",
@@ -23,7 +23,7 @@
           "bytesPerRow": 56,
           "detail": "exp_num(2), is_atom(FALSE); INFO_BITS(0); BATCH_EXP_NUM(1); spl_info(NULL)",
           "predicates": null,
-          "indentation": 5,
+          "indentation": 6,
           "children": [
             {
               "nodeType": "NEST LOOP INDEX JOIN2",
@@ -34,7 +34,7 @@
               "bytesPerRow": 56,
               "detail": null,
               "predicates": null,
-              "indentation": 7,
+              "indentation": 8,
               "children": [
                 {
                   "nodeType": "CSCN2",
@@ -45,7 +45,7 @@
                   "bytesPerRow": 52,
                   "detail": "INDEX33555490(T2 as B); btr_scan(1); need_slct(0); prejudge_iescn(0)",
                   "predicates": null,
-                  "indentation": 9,
+                  "indentation": 10,
                   "children": [],
                   "extra": {}
                 },
@@ -58,7 +58,7 @@
                   "bytesPerRow": 4,
                   "detail": "scan_type(ASC), IDX_T1_C1(T1 as A), scan_range[B.D1,B.D1], is_global(0)",
                   "predicates": null,
-                  "indentation": 9,
+                  "indentation": 10,
                   "children": [],
                   "extra": {}
                 }

@@ -38,6 +38,20 @@ test("parses Dameng operation rows, tuple fields, indentation and predicates by 
   assert.equal(parsed.root.children[0].children[1].indentation > parsed.root.children[0].indentation, true);
 });
 
+test("uses the display column of # so multi-digit operation ids remain siblings", () => {
+  const parsed = parseDamengTextPlan(
+    input(`1   #NSET2: [1, 1, 1]
+2     #PRJT2: [1, 1, 1]
+9       #NEST LOOP JOIN2: [1, 1, 1]
+10      #CSCN2: [1, 1, 1]
+11      #CSCN2: [1, 1, 1]
+`),
+  );
+
+  assert.deepEqual(parsed.root.children.map((child) => child.nodeType), ["PRJT2"]);
+  assert.deepEqual(parsed.root.children[0].children.map((child) => child.id), [9, 10, 11]);
+});
+
 test("keeps the operation detail verbatim and tolerates unknown operators", () => {
   const parsed = parseDamengTextPlan(
     input(`1 #NSET2: [1, 1, 64]
