@@ -49,7 +49,7 @@ PostgreSQL、MySQL 和 SQL Server 会进入结构化分析；其他已支持获�
 
 当前版本已发布到 [GitHub Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases)，但尚未进入 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录；目前以 GitHub Release 的未签名候选包手动安装为主。
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.5.4-universal.dbxp`。
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.0-universal.dbxp`。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
 
