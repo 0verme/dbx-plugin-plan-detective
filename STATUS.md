@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-22 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（PR [#37](https://github.com/0verme/dbx-plugin-plan-detective/pull/37) 已合并）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）+ Issue [#38](https://github.com/0verme/dbx-plugin-plan-detective/issues/38) MySQL `data_read_per_join` 修复（PR [#39](https://github.com/0verme/dbx-plugin-plan-detective/pull/39) 已合并）+ v0.6.0 Release（已发布）+ Issue [#42](https://github.com/0verme/dbx-plugin-plan-detective/issues/42) Hotspot 可读性与复制 AI 分析提示词（PR [#43](https://github.com/0verme/dbx-plugin-plan-detective/pull/43) 已合并）+ v0.6.1 Release（已发布）+ **Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（本轮实现，尚未合并）**；上游 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（PR [#37](https://github.com/0verme/dbx-plugin-plan-detective/pull/37) 已合并）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）+ Issue [#38](https://github.com/0verme/dbx-plugin-plan-detective/issues/38) MySQL `data_read_per_join` 修复（PR [#39](https://github.com/0verme/dbx-plugin-plan-detective/pull/39) 已合并）+ v0.6.0 Release（已发布）+ Issue [#42](https://github.com/0verme/dbx-plugin-plan-detective/issues/42) Hotspot 可读性与复制 AI 分析提示词（PR [#43](https://github.com/0verme/dbx-plugin-plan-detective/pull/43) 已合并）+ v0.6.1 Release（已发布）+ **Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（PR [#46](https://github.com/0verme/dbx-plugin-plan-detective/pull/46) 待合并）**；上游 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
 | 插件版本 | 0.6.1（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL / SQL Server / OceanBase Oracle structured；Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging） |
@@ -132,7 +132,7 @@ DBX Host（dbType: "sqlserver" / format: "xml" / Estimated ShowPlanXML）
 - 边界：`query_cost` / `read_cost` / `eval_cost` / `prefix_cost` / `sort_cost` / `filtered` 的 numeric contract 未放宽；MySQL JSON Explain V2 无 `cost_info`，无需修改。
 - 回归：新增 `fixtures/mysql/estimated/data-read-per-join-unit.synthetic.*` + golden、parser 单测、pipeline 与 view-model 断言；既有 47 个 golden 未变化。
 
-### 0.2.6 OceanBase Oracle JSON Estimated Plan 结构化（Phase 3.2，2026-09-22，尚未合并）
+### 0.2.6 OceanBase Oracle JSON Estimated Plan 结构化（Phase 3.2，2026-09-22，PR [#46](https://github.com/0verme/dbx-plugin-plan-detective/pull/46) 待合并）
 
 ```text
 DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解码结果）
@@ -164,6 +164,8 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
   11 个 synthetic）+ 对应 golden；本机无 OceanBase 实例，provenance 见 `fixtures/oceanbase-oracle/README.md`。
 - 测试：`tests/oceanbase/**`（parser / normalizer / fixtures+golden / analysis / view-model）+ 既有测试适配
   （registry、fixture loader / convention、core isolation、metrics、hotspots）；`npm test` 1019/1019，既有 48 个 golden 未变化。
+- Gate：`npm test` 1019/1019；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 与 `git diff --check` 通过；
+  Host Smoke **NOT RUN**（当前环境无 DBX Desktop Host）。本轮不发 Release（不改版本号 / 不打 tag / 不建 GitHub Release / 不更新 DBX Store）。
 
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
