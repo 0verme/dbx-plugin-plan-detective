@@ -107,6 +107,20 @@ test("metrics never invent a cost for MySQL", async () => {
   }
 });
 
+test("issue #38: a human-readable data_read_per_join survives the pipeline", async () => {
+  const loaded = await fixture("data-read-per-join-unit.synthetic");
+  const { parsed, normalized, findings } = analyzePlan(loaded.input);
+
+  const [tableNode] = parsed.root.children;
+  assert.equal(tableNode.mysql.dataReadPerJoin, 171008, '"167K" must decode with MySQL\'s 1024 base');
+  assert.equal(
+    normalized.root.children[0].engineSpecific.mysql.dataReadPerJoin,
+    171008,
+    "the decoded byte count must reach the normalized engineSpecific block",
+  );
+  assert.deepEqual(findings, [], "the regression fixture is about parsing, not about firing rules");
+});
+
 test("large-sequential-scan fires on the row branch with a null cost, without fabricating zero", async () => {
   const loaded = await fixture("nested-loop-large-inner.synthetic");
   const { findings } = analyzePlan(loaded.input);

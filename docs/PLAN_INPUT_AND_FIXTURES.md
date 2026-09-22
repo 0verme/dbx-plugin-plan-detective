@@ -246,7 +246,7 @@ V1 `query_block` 与 V2 `query_plan` 保持独立解析分支，V2 不伪造 V1 
 | `query_block.message` / `table.message` / `*_result.message` | `mysql.message` | MySQL 在这些结构上报告 message（如 `Deleting all rows`、`Not optimized, outer query is empty`），parser 不丢弃 |
 | `materialized_from_subquery` | `nodeType: "Materialized Subquery"` | 可出现在 query block 或 table 下 |
 | `attached_subqueries` / `optimized_away_subqueries` / `group_by_subqueries` / `having_subqueries` / `order_by_subqueries` / `select_list_subqueries` | `nodeType: "Subquery"` | 数组元素形状统一为 `{ dependent, cacheable, query_block }` |
-| `cost_info.*` | `mysql.queryCost` / `readCost` / `evalCost` / `prefixCost` / `dataReadPerJoin` / `sortCost` | MySQL cost 是 numeric string，严格解析；未知子键进入 `extra.cost_info` |
+| `cost_info.*` | `mysql.queryCost` / `readCost` / `evalCost` / `prefixCost` / `dataReadPerJoin` / `sortCost` | cost 字段是 numeric string，严格解析；`data_read_per_join` 是 data size，单独由 `optionalDataSize()` 解析 MySQL `human_readable_num_bytes()` 格式（1024 进制整数 + `K`/`M`/`G`/`T`/`P`/`E`/`Z`/`Y` 后缀，如 `"167K"`）并归一化为 byte 数值；未知子键进入 `extra.cost_info` |
 | 其余原生键 | `extra` | 不丢弃；未知结构不会生成假节点 |
 
 - 结构不可信时抛 `PlanParseError`：V1 缺 `query_block`、V2 缺 `query_plan`/`operation`、
@@ -611,7 +611,7 @@ fixtures/sqlserver/                 # 仅 estimated；全部为 synthetic ShowPl
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
 当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
-MySQL 13 个，全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）；
+MySQL 14 个（12 个 V1 + 2 个 V2），全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）；
 SQL Server 14 个，全部为 synthetic ShowPlanXML（本机无 SQL Server 实例；形状对照公开 schema 与文档，
 明细见 `fixtures/sqlserver/README.md`）。
 

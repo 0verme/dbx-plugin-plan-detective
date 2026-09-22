@@ -119,6 +119,15 @@ test("findings keep their node labels and null evidence readable", () => {
   assert.equal(nestedEvidence.get("estimateOnly"), "true");
 });
 
+test("issue #38: a data-size data_read_per_join reaches the Node Inspector as bytes", async () => {
+  const loaded = await loadFixture({ database: "mysql", mode: "estimated", name: "data-read-per-join-unit.synthetic" });
+  const analysis = analyzePlan(loaded.input);
+  const nodes = indexNodesById(analysis.normalized.root);
+  const fields = inspectorFields(buildNodeInspector(nodes.get("0.0")));
+
+  assert.equal(fields.get("Data Read Per Join"), "171,008");
+});
+
 test("the view-model works on every committed MySQL fixture", async () => {
   const { loadAllFixtures } = await import("../helpers/fixtures.js");
   for (const fixture of await loadAllFixtures("mysql")) {

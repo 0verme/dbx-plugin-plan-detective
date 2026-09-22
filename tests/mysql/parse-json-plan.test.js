@@ -87,6 +87,77 @@ test("parses the MySQL envelope and table fields into typed values", () => {
   assert.deepEqual(node.extra, {});
 });
 
+test("parses data_read_per_join as a byte count, including MySQL data-size strings", () => {
+  // MySQL renders data_read_per_join through human_readable_num_bytes()
+  // (mysql-server include/m_string.h): binary (1024) base, integer-only
+  // output with an optional K/M/G/T/P/E/Z/Y suffix. Issue #38 was a real
+  // "167K" that the numeric parser rejected.
+  const cases = [
+    ["JSON number", 40000, 40000],
+    ["numeric string", "40000", 40000],
+    ["no-suffix boundary", "1024", 1024],
+    ["kilobytes", "16K", 16384],
+    ["issue #38 value", "167K", 171008],
+    ["megabytes", "1M", 1024 ** 2],
+    ["gigabytes", "2G", 2 * 1024 ** 3],
+    ["terabytes", "1T", 1024 ** 4],
+  ];
+
+  for (const [label, value, expected] of cases) {
+    const parsed = parseMySqlJsonPlan(
+      mysqlInput(plan({ table: table({ cost_info: { data_read_per_join: value } }) })),
+    );
+    assert.equal(parsed.root.children[0].mysql.dataReadPerJoin, expected, label);
+  }
+});
+
+test("data_read_per_join may be absent or null", () => {
+  const absent = parseMySqlJsonPlan(
+    mysqlInput(plan({ table: table({ cost_info: { read_cost: "0.50" } }) })),
+  );
+  assert.equal(absent.root.children[0].mysql.dataReadPerJoin, null);
+
+  const nulled = parseMySqlJsonPlan(
+    mysqlInput(plan({ table: table({ cost_info: { read_cost: "0.50", data_read_per_join: null } }) })),
+  );
+  assert.equal(nulled.root.children[0].mysql.dataReadPerJoin, null);
+});
+
+test("data_read_per_join rejects values outside MySQL's data-size grammar", () => {
+  const malformed = ["1.5M", "16KB", "16k", "-1K", "K", "1,000", "1 000", "", true, {}, []];
+  for (const value of malformed) {
+    assert.throws(
+      () => parseMySqlJsonPlan(mysqlInput(plan({ table: table({ cost_info: { data_read_per_join: value } }) }))),
+      (error) => error instanceof PlanParseError && error.code === "MALFORMED_NODE",
+      `${JSON.stringify(value)} must be malformed`,
+    );
+  }
+
+  // `+INF` is the human_readable_num_bytes() overflow sentinel. The parser
+  // contract is a finite byte count, so it fails closed instead of inventing
+  // an Infinity.
+  assert.throws(
+    () => parseMySqlJsonPlan(mysqlInput(plan({ table: table({ cost_info: { data_read_per_join: "+INF" } }) }))),
+    (error) => error instanceof PlanParseError && error.code === "MALFORMED_NODE",
+  );
+});
+
+test("data-size suffixes stay invalid for every other numeric cost field", () => {
+  for (const key of ["query_cost", "read_cost", "eval_cost", "prefix_cost", "sort_cost"]) {
+    assert.throws(
+      () => parseMySqlJsonPlan(mysqlInput(plan({ table: table({ cost_info: { [key]: "16K" } }) }))),
+      (error) => error instanceof PlanParseError && error.code === "MALFORMED_NODE",
+      `${key} must stay numeric-only`,
+    );
+  }
+
+  assert.throws(
+    () => parseMySqlJsonPlan(mysqlInput(plan({ table: table({ filtered: "16K" }) }))),
+    (error) => error instanceof PlanParseError && error.code === "MALFORMED_NODE",
+    "filtered must stay numeric-only",
+  );
+});
+
 test("maps access types onto stable MySQL labels instead of PostgreSQL ones", () => {
   const cases = [
     ["ALL", "Table Scan"],

@@ -3,7 +3,7 @@
 本目录存放 MySQL 执行计划的**离线样本**，作为 Parser、Normalizer、Metrics、Rule Engine 与 UI 的
 一等开发与测试输入。
 
-> **当前状态：13 个 `estimated/` fixture + 对应 golden，已接入结构化 pipeline。**
+> **当前状态：14 个 `estimated/` fixture + 对应 golden，已接入结构化 pipeline。**
 > MySQL 的 Estimated Plan 来自 DBX Host 实际返回的 `EXPLAIN FORMAT=JSON`；V2 fixture 覆盖
 > MySQL 9.5 / DBX v0.6.18 返回的 `query_plan` 形状；详见
 > [docs/PLAN_INPUT_AND_FIXTURES.md](../../docs/PLAN_INPUT_AND_FIXTURES.md) 第 4.2 节。
@@ -40,6 +40,7 @@
 | fixture | SQL 场景 | 覆盖点 | 触发规则 |
 | --- | --- | --- | --- |
 | `table-scan.synthetic` | `SELECT * FROM orders WHERE status = 'OPEN'` | `access_type: ALL`、`attached_condition`、单表 | — |
+| `data-read-per-join-unit.synthetic` | 单表 `access_type: ALL`（Issue #38 regression） | `cost_info.data_read_per_join` 为 MySQL human-readable data size（`"167K"`），验证 1024 进制 byte 归一化 | — |
 | `large-table-scan.synthetic` | `SELECT * FROM events` | 大估算行数、无 IR cost | `large-sequential-scan`（high） |
 | `index-lookup.synthetic` | `SELECT ... FROM users WHERE email = ?` | `ref` + `possible_keys` / `key` / `used_key_parts` / `key_length` / `ref` | — |
 | `const-lookup.synthetic` | `SELECT ... FROM settings WHERE id = 1` | `const` 单行查找 → `const_scan` | — |
@@ -67,6 +68,10 @@
   或不可信结构均 fail closed，未知但合法的字段进入 `extra`。
 - `cost_info` 只进入 `engineSpecific.mysql`，**不**映射到 IR 的 `startupCost` / `totalCost`：
   MySQL cost 与 PostgreSQL cost 不可直接比较，`prefix_cost` 还是累计值。
+- `cost_info` 中除 `data_read_per_join` 外的值都是 MySQL numeric string，严格解析；
+  `data_read_per_join` 是 data size，由 MySQL `human_readable_num_bytes()` 输出为 1024 进制、
+  整数加 `K` / `M` / `G` / `T` / `P` / `E` / `Z` / `Y` 后缀（如 `"167K"`），parser 用独立的
+  `optionalDataSize()` 归一化为 byte 数值，不把单位后缀放宽到其他 cost 字段（Issue #38）。
 - 一个样本一个文件；`.plan.json` 保持 JSON 合法（MySQL `end_markers_in_json=on` 的输出带
   `/* ... */` 注释、不是合法 JSON，本目录不采用）。
 - 不放入任何包含真实生产数据、凭据或连接串的内容。
