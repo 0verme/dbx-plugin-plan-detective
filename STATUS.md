@@ -13,19 +13,19 @@
 - Project: `dbx-plugin-plan-detective`
 - Bootstrap Root: `/vol5/1000/ai-workspace`
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
-- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；发布基线 `c35f2d2`（origin/main）
+- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；最新 main `8c1961b`；release commit `c35f2d2`
 - Active Tasks:
   - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#52`；Notes: merge `3f1ee8b`，`npm test` 1128/1128、golden 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。
   - Issue / Task: v0.6.4 Release；Branch: `chore/prepare-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.4-release`；State: `MERGED`；Conflict Risk: `MEDIUM`；PR: `#53`；Notes: merge `c35f2d2`；annotated tag `v0.6.4` 与 GitHub Release 已发布，workflow / artifact 已校验；DBX Store 不在本轮范围。
-  - Issue / Task: v0.6.4 Release Verification Record；Branch: `docs/record-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/record-v0.6.4-release`；State: `IN_PROGRESS`；Conflict Risk: `LOW`；PR: `not created`；Notes: 记录 tag / GitHub Release / workflow / artifact 校验结果。
+  - Issue / Task: v0.6.4 Release Verification Record；Branch: `docs/record-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/record-v0.6.4-release`；State: `MERGED`；Conflict Risk: `LOW`；PR: `#54`；Notes: merge `8c1961b`；tag / GitHub Release / workflow / artifact 校验已记录。
 - Integration Baseline: `c35f2d2`。
 - Hotspot Files: `src/core/parsers/index.js`、`src/core/raw-plan-input.js`、`src/core/hotspots/compute-hotspots.js`、`src/lib/view-model.js`、`tests/helpers/fixtures.js`、fixture convention / golden tests。
 - Blocked: None identified；Host/API 审计和官方 Dameng plan contract 已完成；Host Smoke 未运行（当前环境无 DBX Desktop Host）。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: `docs/record-v0.6.4-release`，等待发布记录 PR；未入队合并。
-- Recently Merged: PR #52 Phase 3.4 Dameng structured（`3f1ee8b`）；PR #53 v0.6.4 release prep（`c35f2d2`）；v0.6.4 已发布。
+- Merge Queue: None；v0.6.4 release verification record PR #54 已合并。
+- Recently Merged: PR #52 Phase 3.4 Dameng structured（`3f1ee8b`）；PR #53 v0.6.4 release prep（`c35f2d2`）；PR #54 v0.6.4 release verification（`8c1961b`）；v0.6.4 已发布。
 
-- Next Actions: commit / push v0.6.4 release verification record；创建并合并记录 PR；随后将本任务标记 `MERGED`。
+- Next Actions: 无；v0.6.4 tag、GitHub Release、CI artifact 与发布记录均已完成。
 
 ## 0. 当前状态
 
