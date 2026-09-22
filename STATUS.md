@@ -5,7 +5,7 @@
 | 最后更新 | 2026-09-22 |
 | 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（已实现）+ Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（已实现）+ Phase 3.3 · Oracle DBMS_XPLAN Estimated Plan 结构化（已实现）+ Phase 3.4 · Dameng Structured Estimated Plan（READY，PR #52）+ v0.6.3 Release（已发布） |
 | 插件版本 | 0.6.3（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Phase 3.4 业务代码、fixture、golden、专门测试与文档已完成；`npm test` 1127/1127、golden 72 unchanged、`npm run build` 与 `git diff --check` 已通过；commit `48baa71` 已 push，中文 PR #52 已创建。Dameng 为 Estimated-only structured；Doris / QuestDB raw-only。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 阶段结论 | Phase 3.4 业务代码、fixture、golden、专门测试与文档已完成；`npm test` 1128/1128、golden regeneration 7 updated / 65 unchanged、`npm run build` 与 `git diff --check` 已通过；commits `48baa71`、`09de98b`、`9e7c669` 已 push，中文 PR #52 已创建。Dameng 为 Estimated-only structured；Doris / QuestDB raw-only。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / QuestDB / Plan Diff / 版本号 / Release |
 
 ## 当前任务快照（Phase 3.4）
@@ -15,7 +15,7 @@
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
 - Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；基线 `2bacab84`
 - Active Tasks:
-  - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#52`；Notes: 仅 Dameng parser / normalizer / shared analysis / UI fields / fixtures / docs；commit `48baa71` 已 push，`npm test` 1127/1127、golden 72 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。不涉及 DBX、Actual、Doris/QuestDB、AI、Plan Diff、版本号或 Release。
+  - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#52`；Notes: 仅 Dameng parser / normalizer / shared analysis / UI fields / fixtures / docs；commits `48baa71`、`09de98b`、`9e7c669` 已 push，`npm test` 1128/1128、golden regeneration 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。不涉及 DBX、Actual、Doris/QuestDB、AI、Plan Diff、版本号或 Release。
 - Merge Queue: `feat/dameng-structured-plan` → PR #52，等待 CI / review；未入队合并。
 - Integration Baseline: `2bacab84`。
 - Hotspot Files: `src/core/parsers/index.js`、`src/core/raw-plan-input.js`、`src/core/hotspots/compute-hotspots.js`、`src/lib/view-model.js`、`tests/helpers/fixtures.js`、fixture convention / golden tests。
