@@ -30,8 +30,11 @@ import { parseMySqlJsonPlanV2 } from "./parse-json-plan-v2.js";
  *
  * - `rows_examined_per_scan` / `rows_produced_per_join` are numbers in the MySQL
  *   payload; a string there is malformed input, not a value to coerce.
- * - `filtered` and every `cost_info` value are numeric strings in the MySQL
- *   payload; they are parsed strictly and a non-numeric string is malformed.
+ * - `filtered` and the cost values in `cost_info` are numeric strings in the
+ *   MySQL payload; they are parsed strictly and a non-numeric string is
+ *   malformed. `data_read_per_join` is the one exception: MySQL formats it
+ *   through `human_readable_num_bytes()` as a binary byte size ("167K"), so
+ *   it has its own decoder (`optionalDataSize`) instead of the numeric parser.
  * - costs stay in `mysql.*` and are never mapped onto PostgreSQL-style cost
  *   fields (the normalizer explains why).
  *
@@ -698,7 +701,10 @@ function applyCostInfo(node, raw, path) {
   node.mysql.readCost = optionalNumeric(costInfo, "read_cost", `${path}.cost_info`);
   node.mysql.evalCost = optionalNumeric(costInfo, "eval_cost", `${path}.cost_info`);
   node.mysql.prefixCost = optionalNumeric(costInfo, "prefix_cost", `${path}.cost_info`);
-  node.mysql.dataReadPerJoin = optionalNumeric(costInfo, "data_read_per_join", `${path}.cost_info`);
+  // `data_read_per_join` is a data size, not a cost: MySQL emits a
+  // human-readable byte count ("167K"), so it must not go through the numeric
+  // parser the other cost fields use.
+  node.mysql.dataReadPerJoin = optionalDataSize(costInfo, "data_read_per_join", `${path}.cost_info`);
   node.mysql.sortCost = optionalNumeric(costInfo, "sort_cost", `${path}.cost_info`);
 
   const leftovers = collectExtra(costInfo, COST_KEYS);
@@ -788,6 +794,41 @@ function optionalNumeric(raw, key, path) {
     return Number(value);
   }
   throw malformedNode(path, `[${JSON.stringify(key)}] must be a number or a numeric string; got ${describeValue(value)}.`);
+}
+
+/**
+ * `data_read_per_join` is a byte count, not a cost: MySQL renders it with
+ * `human_readable_num_bytes()` (`mysql-server/include/m_string.h`), which
+ * divides by 1024 and prints `%llu%c` — an integer plus one of the suffixes
+ * `""` (empty), `K`, `M`, `G`, `T`, `P`, `E`, `Z`, `Y` (`"224"`, `"167K"`,
+ * `"1M"`). The formatter never prints a decimal, so `"1.5M"` is not a value
+ * MySQL can produce and stays malformed here; `"+INF"` (its overflow
+ * sentinel) is malformed too, because the contract is a finite byte count.
+ *
+ * The decoder is deliberately separate from `optionalNumeric()`: `query_cost`,
+ * `read_cost`, `eval_cost`, `prefix_cost` and `sort_cost` are cost values and
+ * must keep rejecting unit suffixes. The data size is normalized to bytes
+ * with MySQL's binary (1024) base, never the decimal base.
+ *
+ * @param {Record<string, unknown>} raw
+ * @param {string} key
+ * @param {string} path
+ * @returns {number|null}
+ */
+function optionalDataSize(raw, key, path) {
+  const value = raw[key];
+  if (value === undefined || value === null) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (text.length > 0 && NUMERIC_STRING.test(text)) return Number(text);
+    const match = DATA_SIZE_STRING.exec(text);
+    if (match !== null) return Number(match[1]) * DATA_SIZE_MULTIPLIER[match[2]];
+  }
+  throw malformedNode(
+    path,
+    `[${JSON.stringify(key)}] must be a number, a numeric string, or a MySQL data-size string such as "167K"; got ${describeValue(value)}.`,
+  );
 }
 
 /**
@@ -913,3 +954,21 @@ function describeValue(value) {
 
 /** Strict numeric-string shape MySQL uses for `cost_info` / `filtered`. */
 const NUMERIC_STRING = /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/;
+
+/**
+ * `human_readable_num_bytes()` output: an integer plus an optional binary
+ * suffix. The plain integer form is already covered by `NUMERIC_STRING`.
+ */
+const DATA_SIZE_STRING = /^(\d+)([KMGTPEZY])$/;
+
+/** Binary multipliers used by `human_readable_num_bytes()` (1024, not 1000). */
+const DATA_SIZE_MULTIPLIER = Object.freeze({
+  K: 1024,
+  M: 1024 ** 2,
+  G: 1024 ** 3,
+  T: 1024 ** 4,
+  P: 1024 ** 5,
+  E: 1024 ** 6,
+  Z: 1024 ** 7,
+  Y: 1024 ** 8,
+});

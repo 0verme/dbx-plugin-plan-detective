@@ -1,0 +1,27 @@
+{
+  "database": "mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Regression fixture for GitHub issue #38 (https://github.com/0verme/dbx-plugin-plan-detective/issues/38): synthetic minimal MySQL 8.0 EXPLAIN FORMAT=JSON table access whose cost_info.data_read_per_join is a human-readable byte size (\"167K\") instead of a plain numeric string. The shape mirrors the reporter's real plan (query_block -> table, access_type ALL, rows_examined_per_scan / rows_produced_per_join, filtered, cost_info) without copying the user's SQL, schema or table names. The size encoding was verified against MySQL Server 8.0 human_readable_num_bytes() (include/m_string.h): 1024-based, integer-only, with an optional K/M/G/T/P/E/Z/Y suffix. Table name, columns, row counts and costs are neutralized synthetic test data.",
+    "reference": "https://github.com/mysql/mysql-server/blob/8.0/include/m_string.h"
+  },
+  "features": [
+    "regression for issue #38",
+    "data_read_per_join",
+    "human-readable byte size",
+    "access_type ALL",
+    "single table"
+  ],
+  "expect": {
+    "rootNodeType": "Query Block",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}
