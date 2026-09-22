@@ -1,0 +1,30 @@
+{
+  "ID": 0,
+  "OPERATOR": "EXCHANGE OUT DISTRIBUTED",
+  "NAME": "",
+  "EST.ROWS": 64,
+  "EST.TIME(us)": 21,
+  "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL])",
+  "use_hash": true,
+  "px_expected_worker_count": 4,
+  "px_worker_count": null,
+  "gi_partition_id": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "plan_notes": {
+    "outline": "USE_HASH(T_ORDERS)",
+    "plan_type": 1
+  },
+  "filter": "filter([T_ORDERS.STATUS = 'PAID'])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T_ORDERS",
+    "EST.ROWS": 64,
+    "EST.TIME(us)": 12,
+    "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL], [T_ORDERS.STATUS])"
+  }
+}

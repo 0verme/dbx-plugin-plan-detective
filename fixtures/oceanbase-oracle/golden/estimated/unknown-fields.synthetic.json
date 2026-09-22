@@ -1,0 +1,179 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "EXCHANGE OUT DISTRIBUTED",
+      "operator": "EXCHANGE OUT DISTRIBUTED",
+      "nodeId": 0,
+      "name": "",
+      "estimatedRows": 64,
+      "estimatedTimeUs": 21,
+      "cost": null,
+      "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL])",
+      "children": [
+        {
+          "nodeType": "TABLE FULL SCAN",
+          "operator": "TABLE FULL SCAN",
+          "nodeId": 1,
+          "name": "T_ORDERS",
+          "estimatedRows": 64,
+          "estimatedTimeUs": 12,
+          "cost": null,
+          "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL], [T_ORDERS.STATUS])",
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {
+        "use_hash": true,
+        "px_expected_worker_count": 4,
+        "px_worker_count": null,
+        "gi_partition_id": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "plan_notes": {
+          "outline": "USE_HASH(T_ORDERS)",
+          "plan_type": 1
+        },
+        "filter": "filter([T_ORDERS.STATUS = 'PAID'])"
+      }
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "unknown",
+      "nodeType": "EXCHANGE OUT DISTRIBUTED",
+      "relation": null,
+      "estimatedRows": 64,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "TABLE FULL SCAN",
+          "relation": {
+            "name": "T_ORDERS",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 64,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 1,
+              "operator": "TABLE FULL SCAN",
+              "name": "T_ORDERS",
+              "estimatedRows": 64,
+              "estimatedTimeUs": 12,
+              "cost": null,
+              "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL], [T_ORDERS.STATUS])"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "EXCHANGE OUT DISTRIBUTED",
+          "name": "",
+          "estimatedRows": 64,
+          "estimatedTimeUs": 21,
+          "cost": null,
+          "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL])"
+        },
+        "extra": {
+          "use_hash": true,
+          "px_expected_worker_count": 4,
+          "px_worker_count": null,
+          "gi_partition_id": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "plan_notes": {
+            "outline": "USE_HASH(T_ORDERS)",
+            "plan_type": 1
+          },
+          "filter": "filter([T_ORDERS.STATUS = 'PAID'])"
+        }
+      }
+    },
+    "unknownNodeTypes": [
+      "EXCHANGE OUT DISTRIBUTED"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 64,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "unknown",
+      "nodeType": "EXCHANGE OUT DISTRIBUTED",
+      "relation": null,
+      "estimatedRows": 64
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

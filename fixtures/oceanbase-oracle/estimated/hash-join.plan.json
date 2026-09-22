@@ -1,0 +1,24 @@
+{
+  "ID": 0,
+  "OPERATOR": "HASH JOIN ",
+  "NAME": "",
+  "EST.ROWS": 1,
+  "EST.TIME(us)": 8,
+  "output": "output([T101.C1], [T101.C2], [T102.C1], [T102.C2])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T102",
+    "EST.ROWS": 1,
+    "EST.TIME(us)": 4,
+    "output": "output([T102.C2], [T102.C1])"
+  },
+  "CHILD_2": {
+    "ID": 2,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T101",
+    "EST.ROWS": 1,
+    "EST.TIME(us)": 4,
+    "output": "output([T101.C2], [T101.C1])"
+  }
+}

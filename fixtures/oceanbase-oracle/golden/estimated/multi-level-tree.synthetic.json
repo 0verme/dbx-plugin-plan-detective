@@ -1,0 +1,341 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "LIMIT",
+      "operator": "LIMIT",
+      "nodeId": 0,
+      "name": "",
+      "estimatedRows": 100,
+      "estimatedTimeUs": 5120,
+      "cost": null,
+      "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+      "children": [
+        {
+          "nodeType": "SORT",
+          "operator": "SORT",
+          "nodeId": 1,
+          "name": "",
+          "estimatedRows": 100,
+          "estimatedTimeUs": 4980,
+          "cost": null,
+          "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+          "children": [
+            {
+              "nodeType": "HASH JOIN",
+              "operator": "HASH JOIN",
+              "nodeId": 2,
+              "name": "",
+              "estimatedRows": 100,
+              "estimatedTimeUs": 4600,
+              "cost": null,
+              "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+              "children": [
+                {
+                  "nodeType": "TABLE RANGE SCAN",
+                  "operator": "TABLE RANGE SCAN",
+                  "nodeId": 3,
+                  "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+                  "estimatedRows": 1000,
+                  "estimatedTimeUs": 4200,
+                  "cost": null,
+                  "output": "output([T_CUSTOMERS.ID], [T_CUSTOMERS.REGION])",
+                  "children": [],
+                  "extra": {}
+                },
+                {
+                  "nodeType": "MATERIAL",
+                  "operator": "MATERIAL",
+                  "nodeId": 4,
+                  "name": "",
+                  "estimatedRows": 5000,
+                  "estimatedTimeUs": 2600,
+                  "cost": null,
+                  "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])",
+                  "children": [
+                    {
+                      "nodeType": "TABLE FULL SCAN",
+                      "operator": "TABLE FULL SCAN",
+                      "nodeId": 5,
+                      "name": "T_ORDERS",
+                      "estimatedRows": 5000,
+                      "estimatedTimeUs": 1800,
+                      "cost": null,
+                      "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])",
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "limit",
+      "nodeType": "LIMIT",
+      "relation": null,
+      "estimatedRows": 100,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "sort",
+          "nodeType": "SORT",
+          "relation": null,
+          "estimatedRows": 100,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "hash_join",
+              "nodeType": "HASH JOIN",
+              "relation": null,
+              "estimatedRows": 100,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "index_scan",
+                  "nodeType": "TABLE RANGE SCAN",
+                  "relation": {
+                    "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+                    "alias": null,
+                    "indexName": null
+                  },
+                  "estimatedRows": 1000,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "oceanbase-oracle",
+                    "oceanBase": {
+                      "id": 3,
+                      "operator": "TABLE RANGE SCAN",
+                      "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+                      "estimatedRows": 1000,
+                      "estimatedTimeUs": 4200,
+                      "cost": null,
+                      "output": "output([T_CUSTOMERS.ID], [T_CUSTOMERS.REGION])"
+                    },
+                    "extra": {}
+                  }
+                },
+                {
+                  "id": "0.0.0.1",
+                  "kind": "materialize",
+                  "nodeType": "MATERIAL",
+                  "relation": null,
+                  "estimatedRows": 5000,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.1.0",
+                      "kind": "seq_scan",
+                      "nodeType": "TABLE FULL SCAN",
+                      "relation": {
+                        "name": "T_ORDERS",
+                        "alias": null,
+                        "indexName": null
+                      },
+                      "estimatedRows": 5000,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "oceanbase-oracle",
+                        "oceanBase": {
+                          "id": 5,
+                          "operator": "TABLE FULL SCAN",
+                          "name": "T_ORDERS",
+                          "estimatedRows": 5000,
+                          "estimatedTimeUs": 1800,
+                          "cost": null,
+                          "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])"
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "oceanbase-oracle",
+                    "oceanBase": {
+                      "id": 4,
+                      "operator": "MATERIAL",
+                      "name": "",
+                      "estimatedRows": 5000,
+                      "estimatedTimeUs": 2600,
+                      "cost": null,
+                      "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])"
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "oceanbase-oracle",
+                "oceanBase": {
+                  "id": 2,
+                  "operator": "HASH JOIN",
+                  "name": "",
+                  "estimatedRows": 100,
+                  "estimatedTimeUs": 4600,
+                  "cost": null,
+                  "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])"
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 1,
+              "operator": "SORT",
+              "name": "",
+              "estimatedRows": 100,
+              "estimatedTimeUs": 4980,
+              "cost": null,
+              "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "LIMIT",
+          "name": "",
+          "estimatedRows": 100,
+          "estimatedTimeUs": 5120,
+          "cost": null,
+          "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 6,
+    "maxDepth": 5,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 100,
+    "scanCount": 2,
+    "sequentialScanCount": 1,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 1,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0.1",
+      "kind": "materialize",
+      "nodeType": "MATERIAL",
+      "relation": null,
+      "estimatedRows": 5000
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

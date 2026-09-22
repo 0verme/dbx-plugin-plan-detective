@@ -5,10 +5,9 @@
  *
  * The registry is the only place that decides whether a database family has a
  * structured parser. A family without one is not an error: the host can return
- * a perfectly valid estimated plan for Oracle, OceanBase Oracle, Dameng, Doris
- * or QuestDB, and the UI still shows the Raw Plan and the host warnings. What
- * it must not do is pretend to parse a payload no one has validated against a
- * real sample.
+ * a perfectly valid estimated plan for Oracle, Dameng, Doris or QuestDB, and the
+ * UI still shows the Raw Plan and the host warnings. What it must not do is
+ * pretend to parse a payload no one has validated against a real sample.
  *
  * Adding a database means adding one parser module here; the UI, rules and
  * metrics never change.
@@ -20,6 +19,7 @@ import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
 import { mysqlParser } from "./mysql.js";
+import { oceanBaseOracleParser } from "./oceanbase-oracle.js";
 import { postgresParser } from "./postgres.js";
 import { sqlserverParser } from "./sqlserver.js";
 
@@ -32,6 +32,7 @@ const PARSERS = new Map([
   [postgresParser.database, postgresParser],
   [mysqlParser.database, mysqlParser],
   [sqlserverParser.database, sqlserverParser],
+  [oceanBaseOracleParser.database, oceanBaseOracleParser],
 ]);
 
 /**
@@ -43,7 +44,6 @@ const PARSERS = new Map([
  */
 const PENDING_PARSERS = new Map([
   ["oracle", "PARSER_NOT_IMPLEMENTED"],
-  ["oceanbase-oracle", "PARSER_NOT_IMPLEMENTED"],
   ["doris", "PARSER_NOT_IMPLEMENTED"],
   ["dameng", "PARSER_NOT_IMPLEMENTED"],
   ["questdb", "PARSER_NOT_IMPLEMENTED"],

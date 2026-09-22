@@ -1,0 +1,99 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "TABLE RANGE SCAN",
+      "operator": "TABLE RANGE SCAN",
+      "nodeId": 0,
+      "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+      "estimatedRows": 1200,
+      "estimatedTimeUs": 830,
+      "cost": null,
+      "output": "output([T_ORDERS.ID], [T_ORDERS.STATUS])",
+      "children": [],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "index_scan",
+      "nodeType": "TABLE RANGE SCAN",
+      "relation": {
+        "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+        "alias": null,
+        "indexName": null
+      },
+      "estimatedRows": 1200,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "TABLE RANGE SCAN",
+          "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+          "estimatedRows": 1200,
+          "estimatedTimeUs": 830,
+          "cost": null,
+          "output": "output([T_ORDERS.ID], [T_ORDERS.STATUS])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1200,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "TABLE RANGE SCAN",
+      "relation": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+      "estimatedRows": 1200
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

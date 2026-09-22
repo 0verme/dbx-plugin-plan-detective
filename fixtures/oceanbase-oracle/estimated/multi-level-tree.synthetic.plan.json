@@ -1,0 +1,48 @@
+{
+  "ID": 0,
+  "OPERATOR": "LIMIT",
+  "NAME": "",
+  "EST.ROWS": 100,
+  "EST.TIME(us)": 5120,
+  "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "SORT",
+    "NAME": "",
+    "EST.ROWS": 100,
+    "EST.TIME(us)": 4980,
+    "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+    "CHILD_1": {
+      "ID": 2,
+      "OPERATOR": "HASH JOIN",
+      "NAME": "",
+      "EST.ROWS": 100,
+      "EST.TIME(us)": 4600,
+      "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+      "CHILD_1": {
+        "ID": 3,
+        "OPERATOR": "TABLE RANGE SCAN",
+        "NAME": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+        "EST.ROWS": 1000,
+        "EST.TIME(us)": 4200,
+        "output": "output([T_CUSTOMERS.ID], [T_CUSTOMERS.REGION])"
+      },
+      "CHILD_2": {
+        "ID": 4,
+        "OPERATOR": "MATERIAL",
+        "NAME": "",
+        "EST.ROWS": 5000,
+        "EST.TIME(us)": 2600,
+        "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])",
+        "CHILD_1": {
+          "ID": 5,
+          "OPERATOR": "TABLE FULL SCAN",
+          "NAME": "T_ORDERS",
+          "EST.ROWS": 5000,
+          "EST.TIME(us)": 1800,
+          "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])"
+        }
+      }
+    }
+  }
+}

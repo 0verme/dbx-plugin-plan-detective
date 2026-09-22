@@ -10,6 +10,7 @@ DBX 的 SQL 执行计划分析插件。
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-structured-336791)](https://www.postgresql.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-structured-4479A1)](https://www.mysql.com/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-structured-CC2927)](https://www.microsoft.com/sql-server)
+[![OceanBase Oracle](https://img.shields.io/badge/OceanBase%20Oracle-structured-0b5fff)](https://www.oceanbase.com/)
 
 ## 插件简介
 
@@ -24,7 +25,7 @@ DBX 当前连接
     → Hotspots / Findings
 ```
 
-PostgreSQL、MySQL 和 SQL Server 会进入结构化分析；其他已支持获取 Estimated Plan 的数据库仍可查看 Host 返回的 Raw Plan。
+PostgreSQL、MySQL、SQL Server 和 OceanBase Oracle 会进入结构化分析；其他已支持获取 Estimated Plan 的数据库仍可查看 Host 返回的 Raw Plan。
 
 ## 主界面
 
@@ -38,6 +39,7 @@ PostgreSQL、MySQL 和 SQL Server 会进入结构化分析；其他已支持获�
 - **PostgreSQL 结构化解析**：将 JSON 执行计划整理为统一的计划树和指标。
 - **MySQL JSON Explain 结构化解析**：支持 DBX Host 返回的 `EXPLAIN FORMAT=JSON`。
 - **SQL Server ShowPlanXML 结构化解析**：支持 DBX Host 返回的 `format: "xml"` Estimated Plan，保留 ShowPlanXML 专有代价与对象信息。
+- **OceanBase Oracle JSON 结构化解析**：支持 DBX Host 返回的 `format: "json"` Estimated Plan（`EXPLAIN FORMAT=JSON`），按 `CHILD_<n>` 递归构建计划树，保留 `EST.TIME(us)` / `COST` 等 OceanBase 专有估算信息。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
@@ -111,8 +113,8 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 | PostgreSQL | Structured |
 | MySQL | Structured |
 | SQL Server | Structured |
+| OceanBase Oracle | Structured |
 | Oracle | Raw Plan |
-| OceanBase Oracle | Raw Plan |
 | Doris | Raw Plan |
 | Dameng | Raw Plan |
 | QuestDB | Raw Plan |
@@ -136,7 +138,8 @@ DBX 负责 Connection、Credential、Driver 和 Plan Execution；Plan Detective 
 ## 当前限制
 
 - 当前只支持 Estimated Plan，不支持 Actual Plan 或 `EXPLAIN ANALYZE`。
-- 当前只有 PostgreSQL、MySQL 和 SQL Server 提供 structured parser；其他数据库为 Raw Plan 展示，不生成对应的结构化 Metrics / Hotspots / Findings。
+- 当前只有 PostgreSQL、MySQL、SQL Server 和 OceanBase Oracle 提供 structured parser；其他数据库为 Raw Plan 展示，不生成对应的结构化 Metrics / Hotspots / Findings。
+- OceanBase Oracle 的 `EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，不会映射成 PostgreSQL 语义的代价，也不参与代价类 Hotspot / Finding；OceanBase Oracle 的 `format: "text"` 降级计划仍只展示 Raw Plan。
 - 尚未实现 Plan Diff、Plan History、AI SQL Rewrite 或自动调优。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 

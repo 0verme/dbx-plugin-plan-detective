@@ -1,0 +1,167 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "TABLE FULL SCAN",
+      "operator": "TABLE FULL SCAN",
+      "nodeId": 0,
+      "name": "T_ORDERS",
+      "estimatedRows": 250000,
+      "estimatedTimeUs": 41200,
+      "cost": null,
+      "output": "output([T_ORDERS.ID], [T_ORDERS.STATUS], [T_ORDERS.TOTAL])",
+      "children": [],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "seq_scan",
+      "nodeType": "TABLE FULL SCAN",
+      "relation": {
+        "name": "T_ORDERS",
+        "alias": null,
+        "indexName": null
+      },
+      "estimatedRows": 250000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "TABLE FULL SCAN",
+          "name": "T_ORDERS",
+          "estimatedRows": 250000,
+          "estimatedTimeUs": 41200,
+          "cost": null,
+          "output": "output([T_ORDERS.ID], [T_ORDERS.STATUS], [T_ORDERS.TOTAL])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 250000,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "TABLE FULL SCAN",
+      "relation": "T_ORDERS",
+      "estimatedRows": 250000
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0",
+      "ruleId": "large-sequential-scan",
+      "severity": "high",
+      "title": "Large sequential scan",
+      "summary": "TABLE FULL SCAN on T_ORDERS with no filter reported is estimated to read 250000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0",
+      "facts": {
+        "database": "oceanbase-oracle",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "TABLE FULL SCAN",
+        "relation": "T_ORDERS",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": false
+      },
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "TABLE FULL SCAN",
+        "relation": "T_ORDERS",
+        "estimatedRows": 250000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "TABLE FULL SCAN",
+        "kind": "seq_scan",
+        "relation": "T_ORDERS",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "TABLE FULL SCAN on T_ORDERS is estimated to return 250000 rows.",
+            "source": "EST.ROWS",
+            "evidence": {
+              "estimatedRows": 250000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "TABLE FULL SCAN",
+          "kind": "seq_scan",
+          "relation": "T_ORDERS",
+          "estimatedRows": 250000
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

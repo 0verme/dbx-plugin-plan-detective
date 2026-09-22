@@ -1,0 +1,32 @@
+{
+  "ID": 0,
+  "OPERATOR": "UNION ALL",
+  "NAME": "",
+  "EST.ROWS": 3,
+  "EST.TIME(us)": 24,
+  "output": "output([T_A.ID])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T_A",
+    "EST.ROWS": 1,
+    "EST.TIME(us)": 5,
+    "output": "output([T_A.ID])"
+  },
+  "CHILD_10": {
+    "ID": 10,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T_B",
+    "EST.ROWS": 1,
+    "EST.TIME(us)": 5,
+    "output": "output([T_B.ID])"
+  },
+  "CHILD_2": {
+    "ID": 2,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T_C",
+    "EST.ROWS": 1,
+    "EST.TIME(us)": 5,
+    "output": "output([T_C.ID])"
+  }
+}

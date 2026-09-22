@@ -1,0 +1,10 @@
+{
+  "OPERATOR": "MATERIAL",
+  "CHILD_1": {
+    "OPERATOR": "TABLE FULL SCAN"
+  },
+  "CHILD_2": {
+    "EST.ROWS": 5
+  },
+  "CHILD_9": null
+}

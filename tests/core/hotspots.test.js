@@ -555,8 +555,81 @@ test("SQL Server nested loop amplification reads the two input estimates", () =>
   assert.equal(analysis.items[0].reasons[0].evidence.estimatedRowComparisons, 50_000_000);
 });
 
-/* --------------------------------------------------------------- ordering -- */
+/* --------------------------------------------------- OceanBase Oracle signals -- */
 
+/** An OceanBase Oracle node carrying engine-specific fields. */
+function oceanBaseNode(oceanBase, overrides = {}) {
+  return normalizedNode({ engineSpecific: { database: "oceanbase-oracle", oceanBase }, ...overrides });
+}
+
+test("OceanBase Oracle hotspots use rows only and name the native EST.ROWS field", () => {
+  const root = oceanBaseNode(
+    { id: 0, operator: "TABLE FULL SCAN", name: "T_ORDERS", estimatedTimeUs: 41_200, cost: 1_234 },
+    {
+      kind: "seq_scan",
+      nodeType: "TABLE FULL SCAN",
+      relation: { name: "T_ORDERS", alias: null, indexName: null },
+      estimatedRows: 250_000,
+    },
+  );
+
+  const analysis = run(root, "oceanbase-oracle");
+  assert.deepEqual(analysis.cost, {
+    engine: "oceanbase-oracle",
+    status: "not-applicable",
+    reason: "NOT_POSTGRES_COST_MODEL",
+  });
+  assert.deepEqual(analysis.items.map((hotspot) => hotspot.reasons.map((reason) => reason.code)), [["large-sequential-scan"]]);
+  assert.equal(analysis.items[0].reasons[0].source, "EST.ROWS");
+  assert.equal(analysis.items[0].estimateOnly, true);
+
+  const evidence = analysis.items[0].evidence;
+  assert.equal("estimatedTotalCost" in evidence, false, "PostgreSQL-only evidence must not appear");
+  assert.equal("selfCost" in evidence, false);
+  assert.equal("selfCostShare" in evidence, false);
+  assert.equal("estimatedTimeUs" in evidence, false, "OceanBase estimate time is not a hotspot signal this round");
+});
+
+test("OceanBase Oracle nested loop amplification reads the two input estimates", () => {
+  const root = oceanBaseNode(
+    { id: 0, operator: "NESTED-LOOP JOIN", name: "", estimatedTimeUs: 62_000_000 },
+    {
+      kind: "nested_loop",
+      nodeType: "NESTED-LOOP JOIN",
+      estimatedRows: 5_000_000,
+      children: [
+        oceanBaseNode({ id: 1, operator: "TABLE RANGE SCAN", name: "T_CUSTOMERS(IDX)" }, { id: "0.0", kind: "index_scan", nodeType: "TABLE RANGE SCAN", estimatedRows: 1_000 }),
+        oceanBaseNode({ id: 2, operator: "TABLE FULL SCAN", name: "T_ORDERS" }, { id: "0.1", kind: "seq_scan", nodeType: "TABLE FULL SCAN", estimatedRows: 50_000 }),
+      ],
+    },
+  );
+
+  const analysis = run(root, "oceanbase-oracle");
+  assert.deepEqual(
+    analysis.items.map((hotspot) => [hotspot.nodeId, hotspot.reasons.map((reason) => reason.code)]),
+    [
+      ["0", ["nested-loop-amplification"]],
+      ["0.1", ["large-sequential-scan"]],
+    ],
+  );
+  const amplification = analysis.items[0].reasons[0];
+  assert.equal(amplification.source, "EST.ROWS");
+  assert.equal(amplification.evidence.estimatedRowComparisons, 50_000_000);
+});
+
+test("OceanBase Oracle generates no cost or sort signal from its own estimates", () => {
+  const sort = run(
+    oceanBaseNode(
+      { id: 0, operator: "SORT", name: "", estimatedTimeUs: 15_600, cost: 9_999 },
+      { kind: "sort", nodeType: "SORT", estimatedRows: 120_000 },
+    ),
+    "oceanbase-oracle",
+  );
+
+  assert.deepEqual(sort.items, [], "EST.TIME(us) / COST are not comparable with any cost threshold");
+});
+
+/* --------------------------------------------------------------- ordering -- */
 test("hotspots are ordered by level, then by reason count, then by plan pre-order", () => {
   const root = pgChild({
     kind: "result",

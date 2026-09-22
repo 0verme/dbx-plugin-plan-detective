@@ -119,6 +119,40 @@ export function parsedSqlServerPlan(overrides = {}) {
   };
 }
 
+/**
+ * @param {Record<string, unknown>} [overrides]
+ * @returns {any} a parsed OceanBase Oracle plan node
+ */
+export function parsedOceanBaseNode(overrides = {}) {
+  return {
+    nodeType: "TABLE FULL SCAN",
+    operator: "TABLE FULL SCAN",
+    nodeId: null,
+    name: null,
+    estimatedRows: null,
+    estimatedTimeUs: null,
+    cost: null,
+    output: null,
+    children: [],
+    extra: {},
+    ...overrides,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} [overrides]
+ * @returns {any} a parsed OceanBase Oracle plan
+ */
+export function parsedOceanBasePlan(overrides = {}) {
+  return {
+    database: "oceanbase-oracle",
+    format: "json",
+    mode: "estimated",
+    root: parsedOceanBaseNode(),
+    ...overrides,
+  };
+}
+
 const ENGINE_SPECIFIC_DEFAULTS = Object.freeze({
   database: "postgresql",
   parentRelationship: null,

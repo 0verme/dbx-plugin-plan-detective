@@ -1,0 +1,111 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "TABLE GET",
+      "operator": "TABLE GET",
+      "nodeId": 0,
+      "name": "T_ORDERS",
+      "estimatedRows": 1,
+      "estimatedTimeUs": 3,
+      "cost": null,
+      "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL])",
+      "children": [],
+      "extra": {
+        "filter": "filter([T_ORDERS.ID = 42])",
+        "access": "access([T_ORDERS.ID], [T_ORDERS.TOTAL])",
+        "range_key": "range_key([T_ORDERS.ID])",
+        "range": "range[42 ; 42]",
+        "is_index_back": false
+      }
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "index_scan",
+      "nodeType": "TABLE GET",
+      "relation": {
+        "name": "T_ORDERS",
+        "alias": null,
+        "indexName": null
+      },
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "TABLE GET",
+          "name": "T_ORDERS",
+          "estimatedRows": 1,
+          "estimatedTimeUs": 3,
+          "cost": null,
+          "output": "output([T_ORDERS.ID], [T_ORDERS.TOTAL])"
+        },
+        "extra": {
+          "filter": "filter([T_ORDERS.ID = 42])",
+          "access": "access([T_ORDERS.ID], [T_ORDERS.TOTAL])",
+          "range_key": "range_key([T_ORDERS.ID])",
+          "range": "range[42 ; 42]",
+          "is_index_back": false
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "index_scan",
+      "nodeType": "TABLE GET",
+      "relation": "T_ORDERS",
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

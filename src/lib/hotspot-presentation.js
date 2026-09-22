@@ -44,6 +44,15 @@ const COST_NOTE_KEYS = Object.freeze({
 });
 
 /**
+ * `not-applicable` is shared by every engine that has no PostgreSQL cost model,
+ * so the note names the engine's own estimate field. Keyed `<engine>:<reason>`;
+ * engines without an entry use the shared reason copy.
+ */
+const ENGINE_COST_NOTE_KEYS = Object.freeze({
+  "oceanbase-oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseOracleCostModel",
+});
+
+/**
  * Present one whole Hotspot: every reason gets its own human line, and the
  * per-reason summaries are joined into one attention sentence.
  *
@@ -96,19 +105,20 @@ export function presentHotspotReason(reason, locale = DEFAULT_LOCALE, nodeContex
  * `not-applicable`). The Core owns the status and the reason code; this is
  * display copy only, and returns `null` when cost signals are available.
  *
- * @param {{ status: string, reason: string|null }|null|undefined} cost
+ * @param {{ status: string, reason: string|null, engine?: string|null }|null|undefined} cost
  * @param {unknown} [locale]
  * @returns {string|null}
  */
 export function presentHotspotCostNote(cost, locale = DEFAULT_LOCALE) {
   if (cost === null || cost === undefined) return null;
   const { t } = createTranslator(locale);
+  const key = ENGINE_COST_NOTE_KEYS[`${cost.engine}:${cost.reason}`] ?? COST_NOTE_KEYS[cost.reason];
 
   if (cost.status === "not-applicable") {
-    return t(COST_NOTE_KEYS[cost.reason] ?? "hotspot.cost.unknownNotApplicable");
+    return t(key ?? "hotspot.cost.unknownNotApplicable");
   }
   if (cost.status !== "withheld") return null;
-  return t(COST_NOTE_KEYS[cost.reason] ?? "hotspot.cost.unknownWithheld");
+  return t(key ?? "hotspot.cost.unknownWithheld");
 }
 
 /* -------------------------------------------------------------- reasons -- */

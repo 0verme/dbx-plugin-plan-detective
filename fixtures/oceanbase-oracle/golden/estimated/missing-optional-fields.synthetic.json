@@ -1,0 +1,193 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "MATERIAL",
+      "operator": "MATERIAL",
+      "nodeId": null,
+      "name": null,
+      "estimatedRows": null,
+      "estimatedTimeUs": null,
+      "cost": null,
+      "output": null,
+      "children": [
+        {
+          "nodeType": "TABLE FULL SCAN",
+          "operator": "TABLE FULL SCAN",
+          "nodeId": null,
+          "name": null,
+          "estimatedRows": null,
+          "estimatedTimeUs": null,
+          "cost": null,
+          "output": null,
+          "children": [],
+          "extra": {}
+        },
+        {
+          "nodeType": "Plan",
+          "operator": null,
+          "nodeId": null,
+          "name": null,
+          "estimatedRows": 5,
+          "estimatedTimeUs": null,
+          "cost": null,
+          "output": null,
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {
+        "CHILD_9": null
+      }
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "materialize",
+      "nodeType": "MATERIAL",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "TABLE FULL SCAN",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": null,
+              "operator": "TABLE FULL SCAN",
+              "name": null,
+              "estimatedRows": null,
+              "estimatedTimeUs": null,
+              "cost": null,
+              "output": null
+            },
+            "extra": {}
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "unknown",
+          "nodeType": "Plan",
+          "relation": null,
+          "estimatedRows": 5,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": null,
+              "operator": null,
+              "name": null,
+              "estimatedRows": 5,
+              "estimatedTimeUs": null,
+              "cost": null,
+              "output": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": null,
+          "operator": "MATERIAL",
+          "name": null,
+          "estimatedRows": null,
+          "estimatedTimeUs": null,
+          "cost": null,
+          "output": null
+        },
+        "extra": {
+          "CHILD_9": null
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.1",
+      "kind": "unknown",
+      "nodeType": "Plan",
+      "relation": null,
+      "estimatedRows": 5
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

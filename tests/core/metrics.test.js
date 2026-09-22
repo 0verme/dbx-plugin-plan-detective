@@ -295,7 +295,31 @@ test("SQL Server keeps the PostgreSQL incremental-cost metric not-applicable", (
   assert.equal(metrics.highestIncrementalCost, null);
 });
 
-test("computeMetrics reports unknown node types from the normalized plan", () => {
-  const plan = normalizedPlan({ unknownNodeTypes: ["Future Shuffle Node", "Another Future Node"] });
+test("OceanBase Oracle keeps the PostgreSQL incremental-cost metric not-applicable", () => {
+  const plan = normalizedPlan({
+    database: "oceanbase-oracle",
+    root: normalizedNode({
+      kind: "seq_scan",
+      nodeType: "TABLE FULL SCAN",
+      totalCost: null,
+      engineSpecific: {
+        database: "oceanbase-oracle",
+        oceanBase: { id: 0, operator: "TABLE FULL SCAN", name: "T_ORDERS", estimatedRows: 250_000, estimatedTimeUs: 41_200, cost: 1_234, output: null },
+        extra: {},
+      },
+    }),
+  });
+
+  const metrics = computeMetrics(plan);
+  assert.deepEqual(metrics.costAttribution, {
+    engine: "oceanbase-oracle",
+    status: "not-applicable",
+    reason: "NOT_POSTGRES_COST_MODEL",
+  });
+  assert.equal(metrics.totalEstimatedCost, null, "EST.TIME(us) / COST are not a PostgreSQL total cost");
+  assert.equal(metrics.highestIncrementalCost, null);
+});
+
+test("computeMetrics reports unknown node types from the normalized plan", () => {  const plan = normalizedPlan({ unknownNodeTypes: ["Future Shuffle Node", "Another Future Node"] });
   assert.equal(computeMetrics(plan).unknownNodeTypeCount, 2);
 });

@@ -10,7 +10,9 @@
  * aggregates independent, engine-aware signals for one node:
  *
  * - engine-neutral row signals (large sequential scan, nested-loop inner
- *   amplification) read estimated row counts only;
+ *   amplification) read estimated row counts only, and name the native field
+ *   each engine reports them in (`Plan Rows`, `rows_examined_per_scan`,
+ *   `RelOp@EstimateRows`, `EST.ROWS`);
  * - PostgreSQL cost concentration reads `Total Cost` through the attribution
  *   envelope in ../cost/postgres-cost.js;
  * - MySQL signals read MySQL's own reported values: `rows_examined_per_scan`,
@@ -56,7 +58,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -101,9 +103,10 @@ export function computeHotspots(normalized, metrics) {
 
 /**
  * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
- * attribution; MySQL has its own block-scoped model; SQL Server does not feed
- * its subtree costs into any cost signal this round, so the stage reports
- * `not-applicable` instead of inventing an attribution.
+ * attribution; MySQL has its own block-scoped model; SQL Server and OceanBase
+ * Oracle do not feed their own cost / time estimates into any cost signal this
+ * round, so the stage reports `not-applicable` instead of inventing an
+ * attribution.
  *
  * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized
  * @param {import("../metrics/compute-metrics.js").PlanMetrics} metrics
@@ -377,7 +380,10 @@ function largeSequentialScanReason(node, database) {
 
   const isMySql = database === "mysql";
   const isSqlServer = database === "sqlserver";
-  const source = isMySql ? "table.rows_examined_per_scan" : isSqlServer ? "RelOp@EstimateRows" : "Plan Rows";
+  const source = estimatedRowsSource(database, {
+    mysql: "table.rows_examined_per_scan",
+    sqlserver: "RelOp@EstimateRows",
+  });
   return {
     code: "large-sequential-scan",
     level,
@@ -419,7 +425,7 @@ function nestedLoopAmplificationReason(node, database) {
     statement:
       `Nested Loop is estimated to drive ${outerEstimatedRows} outer rows into ${innerEstimatedRows} inner rows each, ` +
       `about ${estimatedRowComparisons} estimated row comparisons.`,
-    source: database === "sqlserver" ? "RelOp@EstimateRows" : "Plan Rows",
+    source: estimatedRowsSource(database, { mysql: "Plan Rows", sqlserver: "RelOp@EstimateRows" }),
     evidence: {
       outerNodeRef: outer.id,
       innerNodeRef: inner.id,
@@ -564,6 +570,24 @@ function mysqlFlagReason(node, input) {
 }
 
 /* ------------------------------------------------------------------ helpers -- */
+
+/**
+ * Native plan field a row signal reads, per engine. A neutral row signal must
+ * name the field the reader can actually find in their own plan: OceanBase's
+ * `EST.ROWS` is not PostgreSQL's `Plan Rows`, even though both are planner row
+ * estimates. Engines whose neutral row count comes from a derived value
+ * (MySQL's nested-loop prefix count) keep the PostgreSQL wording, unchanged.
+ *
+ * @param {string} database
+ * @param {{ mysql: string, sqlserver: string }} sources
+ * @returns {string}
+ */
+function estimatedRowsSource(database, sources) {
+  if (database === "mysql") return sources.mysql;
+  if (database === "sqlserver") return sources.sqlserver;
+  if (database === "oceanbase-oracle") return "EST.ROWS";
+  return "Plan Rows";
+}
 
 /**
  * @param {import("../normalize/normalize-postgres.js").NormalizedNode} node

@@ -1,0 +1,149 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "PX FUTURE SHUFFLE",
+      "operator": "PX FUTURE SHUFFLE",
+      "nodeId": 0,
+      "name": "",
+      "estimatedRows": 42,
+      "estimatedTimeUs": 7,
+      "cost": null,
+      "output": "output([T_ORDERS.ID])",
+      "children": [
+        {
+          "nodeType": "TABLE RANGE SCAN",
+          "operator": "TABLE RANGE SCAN",
+          "nodeId": 1,
+          "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+          "estimatedRows": 42,
+          "estimatedTimeUs": 5,
+          "cost": null,
+          "output": "output([T_ORDERS.ID])",
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "unknown",
+      "nodeType": "PX FUTURE SHUFFLE",
+      "relation": null,
+      "estimatedRows": 42,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "TABLE RANGE SCAN",
+          "relation": {
+            "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 42,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 1,
+              "operator": "TABLE RANGE SCAN",
+              "name": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+              "estimatedRows": 42,
+              "estimatedTimeUs": 5,
+              "cost": null,
+              "output": "output([T_ORDERS.ID])"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "PX FUTURE SHUFFLE",
+          "name": "",
+          "estimatedRows": 42,
+          "estimatedTimeUs": 7,
+          "cost": null,
+          "output": "output([T_ORDERS.ID])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": [
+      "PX FUTURE SHUFFLE"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 42,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "unknown",
+      "nodeType": "PX FUTURE SHUFFLE",
+      "relation": null,
+      "estimatedRows": 42
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

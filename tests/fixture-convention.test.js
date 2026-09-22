@@ -4,9 +4,11 @@ import path from "node:path";
 import test from "node:test";
 import {
   FIXTURE_DATABASES,
+  FIXTURE_DIRS,
   MODES,
   MODES_BY_DATABASE,
   MYSQL_FIXTURES_DIR,
+  OCEANBASE_ORACLE_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
   listFixtures,
@@ -61,9 +63,20 @@ test("fixtures/sqlserver has an estimated directory of plan.xml files and no act
   assert.equal(planSuffixFor("sqlserver"), ".plan.xml");
 });
 
+test("fixtures/oceanbase-oracle has an estimated directory of plan.json files and no actual directory", async () => {
+  const entries = await readdir(path.join(OCEANBASE_ORACLE_FIXTURES_DIR, "estimated"));
+  assert.ok(
+    entries.some((entry) => entry.endsWith(".plan.json")),
+    "fixtures/oceanbase-oracle/estimated must contain .plan.json files",
+  );
+  await assert.rejects(readdir(path.join(OCEANBASE_ORACLE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE["oceanbase-oracle"], ["estimated"]);
+  assert.equal(planSuffixFor("oceanbase-oracle"), ".plan.json");
+});
+
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
   for (const database of FIXTURE_DATABASES) {
-    const root = database === "mysql" ? MYSQL_FIXTURES_DIR : database === "sqlserver" ? SQLSERVER_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
+    const root = FIXTURE_DIRS[database];
     const planSuffix = planSuffixFor(database);
     for (const mode of MODES_BY_DATABASE[database]) {
       const entries = await readdir(path.join(root, mode));
@@ -154,6 +167,28 @@ test("metadata validation rejects convention violations", () => {
     /sqlserver fixtures only support mode "estimated"/,
   );
 
+  const oceanBaseMeta = validMeta({
+    database: "oceanbase-oracle",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "synthetic", detail: "synthetic fixture: hand-written.", reference: "https://example.com/plan.json" },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(oceanBaseMeta, { database: "oceanbase-oracle", mode: "estimated", name: "x.synthetic" }),
+    [],
+    "a synthetic OceanBase Oracle fixture must validate with format json",
+  );
+  assert.match(
+    validateFixtureMeta({ ...oceanBaseMeta, format: "text" }, { database: "oceanbase-oracle", mode: "estimated", name: "x.synthetic" }).join("\n"),
+    /format must be "json" for oceanbase-oracle fixtures/,
+  );
+  assert.match(
+    validateFixtureMeta({ ...oceanBaseMeta, mode: "actual" }, { database: "oceanbase-oracle", mode: "actual", name: "x.synthetic" }).join("\n"),
+    /oceanbase-oracle fixtures only support mode "estimated"/,
+  );
+
   const synthetic = validMeta({
     mode: "estimated",
     databaseVersion: "15.19",
@@ -221,7 +256,7 @@ test("metadata validation rejects convention violations", () => {
 test("fixtures contain no credential-like fields", async () => {
   const banned = /"(password|passwd|secret|credential|credentials|token|api_?key|connection_?string|conn_?str)"\s*:/i;
   for (const database of FIXTURE_DATABASES) {
-    const root = database === "mysql" ? MYSQL_FIXTURES_DIR : database === "sqlserver" ? SQLSERVER_FIXTURES_DIR : POSTGRES_FIXTURES_DIR;
+    const root = FIXTURE_DIRS[database];
     for (const fixture of await listFixtures(database)) {
       for (const suffix of [planSuffixFor(database), ".meta.json"]) {
         const file = path.join(root, fixture.mode, `${fixture.name}${suffix}`);
