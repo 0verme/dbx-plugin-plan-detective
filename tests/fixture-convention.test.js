@@ -9,6 +9,7 @@ import {
   MODES_BY_DATABASE,
   MYSQL_FIXTURES_DIR,
   OCEANBASE_ORACLE_FIXTURES_DIR,
+  ORACLE_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
   listFixtures,
@@ -72,6 +73,14 @@ test("fixtures/oceanbase-oracle has an estimated directory of plan.json files an
   await assert.rejects(readdir(path.join(OCEANBASE_ORACLE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
   assert.deepEqual(MODES_BY_DATABASE["oceanbase-oracle"], ["estimated"]);
   assert.equal(planSuffixFor("oceanbase-oracle"), ".plan.json");
+});
+
+test("fixtures/oracle has an estimated directory of plan.txt files and no actual directory", async () => {
+  const entries = await readdir(path.join(ORACLE_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/oracle/estimated must contain .plan.txt files");
+  await assert.rejects(readdir(path.join(ORACLE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.oracle, ["estimated"]);
+  assert.equal(planSuffixFor("oracle"), ".plan.txt");
 });
 
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
@@ -187,6 +196,29 @@ test("metadata validation rejects convention violations", () => {
   assert.match(
     validateFixtureMeta({ ...oceanBaseMeta, mode: "actual" }, { database: "oceanbase-oracle", mode: "actual", name: "x.synthetic" }).join("\n"),
     /oceanbase-oracle fixtures only support mode "estimated"/,
+  );
+
+  const oracleMeta = validMeta({
+    database: "oracle",
+    format: "text",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "synthetic", detail: "synthetic fixture: hand-written.", reference: null },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(oracleMeta, { database: "oracle", mode: "estimated", name: "x.synthetic" }),
+    [],
+    "a synthetic Oracle fixture must validate with format text",
+  );
+  assert.match(
+    validateFixtureMeta({ ...oracleMeta, format: "json" }, { database: "oracle", mode: "estimated", name: "x.synthetic" }).join("\n"),
+    /format must be "text" for oracle fixtures/,
+  );
+  assert.match(
+    validateFixtureMeta({ ...oracleMeta, mode: "actual" }, { database: "oracle", mode: "actual", name: "x.synthetic" }).join("\n"),
+    /oracle fixtures only support mode "estimated"/,
   );
 
   const synthetic = validMeta({

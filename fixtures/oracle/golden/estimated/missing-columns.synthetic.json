@@ -1,0 +1,166 @@
+{
+  "parsed": {
+    "database": "oracle",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SELECT STATEMENT",
+      "rawOperation": "SELECT STATEMENT",
+      "id": 0,
+      "name": null,
+      "estimatedRows": null,
+      "bytes": null,
+      "cost": null,
+      "cpuPercent": null,
+      "time": null,
+      "predicateMarker": false,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "TABLE ACCESS FULL",
+          "rawOperation": "TABLE ACCESS FULL",
+          "id": 1,
+          "name": "PD_EMPTY",
+          "estimatedRows": null,
+          "bytes": null,
+          "cost": null,
+          "cpuPercent": null,
+          "time": null,
+          "predicateMarker": false,
+          "predicates": null,
+          "indentation": 2,
+          "children": [],
+          "extra": {
+            "Rows": "-"
+          }
+        }
+      ],
+      "extra": {
+        "Rows": "-"
+      }
+    },
+    "planHashValue": 111222333
+  },
+  "normalized": {
+    "database": "oracle",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "SELECT STATEMENT",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "TABLE ACCESS FULL",
+          "relation": {
+            "name": "PD_EMPTY",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oracle",
+            "oracle": {
+              "id": 1,
+              "rawOperation": "TABLE ACCESS FULL",
+              "name": "PD_EMPTY",
+              "estimatedRows": null,
+              "bytes": null,
+              "cost": null,
+              "cpuPercent": null,
+              "time": null,
+              "predicateMarker": false,
+              "predicates": null,
+              "planHashValue": null,
+              "extra": {
+                "Rows": "-"
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oracle",
+        "oracle": {
+          "id": 0,
+          "rawOperation": "SELECT STATEMENT",
+          "name": null,
+          "estimatedRows": null,
+          "bytes": null,
+          "cost": null,
+          "cpuPercent": null,
+          "time": null,
+          "predicateMarker": false,
+          "predicates": null,
+          "planHashValue": 111222333,
+          "extra": {
+            "Rows": "-"
+          }
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

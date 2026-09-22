@@ -1,0 +1,224 @@
+{
+  "parsed": {
+    "database": "oracle",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SELECT STATEMENT",
+      "rawOperation": "SELECT STATEMENT",
+      "id": 0,
+      "name": null,
+      "estimatedRows": 1,
+      "bytes": 100,
+      "cost": 3,
+      "cpuPercent": 0,
+      "time": "00:00:01",
+      "predicateMarker": false,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "TABLE ACCESS BY INDEX ROWID",
+          "rawOperation": "TABLE ACCESS BY INDEX ROWID",
+          "id": 1,
+          "name": "PD_USERS",
+          "estimatedRows": 1,
+          "bytes": 100,
+          "cost": 3,
+          "cpuPercent": 0,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "indentation": 3,
+          "children": [
+            {
+              "nodeType": "INDEX UNIQUE SCAN",
+              "rawOperation": "INDEX UNIQUE SCAN",
+              "id": 2,
+              "name": "PD_USERS_PK",
+              "estimatedRows": 1,
+              "bytes": null,
+              "cost": 2,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": null,
+              "indentation": 5,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "planHashValue": 99887766
+  },
+  "normalized": {
+    "database": "oracle",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "SELECT STATEMENT",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "lookup",
+          "nodeType": "TABLE ACCESS BY INDEX ROWID",
+          "relation": {
+            "name": "PD_USERS",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 1,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "index_scan",
+              "nodeType": "INDEX UNIQUE SCAN",
+              "relation": {
+                "name": null,
+                "alias": null,
+                "indexName": "PD_USERS_PK"
+              },
+              "estimatedRows": 1,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "oracle",
+                "oracle": {
+                  "id": 2,
+                  "rawOperation": "INDEX UNIQUE SCAN",
+                  "name": "PD_USERS_PK",
+                  "estimatedRows": 1,
+                  "bytes": null,
+                  "cost": 2,
+                  "cpuPercent": 0,
+                  "time": "00:00:01",
+                  "predicateMarker": false,
+                  "predicates": null,
+                  "planHashValue": null,
+                  "extra": {}
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "oracle",
+            "oracle": {
+              "id": 1,
+              "rawOperation": "TABLE ACCESS BY INDEX ROWID",
+              "name": "PD_USERS",
+              "estimatedRows": 1,
+              "bytes": 100,
+              "cost": 3,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": null,
+              "planHashValue": null,
+              "extra": {}
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oracle",
+        "oracle": {
+          "id": 0,
+          "rawOperation": "SELECT STATEMENT",
+          "name": null,
+          "estimatedRows": 1,
+          "bytes": 100,
+          "cost": 3,
+          "cpuPercent": 0,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "planHashValue": 99887766,
+          "extra": {}
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "result",
+      "nodeType": "SELECT STATEMENT",
+      "relation": null,
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

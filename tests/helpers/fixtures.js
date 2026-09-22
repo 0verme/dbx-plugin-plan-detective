@@ -10,24 +10,26 @@ export const POSTGRES_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "postgres"
 export const MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "mysql");
 export const SQLSERVER_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlserver");
 export const OCEANBASE_ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oceanbase-oracle");
+export const ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oracle");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
- * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle call
- * sites pass the family explicitly.
+ * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle /
+ * Oracle call sites pass the family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
   postgresql: POSTGRES_FIXTURES_DIR,
   mysql: MYSQL_FIXTURES_DIR,
   sqlserver: SQLSERVER_FIXTURES_DIR,
   "oceanbase-oracle": OCEANBASE_ORACLE_FIXTURES_DIR,
+  oracle: ORACLE_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle"]);
 export const MODES = ["estimated", "actual"];
 /**
- * Modes each database has fixtures for. MySQL, SQL Server and OceanBase Oracle
- * support estimated plans only: the Host API never serves an actual plan for
+ * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle and
+ * Oracle support estimated plans only: the Host API never serves an actual plan for
  * them, and none of them has an actual-plan shape this plugin models, so there
  * is no `actual/` directory for any of them by design.
  */
@@ -36,15 +38,17 @@ export const MODES_BY_DATABASE = Object.freeze({
   mysql: ["estimated"],
   sqlserver: ["estimated"],
   "oceanbase-oracle": ["estimated"],
+  oracle: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
-/** Plan file suffix by database family (SQL Server plans are ShowPlanXML strings). */
+/** Plan file suffix by database family (SQL Server XML and Oracle text are strings). */
 const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   postgresql: ".plan.json",
   mysql: ".plan.json",
   sqlserver: ".plan.xml",
   "oceanbase-oracle": ".plan.json",
+  oracle: ".plan.txt",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -53,6 +57,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   mysql: "json",
   sqlserver: "xml",
   "oceanbase-oracle": "json",
+  oracle: "text",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -120,9 +125,9 @@ export async function loadFixture({ database = "postgresql", mode, name }) {
   const [planText, metaText] = await Promise.all([readFile(planPath, "utf8"), readFile(metaPath, "utf8")]);
 
   let plan;
-  if (planSuffix === ".plan.xml") {
-    // XML plans are committed as the exact string the host returns; parsing
-    // them here would hide the boundary the parser is supposed to own.
+  if (planSuffix === ".plan.xml" || planSuffix === ".plan.txt") {
+    // XML and DBMS_XPLAN text plans are committed as the exact string the
+    // host returns; parsing them here would hide the boundary the parser owns.
     plan = planText;
   } else {
     try {
@@ -174,12 +179,12 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle`) and must match
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle`) and must match
  *   the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;
  * - `format` must match the family's committed payload format (`json` for
- *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server);
+ *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;

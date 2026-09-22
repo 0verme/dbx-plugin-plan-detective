@@ -1,0 +1,21 @@
+{
+  "database": "oracle",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic DBMS_XPLAN TYPICAL +PREDICATE index lookup table for parser coverage; not captured from Oracle.",
+    "reference": null
+  },
+  "features": ["estimated text", "index unique scan", "table access by index rowid", "missing bytes cell"],
+  "expect": {
+    "rootNodeType": "SELECT STATEMENT",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

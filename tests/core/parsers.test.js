@@ -17,13 +17,14 @@ const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "table-scan.synthetic" });
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 const oceanBaseFixture = await loadFixture({ database: "oceanbase-oracle", mode: "estimated", name: "hash-join" });
+const oracleFixture = await loadFixture({ database: "oracle", mode: "estimated", name: "table-scan.synthetic" });
 
 function pendingDialectInput() {
   return createRawPlanInput({
-    database: "oracle",
+    database: "doris",
     mode: "estimated",
     format: "text",
-    plan: "| 0 | SELECT STATEMENT |",
+    plan: "Physical Plan",
   });
 }
 
@@ -44,13 +45,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(oceanBaseOracle?.id, "oceanbase-oracle");
   assert.deepEqual(oceanBaseOracle?.formats, ["json"]);
 
-  for (const database of ["oracle", "unknown-database"]) {
+  const oracle = getParser("oracle");
+  assert.equal(oracle?.id, "oracle");
+  assert.deepEqual(oracle?.formats, ["text"]);
+
+  for (const database of ["doris", "unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle"]);
 });
 
 test("describeParserSupport separates structured, pending and unknown families", () => {
@@ -86,7 +91,14 @@ test("describeParserSupport separates structured, pending and unknown families",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
-  for (const database of ["oracle", "doris", "dameng", "questdb"]) {
+  assert.deepEqual(describeParserSupport("oracle", "text"), { structured: true, parser: "oracle", reasonCode: null });
+  assert.deepEqual(describeParserSupport("oracle", "json"), {
+    structured: false,
+    parser: "oracle",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  for (const database of ["doris", "dameng", "questdb"]) {
     assert.deepEqual(
       describeParserSupport(database, "text"),
       { structured: false, parser: "none", reasonCode: "PARSER_NOT_IMPLEMENTED" },
@@ -179,13 +191,33 @@ test("analyzeRawPlan runs the full structured pipeline for OceanBase Oracle JSON
   assert.deepEqual(result.findings, strict.findings);
 });
 
+test("analyzeRawPlan runs the full structured pipeline for Oracle DBMS_XPLAN text", () => {
+  const result = analyzeRawPlan(oracleFixture.input);
+
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "oracle");
+  assert.equal(result.reasonCode, null);
+  assert.equal(result.parsed.database, "oracle");
+  assert.equal(result.parsed.format, "text");
+  assert.equal(result.normalized.database, "oracle");
+  assert.equal(result.normalized.root.children[0].kind, "seq_scan");
+  assert.equal(result.normalized.root.children[0].engineSpecific.oracle.predicateMarker, true);
+  assert.equal(result.metrics.costAttribution.status, "not-applicable");
+
+  const strict = analyzePlan(oracleFixture.input);
+  assert.deepEqual(result.parsed, strict.parsed);
+  assert.deepEqual(result.normalized, strict.normalized);
+  assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+});
+
 test("analyzeRawPlan returns a raw-only result for a pending dialect", () => {
   const result = analyzeRawPlan(pendingDialectInput());
 
   assert.equal(result.status, "raw-only");
   assert.equal(result.parser, "none");
   assert.equal(result.reasonCode, "PARSER_NOT_IMPLEMENTED");
-  assert.match(result.reason, /oracle/);
+  assert.match(result.reason, /doris/);
   assert.equal(result.parsed, null);
   assert.equal(result.normalized, null);
   assert.equal(result.metrics, null);
@@ -230,6 +262,13 @@ test("analyzeRawPlan reports a format mismatch instead of silently skipping the 
   assert.equal(oceanBaseResult.status, "raw-only");
   assert.equal(oceanBaseResult.parser, "oceanbase-oracle");
   assert.equal(oceanBaseResult.reasonCode, "UNSUPPORTED_FORMAT");
+
+  const oracleResult = analyzeRawPlan(
+    createRawPlanInput({ database: "oracle", mode: "estimated", format: "json", plan: {} }),
+  );
+  assert.equal(oracleResult.status, "raw-only");
+  assert.equal(oracleResult.parser, "oracle");
+  assert.equal(oracleResult.reasonCode, "UNSUPPORTED_FORMAT");
 });
 
 test("analyzePlan stays strict: a raw-only family throws instead of returning empty findings", () => {
@@ -239,7 +278,7 @@ test("analyzePlan stays strict: a raw-only family throws instead of returning em
   } catch (error) {
     assert.ok(error instanceof PlanParseError);
     assert.equal(error.code, "PARSER_NOT_IMPLEMENTED");
-    assert.match(error.message, /oracle/);
+    assert.match(error.message, /doris/);
   }
 });
 

@@ -25,6 +25,8 @@ export { parseSqlServerShowPlanXml } from "./sqlserver/parse-showplan-xml.js";
 export { normalizeSqlServerPlan } from "./normalize/normalize-sqlserver.js";
 export { parseOceanBaseJsonPlan } from "./oceanbase/parse-json-plan.js";
 export { normalizeOceanBasePlan } from "./normalize/normalize-oceanbase.js";
+export { parseOracleTextPlan } from "./oracle/parse-text-plan.js";
+export { normalizeOraclePlan } from "./normalize/normalize-oracle.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";

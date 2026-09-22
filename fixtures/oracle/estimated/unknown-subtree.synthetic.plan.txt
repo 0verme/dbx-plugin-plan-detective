@@ -1,0 +1,13 @@
+Plan hash value: 555666777
+
++----+----------------------+----------+-------+--------+-------------+----------+
+| Id | Operation            | Name     | Rows  | Bytes  | Cost (%CPU) | Time     |
++----+----------------------+----------+-------+--------+-------------+----------+
+| 0  | SELECT STATEMENT     |          | 10    | 100    | 5   (0)     | 00:00:01 |
+| 1  |  MYSTERY OPERATOR    | MYSTERY  | 10    | 100    | 5   (0)     | 00:00:01 |
+| 2  |   TABLE ACCESS FULL  | PD_CHILD | 10000 | 100000 | 5   (0)     | 00:00:01 |
++----+----------------------+----------+-------+--------+-------------+----------+
+
+Note
+-----
+- This tail section is intentionally ignored by the structured parser.

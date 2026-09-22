@@ -563,7 +563,7 @@ export function buildNodeInspector(node) {
     {
       key: "extra",
       label: "Extra / native fields",
-      fields: extraFields(engine.extra),
+      fields: extraFields(engine.extra ?? (isPlainObject(engine.oracle) ? engine.oracle.extra : null)),
     },
   ];
 
@@ -576,9 +576,9 @@ export function buildNodeInspector(node) {
 }
 
 /**
- * Engine-specific fields. PostgreSQL, MySQL, SQL Server and OceanBase Oracle
- * keep their own vocabularies: the panel renders whatever the node's normalizer
- * actually reported and never renames one engine's fields into another's.
+ * Engine-specific fields. PostgreSQL, MySQL, SQL Server, OceanBase Oracle and
+ * Oracle keep their own vocabularies: the panel renders whatever the node's
+ * normalizer actually reported and never renames one engine's fields into another's.
  *
  * @param {Record<string, any>} engine
  * @returns {Array<{ label: string, value: string }|null>}
@@ -587,6 +587,7 @@ function engineFields(engine) {
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
   if (isPlainObject(engine.oceanBase)) return oceanBaseEngineFields(engine.oceanBase);
+  if (isPlainObject(engine.oracle)) return oracleEngineFields(engine.oracle);
   return [
     flagField("Parallel Aware", engine.parallelAware),
     flagField("Async Capable", engine.asyncCapable),
@@ -618,6 +619,29 @@ function oceanBaseEngineFields(oceanBase) {
     field("Estimated Time (EST.TIME(us))", formatNumber(oceanBase.estimatedTimeUs)),
     field("Cost (COST)", formatNumber(oceanBase.cost)),
     field("Output", oceanBase.output),
+  ];
+}
+
+/**
+ * Oracle DBMS_XPLAN fields. Oracle Cost / Bytes / CPU / Time remain visibly
+ * engine-specific and are never presented as PostgreSQL-style costs.
+ *
+ * @param {Record<string, unknown>} oracle
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function oracleEngineFields(oracle) {
+  return [
+    field("Operation ID (Id)", formatNumber(oracle.id)),
+    field("Raw Operation", oracle.rawOperation),
+    field("Object Name (Name)", oracle.name),
+    field("Rows", formatNumber(oracle.estimatedRows)),
+    field("Bytes", formatNumber(oracle.bytes)),
+    field("Cost (Cost)", formatNumber(oracle.cost)),
+    field("CPU %", formatNumber(oracle.cpuPercent)),
+    field("Time", oracle.time),
+    flagField("Predicate Marker", oracle.predicateMarker),
+    field("Predicates", formatRawValue(oracle.predicates)),
+    field("Plan Hash Value", formatNumber(oracle.planHashValue)),
   ];
 }
 

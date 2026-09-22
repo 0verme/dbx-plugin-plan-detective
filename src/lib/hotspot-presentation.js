@@ -50,6 +50,7 @@ const COST_NOTE_KEYS = Object.freeze({
  */
 const ENGINE_COST_NOTE_KEYS = Object.freeze({
   "oceanbase-oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseOracleCostModel",
+  "oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oracleCostModel",
 });
 
 /**
@@ -162,9 +163,9 @@ function presentPostgresCostConcentration(reason, context, t) {
 }
 
 /**
- * Large sequential scan. The same reason code is emitted by three engines with
- * different native fields, so the source decides the wording; the presenter
- * never invents another engine's semantics.
+ * Large sequential scan. The same reason code is emitted by several engines
+ * with different native fields, so the source decides the wording; the
+ * presenter never invents another engine's semantics.
  */
 function presentLargeSequentialScan(reason, context, t) {
   const rows = formatNumber(reason?.evidence?.estimatedRows);
@@ -175,7 +176,9 @@ function presentLargeSequentialScan(reason, context, t) {
       ? "hotspot.largeSeqScan.summary.mysql"
       : reason?.source === "RelOp@EstimateRows"
         ? "hotspot.largeSeqScan.summary.sqlserver"
-        : "hotspot.largeSeqScan.summary.postgres";
+        : reason?.source === "Rows"
+          ? "hotspot.largeSeqScan.summary.oracle"
+          : "hotspot.largeSeqScan.summary.postgres";
 
   return {
     summary: t(key, { target: describeTarget(context, t), rows }),

@@ -1,0 +1,286 @@
+{
+  "parsed": {
+    "database": "oracle",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SELECT STATEMENT",
+      "rawOperation": "SELECT STATEMENT",
+      "id": 0,
+      "name": null,
+      "estimatedRows": 100,
+      "bytes": 5200,
+      "cost": 18,
+      "cpuPercent": 5,
+      "time": "00:00:01",
+      "predicateMarker": false,
+      "predicates": null,
+      "indentation": 1,
+      "children": [
+        {
+          "nodeType": "HASH JOIN",
+          "rawOperation": "HASH JOIN",
+          "id": 1,
+          "name": null,
+          "estimatedRows": 100,
+          "bytes": 5200,
+          "cost": 18,
+          "cpuPercent": 5,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "indentation": 3,
+          "children": [
+            {
+              "nodeType": "TABLE ACCESS FULL",
+              "rawOperation": "TABLE ACCESS FULL",
+              "id": 2,
+              "name": "ORDERS",
+              "estimatedRows": 1000,
+              "bytes": 26000,
+              "cost": 8,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": [
+                "filter(\"ORDERS\".\"STATUS\" = 'OPEN')"
+              ],
+              "indentation": 5,
+              "children": [],
+              "extra": {}
+            },
+            {
+              "nodeType": "TABLE ACCESS FULL",
+              "rawOperation": "TABLE ACCESS FULL",
+              "id": 3,
+              "name": "CUSTOMERS",
+              "estimatedRows": 100,
+              "bytes": 2600,
+              "cost": 9,
+              "cpuPercent": 0,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": [
+                "access(\"CUSTOMERS\".\"ID\" = \"ORDERS\".\"CUSTOMER_ID\")"
+              ],
+              "indentation": 5,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "planHashValue": 4078123456
+  },
+  "normalized": {
+    "database": "oracle",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "SELECT STATEMENT",
+      "relation": null,
+      "estimatedRows": 100,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "hash_join",
+          "nodeType": "HASH JOIN",
+          "relation": null,
+          "estimatedRows": 100,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "TABLE ACCESS FULL",
+              "relation": {
+                "name": "ORDERS",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 1000,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "oracle",
+                "oracle": {
+                  "id": 2,
+                  "rawOperation": "TABLE ACCESS FULL",
+                  "name": "ORDERS",
+                  "estimatedRows": 1000,
+                  "bytes": 26000,
+                  "cost": 8,
+                  "cpuPercent": 0,
+                  "time": "00:00:01",
+                  "predicateMarker": false,
+                  "predicates": [
+                    "filter(\"ORDERS\".\"STATUS\" = 'OPEN')"
+                  ],
+                  "planHashValue": null,
+                  "extra": {}
+                }
+              }
+            },
+            {
+              "id": "0.0.1",
+              "kind": "seq_scan",
+              "nodeType": "TABLE ACCESS FULL",
+              "relation": {
+                "name": "CUSTOMERS",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 100,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "oracle",
+                "oracle": {
+                  "id": 3,
+                  "rawOperation": "TABLE ACCESS FULL",
+                  "name": "CUSTOMERS",
+                  "estimatedRows": 100,
+                  "bytes": 2600,
+                  "cost": 9,
+                  "cpuPercent": 0,
+                  "time": "00:00:01",
+                  "predicateMarker": false,
+                  "predicates": [
+                    "access(\"CUSTOMERS\".\"ID\" = \"ORDERS\".\"CUSTOMER_ID\")"
+                  ],
+                  "planHashValue": null,
+                  "extra": {}
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "oracle",
+            "oracle": {
+              "id": 1,
+              "rawOperation": "HASH JOIN",
+              "name": null,
+              "estimatedRows": 100,
+              "bytes": 5200,
+              "cost": 18,
+              "cpuPercent": 5,
+              "time": "00:00:01",
+              "predicateMarker": false,
+              "predicates": null,
+              "planHashValue": null,
+              "extra": {}
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oracle",
+        "oracle": {
+          "id": 0,
+          "rawOperation": "SELECT STATEMENT",
+          "name": null,
+          "estimatedRows": 100,
+          "bytes": 5200,
+          "cost": 18,
+          "cpuPercent": 5,
+          "time": "00:00:01",
+          "predicateMarker": false,
+          "predicates": null,
+          "planHashValue": 4078123456,
+          "extra": {}
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 100,
+    "scanCount": 2,
+    "sequentialScanCount": 2,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "TABLE ACCESS FULL",
+      "relation": "ORDERS",
+      "estimatedRows": 1000
+    },
+    "costAttribution": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}
