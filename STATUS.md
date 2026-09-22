@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-22 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（PR [#37](https://github.com/0verme/dbx-plugin-plan-detective/pull/37) 已合并）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）+ Issue [#38](https://github.com/0verme/dbx-plugin-plan-detective/issues/38) MySQL `data_read_per_join` 修复（PR [#39](https://github.com/0verme/dbx-plugin-plan-detective/pull/39) 已合并）+ v0.6.0 Release（准备中）**；上游 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
-| 插件版本 | 0.6.0（发布准备；manifest 已是 0.6.0，`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（PR [#37](https://github.com/0verme/dbx-plugin-plan-detective/pull/37) 已合并）+ v0.5.4 DBX 最低版本收紧（已发布；DBX Store 首次收录 PR [#112](https://github.com/t8y2/dbx-store/pull/112) 审核中）+ Issue [#38](https://github.com/0verme/dbx-plugin-plan-detective/issues/38) MySQL `data_read_per_join` 修复（PR [#39](https://github.com/0verme/dbx-plugin-plan-detective/pull/39) 已合并）+ v0.6.0 Release（已发布）**；上游 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 已合并进 `t8y2/dbx/main`（merge `f909f85`） |
+| 插件版本 | 0.6.0（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Host 接入不再 blocked：真实 Estimated Plan 闭环已打通（PostgreSQL / MySQL / SQL Server structured；Oracle / OceanBase Oracle / Doris / Dameng / QuestDB raw-only）。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan、不接 AI |
 
@@ -149,12 +149,17 @@ DBX Host（dbType: "sqlserver" / format: "xml" / Estimated ShowPlanXML）
 | Actual Plan | ❌ | `INTERNAL_ONLY`（PG/SQL Server）/ `NOT_AVAILABLE`（MySQL） | 不属于当前一期 |
 | timeout / cancel | ❌ | `INTERNAL_ONLY` | 插件侧只有 sidecar RPC 超时（≤ 120s），与查询超时无关 |
 
-### 0.7 v0.6.0 Release（准备中，2026-09-22）
+### 0.7 v0.6.0 Release（2026-09-22）
 
 - 本轮为 minor release：版本 `0.5.4 → 0.6.0`；manifest 在 PR #37 中已升级为 `0.6.0`（`engines.dbx: >=0.6.18`、`engines.host_api: ^1.2`、`host.plans:read`）。
 - 内容：Phase 3.1 SQL Server ShowPlanXML 结构化解析（PR [#37](https://github.com/0verme/dbx-plugin-plan-detective/pull/37)，merge `79dd292`）+ Issue [#38](https://github.com/0verme/dbx-plugin-plan-detective/issues/38) MySQL `data_read_per_join` data-size 修复（PR [#39](https://github.com/0verme/dbx-plugin-plan-detective/pull/39)，merge `b6641c6`）。
-- Release commit / tag / GitHub Release / workflow / CI asset 校验：见发布后记录。
-- 本地 Gate：`npm test` 835/835；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .`、`git diff --check` 通过。
+- Release commit：`1a1d8c0453bcf305037ab3b10866d24cc529cfd8`（PR [#40](https://github.com/0verme/dbx-plugin-plan-detective/pull/40) merge）；annotated tag `v0.6.0` 已推送。
+- GitHub Release：[Plan Detective v0.6.0](https://github.com/0verme/dbx-plugin-plan-detective/releases/tag/v0.6.0)，非 draft / 非 prerelease，published 2026-09-22T05:49:58Z。
+- Workflow：[Release DBX plugin · 35692252780](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/35692252780)，success；`head_sha` 为 release commit。
+- CI asset：`io.github.0verme.plan-detective-0.6.0-universal.dbxp`，size `67910` bytes，SHA-256 `41ef03bd6ebf4f144d7e8cad0e515b7fdbd361edb5fdca1f8d9f414eae6b318f`。
+- Metadata：`release-candidates.json`，size `559` bytes，SHA-256 `958e886e8f695c791894811aa66e6cabb32d9d0bdbf911ad69c1d7333539b3bb`；target `universal`，plugin `0.6.0`，artifact hash 与实际 Release asset 一致。
+- 包内容：`manifest.json`（0.6.0 / engines / `host.plans:read`）、`ui/index.html`、`ui/assets/index-DKAu-p64.js`、`ui/assets/index-BnBTLH1_.css`、`assets/plugin.svg`、`checksums.json`；无 `signature.json`；包内 ui 文件与仓库 `ui/` 逐字节一致。
+- Gate：`npm test` 835/835；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .`、Release artifact validation、`git diff --check` 通过。
 - Host Smoke：**NOT RUN** — 当前环境无可用 DBX Desktop Host；Windows 安装与真实 MySQL data-size 计划验证由维护者手工完成。
 - DBX Store：PR [#112](https://github.com/t8y2/dbx-store/pull/112) 仍为 v0.5.4 candidate；v0.6.0 Store 收录待后续处理。
 
@@ -199,7 +204,7 @@ DBX Host（dbType: "sqlserver" / format: "xml" / Estimated ShowPlanXML）
 | --- | --- |
 | 官方 Svelte + Vite 项目骨架 | ✅ 已初始化 |
 | UI 构建（`npm run build`） | ✅ 通过（本轮复跑） |
-| 打包（`dbx-plugin package`） | ✅ 通过（v0.6.0 unsigned universal candidate；CI Release artifact 见 v0.6.0 发布记录） |
+| 打包（`dbx-plugin package`） | ✅ 通过（v0.6.0 unsigned universal candidate；CI Release artifact 已核验：67910 bytes / SHA-256 `41ef03bd…`） |
 | `dbx-plugin dev` 本地开发主机 | ⚠️ 可用，但 Windows 需绕过上游 bug（见第 4 节） |
 | `manifest.json` 合法性 | ✅ 通过（`dbx >=0.6.18` / `host_api ^1.2` / `host.plans:read`，对上游 schema） |
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
@@ -362,9 +367,9 @@ Build failed (exit 1)
 
 ## 5. 待办
 
-1. **真实 DBX 宿主端到端手测**（需要 DBX v0.6.18 / Host API 1.2+）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan。
+1. **真实 DBX 宿主端到端手测**（需要 DBX v0.6.18 / Host API 1.2+）：在已打开连接的查询结果页打开 Plan Detective → 输入 SQL → Analyze Plan → 核对 Plan Tree / Findings / Raw Plan；v0.6.0 Release 已发布，可在 Windows DBX 安装后执行，含 Issue #38 MySQL data-size 计划验证。
 2. **DBX Store 首次收录**：PR [#112](https://github.com/t8y2/dbx-store/pull/112) 等待 maintainer review、`/sign`、protected signing workflow 和最终 catalog 生成；本仓库不管理 Store signing key。
-3. **宿主兼容边界**：v0.6.0 将按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
+3. **宿主兼容边界**：v0.6.0 已按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
 4. 后续增量（独立 Issue）：文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展。
 5. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
