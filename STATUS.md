@@ -3,26 +3,28 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-22 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（已实现）+ Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（已实现）+ Phase 3.3 · Oracle DBMS_XPLAN Estimated Plan 结构化（已实现）+ Phase 3.4 · Dameng Structured Estimated Plan（READY，PR #52）+ v0.6.3 Release（已发布） |
-| 插件版本 | 0.6.3（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Phase 3.4 业务代码、fixture、golden、专门测试与文档已完成；`npm test` 1128/1128、golden regeneration 7 updated / 65 unchanged、`npm run build` 与 `git diff --check` 已通过；commits `48baa71`、`09de98b`、`9e7c669` 已 push，中文 PR #52 已创建。Dameng 为 Estimated-only structured；Doris / QuestDB raw-only。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
-| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / QuestDB / Plan Diff / 版本号 / Release |
+| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（已实现）+ Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（已实现）+ Phase 3.3 · Oracle DBMS_XPLAN Estimated Plan 结构化（已实现）+ Phase 3.4 · Dameng Structured Estimated Plan（PR #52 已合并）+ v0.6.4 Release（准备中） |
+| 插件版本 | 0.6.4（发布准备；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
+| 阶段结论 | Phase 3.4 已随 PR #52 合并（merge `3f1ee8b`）；v0.6.4 发布准备中。当前 gate：`npm test` 1128/1128、golden 72 unchanged、`npm run build` 与 `git diff --check` 已通过；版本快照已更新，待打包、打 tag 与创建 GitHub Release。Dameng 为 Estimated-only structured；Doris / QuestDB raw-only。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / QuestDB / Plan Diff；本次仅发布 0.6.4，不更新 DBX Store |
 
 ## 当前任务快照（Phase 3.4）
 
 - Project: `dbx-plugin-plan-detective`
 - Bootstrap Root: `/vol5/1000/ai-workspace`
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
-- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；基线 `2bacab84`
+- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；发布基线 `3f1ee8b`（origin/main）
 - Active Tasks:
-  - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#52`；Notes: 仅 Dameng parser / normalizer / shared analysis / UI fields / fixtures / docs；commits `48baa71`、`09de98b`、`9e7c669` 已 push，`npm test` 1128/1128、golden regeneration 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。不涉及 DBX、Actual、Doris/QuestDB、AI、Plan Diff、版本号或 Release。
-- Merge Queue: `feat/dameng-structured-plan` → PR #52，等待 CI / review；未入队合并。
-- Integration Baseline: `2bacab84`。
+  - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#52`；Notes: merge `3f1ee8b`，`npm test` 1128/1128、golden 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。
+  - Issue / Task: v0.6.4 Release；Branch: `chore/prepare-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.4-release`；State: `IN_PROGRESS`；Conflict Risk: `MEDIUM`；PR: `not created`；Notes: manifest / README / STATUS version bump；tag `v0.6.4` 与 GitHub Release 待创建，DBX Store 不在本轮范围。
+- Integration Baseline: `3f1ee8b`。
 - Hotspot Files: `src/core/parsers/index.js`、`src/core/raw-plan-input.js`、`src/core/hotspots/compute-hotspots.js`、`src/lib/view-model.js`、`tests/helpers/fixtures.js`、fixture convention / golden tests。
 - Blocked: None identified；Host/API 审计和官方 Dameng plan contract 已完成；Host Smoke 未运行（当前环境无 DBX Desktop Host）。
-- Recently Merged: 基线已包含 Phase 3.3 Oracle structured；本任务尚未 merge。
-- Cleanup Queue: 无；生成 UI bundle、Dameng fixtures 与 goldens 已纳入提交。
-- Next Actions: 等待 PR #52 的 CI / review；确认目标 branch 实际合并后再标记 `MERGED`。
+- Merge Queue: `chore/prepare-v0.6.4-release`，等待发布准备验证；未入队合并。
+- Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
+- Recently Merged: PR #52 Phase 3.4 Dameng structured，merge `3f1ee8b`；v0.6.3 已发布。
+
+- Next Actions: 完成 v0.6.4 release prep；commit / push；合并 release PR；在目标 commit 创建 annotated tag `v0.6.4` 并发布 GitHub Release；等待 workflow 校验 artifact 后记录结果。
 
 ## 0. 当前状态
 
@@ -197,6 +199,14 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 - Package contract：target `universal`；manifest `id = io.github.0verme.plan-detective`、`publisher = 0verme`、`version = 0.6.3`、`engines.dbx = >=0.6.18`、`engines.host_api = ^1.2`、`permissions = ["host.plans:read"]`；包内无 `signature.json`；包内 `ui/` 与仓库 `ui/` 逐字节一致。
 - 本地 Gate：`npm test` 1066/1066；`npm run test:update-goldens` 65 个 golden unchanged；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 成功；`git diff --check` 通过。
 - Host Smoke：**NOT RUN** — 当前环境无 Oracle 实例或 DBX Desktop Host；Windows 安装与 Oracle 计划验证由维护者手工完成。本版本不更新 DBX Store。
+
+### 0.11 v0.6.4 Release（准备中，2026-09-22）
+
+- 本轮为 patch release：版本 `0.6.3 → 0.6.4`；发布基线为 PR #52 merge `3f1ee8b`，同步 `manifest.json`、README 安装示例与状态快照。
+- 内容：Phase 3.4「Dameng Structured Estimated Plan」已合并：Dameng Estimated-only 原生文本 parser / normalizer、共享 Metrics / Hotspots / Rules / UI、1 个 official + 6 个 synthetic fixture 与 golden。
+- 本地 Gate：`npm test` 1128/1128；`npm run test:update-goldens` 72 个 golden unchanged；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`git diff --check` 通过。
+- 待完成：`dbx-plugin package .`、release prep PR 合并、annotated tag `v0.6.4`、GitHub Release 与 workflow artifact 校验。
+- Host Smoke：**NOT RUN** — 当前环境无 DBX Desktop Host 或真实 Dameng 实例；本轮不更新 DBX Store。
 
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
