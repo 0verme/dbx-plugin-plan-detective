@@ -50,10 +50,12 @@ Metrics Engine
 已实现：parser registry + PostgreSQL / MySQL / SQL Server 结构化 parser；其余 5 个方言 raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
 已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
+已实现：Hotspot Presentation（结构化 reason code → 中英文自然语言摘要；未知 code 优雅回退到原始 statement）
+已实现：本地 AI prompt / context packaging（纯函数打包 + `host.copy` / clipboard 复制；不调用任何模型 API）
 已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号 + SQL Server rows 信号）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
-未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI
+未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI 接入（模型 API / API Key / 聊天窗口 / 自动发送；本地的 AI prompt packaging 不在此列）
 ```
 
 ### 真实 Host 数据链路
@@ -76,6 +78,9 @@ src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
 src/lib/analysis-session.js（编排，可注入 fake bridge 测试）
    ↓
 src/lib/finding-presentation.js（facts → locale presentation；旧 Finding fallback）
+src/lib/hotspot-presentation.js（reason code + 结构化 evidence → locale human summary）
+src/lib/ai-analysis-prompt.js（纯函数 AI context packaging；无网络 / 无剪贴板副作用）
+src/lib/clipboard-copy.js（`host.copy` → `navigator.clipboard` 降级）
 src/lib/i18n/（`zh-CN` / `en` catalog、interpolation、fallback）
    ↓
 Svelte components
@@ -217,10 +222,13 @@ src/
 │   └── HostAudit.svelte        # Phase 0 Host Capability Audit（开发视图）
 └── lib/                        # 纯 UI 逻辑，可在 Node 中测试
     ├── analysis-session.js     # Host → Parser → IR → Rules 编排（注入 bridge）
-    ├── host-view-model.js      # 连接上下文 / 能力 / 错误文案 / Raw Plan 格式化
+    ├── host-view-model.js      # 连接上下文 / 能力 / 错误文案 / Raw Plan 格式化 / copy 反馈映射
     ├── fixture-catalog.js      # fixture catalog / 筛选 / analyzeFixture()
     ├── view-model.js           # summary / tree / findings / hotspots / inspector 映射
     ├── finding-presentation.js # facts → localized summary / reasons / actions / caveats
+    ├── hotspot-presentation.js # reason code + 结构化 evidence → localized human summary / caveat
+    ├── ai-analysis-prompt.js   # 纯函数 AI context packaging（无网络 / 无剪贴板副作用）
+    ├── clipboard-copy.js       # host.copy → navigator.clipboard 降级复制
     ├── i18n/                   # zh-CN / en catalog + locale fallback
     └── format.js               # 展示格式化
 ```
@@ -248,7 +256,7 @@ include = ["assets", "ui"]
 - 数据库连接层 / Driver / 连接池 / 凭据 / SSH Tunnel / sidecar DB access
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
 - Plan Diff / History / 自定义 Plan Canvas / 大型可视化（当前只做嵌套行计划树）
-- AI / LLM
+- AI / LLM 接入：模型 API / API Key / 聊天窗口 / 自动发送；不包含 #42 已授权的本地 AI prompt / context packaging
 - Oracle / Doris / Dameng / QuestDB 的结构化 parser（需要真实 sample / contract 后再实现）
 - MariaDB / OceanBase MySQL / ADB MySQL 等 MySQL 兼容方言的自动归入（没有 contract 证据，不自动兼容）
 - MySQL `EXPLAIN ANALYZE` / `FORMAT=TREE` / `FORMAT=TRADITIONAL` 文本计划 parser

@@ -8,6 +8,7 @@
  */
 
 import { formatNumber } from "./format.js";
+import { createTranslator, DEFAULT_LOCALE } from "./i18n/index.js";
 
 /** Character budget for the inline Raw Plan preview; the payload itself is untouched. */
 export const RAW_PLAN_PREVIEW_CHARS = 200_000;
@@ -224,6 +225,44 @@ export function describeAnalysisNotice(session) {
     default:
       return null;
   }
+}
+
+/**
+ * Copy-action states the AnalysisNotice button can render.
+ *
+ *   idle    - the button is ready to copy the local AI prompt
+ *   copying - the host / clipboard call is in flight; the button is disabled
+ *   copied  - success feedback is shown next to the button
+ *   failed  - both channels failed; the user must see an explicit error
+ */
+export const COPY_PROMPT_STATES = Object.freeze({
+  idle: "idle",
+  copying: "copying",
+  copied: "copied",
+  failed: "failed",
+});
+
+/**
+ * Map the copy-action state onto the labels AnalysisNotice renders. The copy
+ * feedback is localized through the shared catalog; the component stays dumb.
+ *
+ * @param {string} state one of COPY_PROMPT_STATES
+ * @param {unknown} [locale]
+ * @returns {{ label: string, feedback: string|null, tone: "success"|"error", disabled: boolean }}
+ */
+export function describeCopyPromptAction(state, locale = DEFAULT_LOCALE) {
+  const { t } = createTranslator(locale);
+  return {
+    label: state === COPY_PROMPT_STATES.copying ? t("copy.copying") : t("copy.button"),
+    feedback:
+      state === COPY_PROMPT_STATES.copied
+        ? t("copy.success")
+        : state === COPY_PROMPT_STATES.failed
+          ? t("copy.failure")
+          : null,
+    tone: state === COPY_PROMPT_STATES.failed ? "error" : "success",
+    disabled: state === COPY_PROMPT_STATES.copying,
+  };
 }
 
 /**

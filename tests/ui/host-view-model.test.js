@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { HOST_PLAN_ERROR_CODES } from "../../src/host/index.js";
 import {
+  COPY_PROMPT_STATES,
   RAW_PLAN_PREVIEW_CHARS,
   describeAnalysisError,
   describeAnalysisNotice,
   describeCapabilities,
   describeConnectionContext,
+  describeCopyPromptAction,
   describeHostGate,
   describePlanWarning,
   formatBytes,
@@ -193,4 +195,37 @@ test("describePlanWarning maps known host warning codes and keeps unknown ones",
   assert.match(describePlanWarning("plan_truncated"), /maxPlanBytes/);
   assert.match(describePlanWarning("plan_rows_truncated"), /行数上限/);
   assert.equal(describePlanWarning("plan_future_unknown"), "plan_future_unknown");
+});
+
+test("describeCopyPromptAction maps every copy state to button copy and feedback", () => {
+  assert.deepEqual(describeCopyPromptAction(COPY_PROMPT_STATES.idle, "zh-CN"), {
+    label: "复制 AI 分析提示词",
+    feedback: null,
+    tone: "success",
+    disabled: false,
+  });
+
+  assert.deepEqual(describeCopyPromptAction(COPY_PROMPT_STATES.copying, "zh-CN"), {
+    label: "正在复制…",
+    feedback: null,
+    tone: "success",
+    disabled: true,
+  });
+
+  assert.deepEqual(describeCopyPromptAction(COPY_PROMPT_STATES.copied, "zh-CN"), {
+    label: "复制 AI 分析提示词",
+    feedback: "已复制 AI 分析提示词",
+    tone: "success",
+    disabled: false,
+  });
+
+  assert.deepEqual(describeCopyPromptAction(COPY_PROMPT_STATES.failed, "zh-CN"), {
+    label: "复制 AI 分析提示词",
+    feedback: "复制失败，请重试",
+    tone: "error",
+    disabled: false,
+  });
+
+  assert.equal(describeCopyPromptAction(COPY_PROMPT_STATES.copied, "en").feedback, "AI analysis prompt copied");
+  assert.equal(describeCopyPromptAction(COPY_PROMPT_STATES.failed, "en").feedback, "Copy failed, please try again");
 });
