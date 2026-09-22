@@ -1,0 +1,16 @@
+{
+  "ID": 0,
+  "OPERATOR": "SORT",
+  "NAME": "",
+  "EST.ROWS": 20000,
+  "EST.TIME(us)": 15600,
+  "output": "output([T_ORDERS.TOTAL])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "TABLE FULL SCAN",
+    "NAME": "T_ORDERS",
+    "EST.ROWS": 20000,
+    "EST.TIME(us)": 3400,
+    "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CREATED_AT])"
+  }
+}

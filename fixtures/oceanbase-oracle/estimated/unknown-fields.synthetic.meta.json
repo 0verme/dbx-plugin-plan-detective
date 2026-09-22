@@ -1,0 +1,26 @@
+{
+  "database": "oceanbase-oracle",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-written synthetic OceanBase Oracle JSON plan: not captured from any OceanBase instance, and never executed on one. Key vocabulary (ID / OPERATOR / NAME / EST.ROWS / EST.TIME(us) / COST / output / CHILD_<n>), operator names and the CHILD_<n> child encoding follow the OceanBase Oracle-mode EXPLAIN documentation and the engine's own JSON plan writer; row counts, table names and column names are synthetic test data. Shape references: https://github.com/oceanbase/oceanbase-doc/blob/V4.3.5/zh-CN/700.reference/500.sql-reference/100.sql-syntax/300.common-tenant-of-oracle-mode/900.sql-statement-of-oracle-mode/200.dml-of-oracle-mode/500.explain-of-oracle-mode.md ; OceanBase execution-plan operator reference (V4.3.5): https://github.com/oceanbase/oceanbase-doc/tree/V4.3.5/zh-CN/700.reference/1000.performance-tuning-guide/500.sql-optimization/200.sql-execution-plan/400.execution-plan-operator ; OceanBase JSON plan writer (ID / OPERATOR / NAME / EST.ROWS / EST.TIME(us) / output / CHILD_<n>): https://github.com/oceanbase/oceanbase/blob/master/src/sql/monitor/ob_sql_plan.cpp",
+    "reference": "https://github.com/oceanbase/oceanbase-doc/blob/V4.3.5/zh-CN/700.reference/500.sql-reference/100.sql-syntax/300.common-tenant-of-oracle-mode/900.sql-statement-of-oracle-mode/200.dml-of-oracle-mode/500.explain-of-oracle-mode.md"
+  },
+  "features": [
+    "unknown-fields",
+    "string/number/boolean/array/object/null extra keys",
+    "extra preserved verbatim",
+    "no error inference"
+  ],
+  "expect": {
+    "rootNodeType": "EXCHANGE OUT DISTRIBUTED",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}

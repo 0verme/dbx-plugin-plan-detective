@@ -9,30 +9,33 @@ export const REPO_ROOT = path.resolve(fileURLToPath(new URL("../..", import.meta
 export const POSTGRES_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "postgres");
 export const MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "mysql");
 export const SQLSERVER_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlserver");
+export const OCEANBASE_ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oceanbase-oracle");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
- * existing call sites keep working; MySQL / SQL Server call sites pass the
- * family explicitly.
+ * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle call
+ * sites pass the family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
   postgresql: POSTGRES_FIXTURES_DIR,
   mysql: MYSQL_FIXTURES_DIR,
   sqlserver: SQLSERVER_FIXTURES_DIR,
+  "oceanbase-oracle": OCEANBASE_ORACLE_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle"]);
 export const MODES = ["estimated", "actual"];
 /**
- * Modes each database has fixtures for. MySQL and SQL Server support estimated
- * plans only: the Host API never serves an actual plan for them, and neither
- * has an actual-plan shape this plugin models, so there is no `actual/`
- * directory for either by design.
+ * Modes each database has fixtures for. MySQL, SQL Server and OceanBase Oracle
+ * support estimated plans only: the Host API never serves an actual plan for
+ * them, and none of them has an actual-plan shape this plugin models, so there
+ * is no `actual/` directory for any of them by design.
  */
 export const MODES_BY_DATABASE = Object.freeze({
   postgresql: ["estimated", "actual"],
   mysql: ["estimated"],
   sqlserver: ["estimated"],
+  "oceanbase-oracle": ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
@@ -41,6 +44,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   postgresql: ".plan.json",
   mysql: ".plan.json",
   sqlserver: ".plan.xml",
+  "oceanbase-oracle": ".plan.json",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -48,6 +52,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   postgresql: "json",
   mysql: "json",
   sqlserver: "xml",
+  "oceanbase-oracle": "json",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -169,12 +174,12 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver`) and must match the fixture directory
- *   when known;
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle`) and must match
+ *   the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;
  * - `format` must match the family's committed payload format (`json` for
- *   PostgreSQL / MySQL, `xml` for SQL Server);
+ *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;

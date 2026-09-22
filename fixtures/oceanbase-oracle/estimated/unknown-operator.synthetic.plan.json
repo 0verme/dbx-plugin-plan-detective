@@ -1,0 +1,16 @@
+{
+  "ID": 0,
+  "OPERATOR": "PX FUTURE SHUFFLE",
+  "NAME": "",
+  "EST.ROWS": 42,
+  "EST.TIME(us)": 7,
+  "output": "output([T_ORDERS.ID])",
+  "CHILD_1": {
+    "ID": 1,
+    "OPERATOR": "TABLE RANGE SCAN",
+    "NAME": "T_ORDERS(IDX_T_ORDERS_STATUS)",
+    "EST.ROWS": 42,
+    "EST.TIME(us)": 5,
+    "output": "output([T_ORDERS.ID])"
+  }
+}

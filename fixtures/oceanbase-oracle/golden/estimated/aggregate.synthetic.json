@@ -1,0 +1,147 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SCALAR GROUP BY",
+      "operator": "SCALAR GROUP BY",
+      "nodeId": 0,
+      "name": "",
+      "estimatedRows": 1,
+      "estimatedTimeUs": 9,
+      "cost": null,
+      "output": "output([T_FUN_COUNT_SUM(T_FUN_COUNT(*))])",
+      "children": [
+        {
+          "nodeType": "TABLE FULL SCAN",
+          "operator": "TABLE FULL SCAN",
+          "nodeId": 1,
+          "name": "T_ORDERS",
+          "estimatedRows": 1,
+          "estimatedTimeUs": 6,
+          "cost": null,
+          "output": "output([T_FUN_COUNT(*)])",
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "aggregate",
+      "nodeType": "SCALAR GROUP BY",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "TABLE FULL SCAN",
+          "relation": {
+            "name": "T_ORDERS",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 1,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 1,
+              "operator": "TABLE FULL SCAN",
+              "name": "T_ORDERS",
+              "estimatedRows": 1,
+              "estimatedTimeUs": 6,
+              "cost": null,
+              "output": "output([T_FUN_COUNT(*)])"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "SCALAR GROUP BY",
+          "name": "",
+          "estimatedRows": 1,
+          "estimatedTimeUs": 9,
+          "cost": null,
+          "output": "output([T_FUN_COUNT_SUM(T_FUN_COUNT(*))])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "aggregate",
+      "nodeType": "SCALAR GROUP BY",
+      "relation": null,
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

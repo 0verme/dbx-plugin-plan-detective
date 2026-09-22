@@ -22,7 +22,7 @@ RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入
 src/core/parsers/（registry：database family → structured parser）
    │
    ▼
-Parser（PostgreSQL / MySQL / SQL Server） → ParsedPlan（引擎专有、字段完整）
+Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle） → ParsedPlan（引擎专有、字段完整）
    │
    ▼
 Normalizer                        → NormalizedPlan（数据库无关语义 + engineSpecific）
@@ -43,7 +43,7 @@ src/lib/analysis-session.js（编排） + UI（Host 分析 / Fixtures 开发模�
   不重跑规则、不重算热点。
 - `window.dbxPlugin` 只在 `src/host/**` 与开发用 HostAudit 视图中出现；依赖方向由测试强制：
   `tests/core-isolation.test.js` 检查「不得引用 `window` / `document` / `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」
-  与「`parsers` / `postgres` / `mysql` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
+  与「`parsers` / `postgres` / `mysql` / `sqlserver` / `oceanbase` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
   `password` / `manifest` / `iframe` / `result-view` / `queryTab`」。
 - DBX 的只读契约不包含 credential / connection string；插件拿不到它们。`timeout` 由 Host 执行，
   Host adapter 只做 UI 侧 guard。
@@ -67,7 +67,7 @@ interface RawPlanInput {
 
 | 字段 | 必填 | 为什么需要 |
 | --- | --- | --- |
-| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"`；raw-only：`"oracle"` / `"oceanbase-oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
+| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"` / `"oceanbase-oracle"`；raw-only：`"oracle"` / `"doris"` / `"dameng"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
 | `mode` | 是 | 决定是否期望 Actual 执行字段。`EXPLAIN` → `estimated`，`EXPLAIN ANALYZE` → `actual`。DBX Host API 只返回 estimated；actual 值保留给离线 fixture / 未来契约。 |
 | `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / Doris / QuestDB）。registry 对 family + format 组合判定是否 structured。 |
 | `plan` | 是 | 原始 payload，原样传递。PostgreSQL 必须保留完整顶层 envelope（单元素数组），而不是内部 `Plan` object；text / xml 为字符串。 |
@@ -111,9 +111,9 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | --- | --- | --- |
 | `dbType: "postgres"` | `database: "postgresql"` | structured |
 | `dbType: "mysql"` | `database: "mysql"` | structured（`EXPLAIN FORMAT=JSON`，见 4.2） |
-| `dbType: "sqlserver"` | `database: "sqlserver"` | raw-only |
+| `dbType: "sqlserver"` | `database: "sqlserver"` | structured（ShowPlanXML，见 4.3） |
+| `dbType: "oceanbase-oracle"` | `database: "oceanbase-oracle"` | structured（`EXPLAIN FORMAT=JSON`，见 4.4） |
 | `dbType: "oracle"` | `database: "oracle"` | raw-only |
-| `dbType: "oceanbase-oracle"` | `database: "oceanbase-oracle"` | raw-only |
 | `dbType: "doris"` / `"dameng"` / `"questdb"` | 同名 family | raw-only |
 | （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径 |
 | `format` | 同名 `format` | `json` / `xml` / `text`；契约外值拒绝 |
@@ -178,6 +178,7 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | PostgreSQL | `src/core/postgres/parse-json-plan.js` | `src/core/normalize/normalize-postgres.js` | `src/core/parsers/postgres.js` |
 | MySQL | `src/core/mysql/parse-json-plan.js` | `src/core/normalize/normalize-mysql.js` | `src/core/parsers/mysql.js` |
 | SQL Server | `src/core/sqlserver/parse-showplan-xml.js` + `src/core/sqlserver/xml.js` | `src/core/normalize/normalize-sqlserver.js` | `src/core/parsers/sqlserver.js` |
+| OceanBase Oracle | `src/core/oceanbase/parse-json-plan.js` | `src/core/normalize/normalize-oceanbase.js` | `src/core/parsers/oceanbase-oracle.js` |
 
 ### 4.1 PostgreSQL
 
@@ -306,14 +307,54 @@ V1 `query_block` 与 V2 `query_plan` 保持独立解析分支，V2 不伪造 V1 
   没有带 QueryPlan 的语句 / 没有根 RelOp、payload 不是字符串）、`MULTIPLE_STATEMENTS`、`MODE_MISMATCH`。
   缺失 `EstimateRows` / cost / `Object` / `Predicate` 不会失败，对应字段为 `null`。
 
+### 4.4 OceanBase Oracle
+
+实现：`src/core/oceanbase/parse-json-plan.js`（JSON 语义）与 `src/core/normalize/normalize-oceanbase.js`。
+输入是 DBX Host 返回的 **已解码 JSON**（`dbType: "oceanbase-oracle"`、`format: "json"`）；
+宿主自己构造 `EXPLAIN FORMAT=JSON` 并把驱动逐行返回的 JSON 文本拼接后解码，插件不建立连接、不拼 `EXPLAIN`。
+
+上游证据（本仓库未在 OceanBase 实例上回放）：`crates/dbx-sql/src/query_execution_sql.rs` 中
+`estimated_plan_format(OceanbaseOracle) == Json`、`build_explain_sql` 生成 `EXPLAIN FORMAT=JSON <sql>`；
+`crates/dbx-core/src/query/plugin_plan.rs` 用 `join_result_text()` 拼接逐行结果后用 `serde_json::from_str`
+解码，无法解码时降级为 `format: "text"` + warning `plan_not_json`。JSON 键与 `CHILD_<n>` 子节点编码同时对照
+了 OceanBase Oracle 模式 `EXPLAIN` 官方文档与引擎的 JSON plan writer（`src/sql/monitor/ob_sql_plan.cpp`）。
+
+| OceanBase JSON | ParsedOceanBaseNode | 说明 |
+| --- | --- | --- |
+| `OPERATOR` | `nodeType` / `operator` | 必填语义字段；trim 后作为标签（引擎会输出尾随空格，如 `"HASH JOIN "`），原值另存 `operator` |
+| `ID` | `nodeId` | 严格有限 JSON number |
+| `NAME` | `name` | 原样保留（`""` 表示无对象）；normalizer 把非空值映射到中立 `relation.name` |
+| `EST.ROWS` | `estimatedRows` | 严格有限 JSON number |
+| `EST.TIME(us)` | `estimatedTimeUs` | 严格有限 JSON number；保留在 `engineSpecific.oceanBase`，**不**进入中立代价字段 |
+| `COST` | `cost` | 部分版本 / 形状才有；同样只作为 OceanBase 自己的估算保留 |
+| `output` | `output` | 字符串时映射；其他类型保留在 `extra` |
+| `CHILD_<n>` | `children` | `<n>` 是算子在计划中的位置，不保证连续 / 字典序；按数字后缀升序建树，支持任意个子节点 |
+| 其余键（`filter` / `access` / `range_key` / `is_index_back` / ...） | `extra` | 原样保留，不参与错误推断，**不**提升为中立谓词字段 |
+
+- **根就是根算子**：没有 `Plan` / `query_block` 之类 envelope。payload 不是 plain object，或对象里既没有非空
+  `OPERATOR` 也没有对象型 `CHILD_<n>` 时，抛 `MALFORMED_PLAN`（不把无关 JSON 当成计划）。
+- **fail-soft**：未知算子保留节点、原始标签与完整子树（`kind: "unknown"`，记入 `unknownNodeTypes`）；
+  缺 `ID` / `NAME` / `EST.ROWS` / `EST.TIME(us)` / `COST` / `output` 时对应字段为 `null`；
+  无 `OPERATOR` 的节点用占位标签 `Plan`（与 DBX 自己的 OceanBase plan viewer 一致），且不计入 `unknownNodeTypes`；
+  非对象 `CHILD_<n>` 不是树边，保留在 `extra`。
+- **不伪造数字**：`EST.ROWS` / `EST.TIME(us)` / `COST` / `ID` 只接受有限 JSON number；类型不符（例如
+  `"EST.ROWS": "250000"`）时字段为 `null`，原值保留在 `extra`，不把 numeric string 强转为数字。
+- **代价语义**：`EST.TIME(us)`（微秒估算时间）与 `COST` 都属于 OceanBase 自己的估算模型，本轮**不**映射到
+  `startupCost` / `totalCost`，也**不**新增基于它们的热点 / 规则信号；Metrics 报告
+  `costAttribution.status = "not-applicable"`。
+- **`mode` 只支持 `estimated`**：Host API 不提供 OceanBase Oracle 的 Actual Plan；声明 `actual` 时抛 `MODE_MISMATCH`。
+- **失败模型**：`MALFORMED_PLAN`、`MODE_MISMATCH`；`format: "text"`（宿主降级路径）由 registry 报
+  `UNSUPPORTED_FORMAT` 并保持 raw-only，不猜文本计划。
+
 ## 5. NormalizedPlan
 
-实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）与
-`src/core/normalize/normalize-mysql.js`（MySQL）。NormalizedPlan 不是字段改名，而是稳定语义层：
+实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）、
+`src/core/normalize/normalize-mysql.js`（MySQL）、`src/core/normalize/normalize-sqlserver.js`（SQL Server）与
+`src/core/normalize/normalize-oceanbase.js`（OceanBase Oracle）。NormalizedPlan 不是字段改名，而是稳定语义层：
 
 ```text
 NormalizedPlan {
-  database: "postgresql" | "mysql" | "sqlserver",
+  database: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle",
   mode, format,
   root: NormalizedNode,
   unknownNodeTypes: string[]   // 排序去重，便于测试与 UI 提示
@@ -326,11 +367,11 @@ NormalizedPlan {
 | --- | --- | --- |
 | `id` | `string` | 稳定路径 id：根为 `"0"`，第 n 个子节点为 `"<parent>.<n>"` |
 | `kind` | `string` | 数据库无关语义（见下表），未知类型为 `"unknown"` |
-| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值） |
-| `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null` |
-| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点） |
+| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值；SQL Server `PhysicalOp`；OceanBase Oracle `OPERATOR`） |
+| `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null`；OceanBase Oracle 取 `NAME`（索引访问时为 `TABLE(INDEX)`，原样保留） |
+| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点）；SQL Server `EstimateRows`；OceanBase Oracle `EST.ROWS` |
 | `actualRows` / `actualStartupTime` / `actualTotalTime` / `loops` | `number \| null` | Actual 字段 |
-| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL 与 SQL Server 恒为 `null`（各自的 cost 在 `engineSpecific` 下，语义不可直接比较） |
+| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL / SQL Server / OceanBase Oracle 恒为 `null`（各自的 cost / 时间估算在 `engineSpecific` 下，语义不可直接比较） |
 | `width` | `number \| null` | Plan Width |
 | `filter` | `string \| null` | 过滤谓词 |
 | `joinType` | `string \| null` | Inner / Left / … |
@@ -360,6 +401,12 @@ NormalizedPlan {
 `residual`、`definedValues`，根节点额外带 `statement` / `queryPlan`）、`extra`。SQL Server 中立
 `relation` 的 table / alias / index 会去掉一层 `[ ]` 引用（保留 `engineSpecific` 原始值），使树标签
 与其它引擎一致。
+**不为了"统一"丢弃数据库专有信息。**
+
+`engineSpecific`（OceanBase Oracle）：`database`、`oceanBase`（`id`、`operator`、`name`、`estimatedRows`、
+`estimatedTimeUs`、`cost`、`output`）、`extra`（官方 JSON 示例与引擎 JSON plan writer 未覆盖的扩展键，
+以及无法映射的原值，如 `filter` / `access` / `range_key` / `is_index_back`）。OceanBase 中立 `relation`
+只取 `NAME` 字符串，**不**反解 `TABLE(INDEX)`：`(Reverse)` 等后缀说明括号内容不一定是索引名，反解会伪造语义。
 **不为了"统一"丢弃数据库专有信息。**
 
 `kind` 主要映射：
@@ -405,6 +452,23 @@ SQL Server 侧追加的 kind：
 | `values_scan` | `Constant Scan` |
 | `unknown` | 未登记 `PhysicalOp`；`nodeType` 与 `unknownNodeTypes` 记录原始值，子树完整保留 |
 
+OceanBase Oracle 侧追加的 kind（现有 metrics / rules 不依赖）：
+
+| kind | OceanBase Oracle `OPERATOR` |
+| --- | --- |
+| `seq_scan` | `TABLE FULL SCAN`（含 `DISTRIBUTED TABLE FULL SCAN` 变体） |
+| `index_scan` | `TABLE SCAN` / `TABLE RANGE SCAN` / `TABLE SKIP SCAN` / `TABLE GET`（OceanBase 把索引回表封装在 `TABLE SCAN` 中，选中的索引写在 `NAME` 里；裸 `TABLE SCAN` 官方描述为范围扫描，因此不归入 `seq_scan`） |
+| `nested_loop` / `hash_join` / `merge_join` | `NESTED-LOOP JOIN`（与 `NESTED LOOP JOIN` 等价归一）/ `HASH JOIN` / `MERGE JOIN` |
+| `sort` | `SORT` |
+| `aggregate` | `SCALAR GROUP BY` / `HASH GROUP BY` / `MERGE GROUP BY` / `COUNT` |
+| `analytic` / `limit` / `materialize` | `WINDOW FUNCTION` / `LIMIT` / `MATERIAL` |
+| `subquery_scan` / `subquery` | `SUBPLAN SCAN` / `SUBPLAN FILTER` |
+| `unique` / `append` / `setop` | `HASH DISTINCT` / `MERGE DISTINCT`；`UNION ALL`；`*UNION DISTINCT` |
+| `modify_table` | `INSERT` / `DELETE` / `UPDATE` / `MERGE` |
+| `unknown` | 未登记算子（例如 `EXCHANGE OUT DISTRIBUTED` / `PX COORDINATOR`）；`nodeType` 与 `unknownNodeTypes` 记录原始值，子树完整保留 |
+
+算子标签比较前会做 `trim` + 大写 + 连字符 / 空白折叠，**只用于分类**；`nodeType` 始终保留引擎原始拼写。
+
 NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测试，且不依赖 UI。
 
 ## 6. Metrics 与 Rules
@@ -432,7 +496,7 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 ```text
 costAttribution.status = "available"       归因可靠，highestIncrementalCost 可展示
                        = "withheld"        边界不成立或没有可归因节点，指标为 null
-                       = "not-applicable"  MySQL / SQL Server 等非 PostgreSQL 计划，不进入该语义
+                       = "not-applicable"  MySQL / SQL Server / OceanBase Oracle 等非 PostgreSQL 计划，不进入该语义
 ```
 
 withheld reason（与 `hotspots.cost.reason` 同一套）：
@@ -444,7 +508,7 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `PLAN_CONTAINS_SUBPLAN` | 含 InitPlan / SubPlan，父代价按 `cost_subplan()` 计入，不按子树累加 |
 | `UNVERIFIED_COST_FLOW` | 缺失或未知 `Parent Relationship`，代价流向无法验证 |
 | `NO_ATTRIBUTABLE_COST` | 边界可靠，但没有任何可归因节点（例如根节点自身截断子节点） |
-| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server 使用各自的 cost model |
+| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server / OceanBase Oracle 使用各自的 cost model（OceanBase 为 `EST.TIME(us)` / `COST`，本轮不进入任何代价信号） |
 
 单节点负自代价（如 `Limit` 截断子节点）时，该节点及其子树不参与归因，祖先仍可归因；
 `src/core/tree.js` 的 `incrementalCostOf` 作为 legacy 路径继续服务 Findings，
@@ -464,13 +528,13 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `nested-loop-large-inner` | `nested_loop` | 外层估算行数 ≥ 10 且内层估算行数 ≥ 10 000 | `warning` |
 | | | 内层估算行数 ≥ 100 000 | `high` |
 
-MySQL / SQL Server 适用性（cost 语义见上）：
+MySQL / SQL Server / OceanBase Oracle 适用性（cost 语义见上）：
 
-| rule | MySQL | SQL Server |
-| --- | --- | --- |
-| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） |
-| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） |
-| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） |
+| rule | MySQL | SQL Server | OceanBase Oracle |
+| --- | --- | --- | --- |
+| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） | 适用（`TABLE FULL SCAN` 按 `EST.ROWS` 触发，同样不触发代价分支） |
+| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） | 不适用（`EST.TIME(us)` / `COST` 不属于 PostgreSQL 代价语义） |
+| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） | 适用（只用 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`，`estimateOnly: true`） |
 
 规则措辞纪律：
 
@@ -521,7 +585,7 @@ Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命�
 ```ts
 HotspotAnalysis {
   cost: {
-    engine: "postgresql" | "mysql" | "sqlserver",
+    engine: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle",
     status: "available" | "withheld" | "not-applicable",
     reason: string | null,
   },
@@ -542,8 +606,8 @@ raw-only 方言的 `hotspots` 为 `null`（与 `metrics` / `normalized` 一致�
 
 | reason code | 引擎 | 依据 | 档位 |
 | --- | --- | --- | --- |
-| `large-sequential-scan` | PostgreSQL / MySQL / SQL Server | `kind = seq_scan`；PG `Plan Rows`，MySQL `rows_examined_per_scan`，SQL Server `EstimateRows` | ≥ 10 000 `warning`；≥ 100 000 `high` |
-| `nested-loop-amplification` | PostgreSQL / MySQL / SQL Server | 外层 × 内层估算行数 | 外层 ≥ 10 且内层 ≥ 10 000 `warning`；内层 ≥ 100 000 `high` |
+| `large-sequential-scan` | PostgreSQL / MySQL / SQL Server / OceanBase Oracle | `kind = seq_scan`；PG `Plan Rows`，MySQL `rows_examined_per_scan`，SQL Server `EstimateRows`，OceanBase Oracle `EST.ROWS` | ≥ 10 000 `warning`；≥ 100 000 `high` |
+| `nested-loop-amplification` | PostgreSQL / MySQL / SQL Server / OceanBase Oracle | 外层 × 内层估算行数（OceanBase Oracle 取 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`） | 外层 ≥ 10 且内层 ≥ 10 000 `warning`；内层 ≥ 100 000 `high` |
 | `cost-concentration` | PostgreSQL | 节点自身增量代价 / 根 Total Cost（PostgreSQL cost units） | ≥ 25% `warning`；≥ 50% `high` |
 | `mysql-rows-examined` | MySQL | 非 `ALL` 访问的 `rows_examined_per_scan` | ≥ 10 000 / ≥ 100 000 |
 | `mysql-filtered-out` | MySQL | `filtered` 低且 `rows_examined_per_scan` 大 | `≤ 10%` 且 ≥ 1 000 行；`≤ 1%` 且 ≥ 100 000 行 |
@@ -565,6 +629,9 @@ PostgreSQL 代价归因安全边界（`cost.status = "withheld"`，只用行数�
 祖先节点不受影响。MySQL 侧不做任何子节点相减，只用 `read_cost + eval_cost` 相对最近外层 query block `query_cost` 的占比，
 且只在同一 block 内 ≥ 2 个有代价访问时输出（单表 block 恒为 100%，无区分度）。SQL Server 侧不生成任何代价占比信号：
 `EstimatedTotalSubtreeCost` 是子树累计值，`cost.status = "not-applicable"`，只用行数信号。
+OceanBase Oracle 侧同样不生成代价 / 时间占比信号：`EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，
+本轮没有任何阈值可以跨引擎比较，`cost.status = "not-applicable"`，只用 `EST.ROWS` 行数信号；
+Hotspot 面板文案会按 `engine` 选择对应说明（`hotspot.cost.oceanbaseOracleCostModel`）。
 
 ## 7. Fixture Convention
 
@@ -596,6 +663,14 @@ fixtures/sqlserver/                 # 仅 estimated；全部为 synthetic ShowPl
 │   └── <name>.synthetic.meta.json
 └── golden/
     └── estimated/<name>.synthetic.json
+
+fixtures/oceanbase-oracle/          # 仅 estimated；1 个 official + 11 个 synthetic
+├── README.md
+├── estimated/
+│   ├── <name>[.synthetic].plan.json  # Host 解码后的 JSON 计划对象，原样保存
+│   └── <name>[.synthetic].meta.json
+└── golden/
+    └── estimated/<name>[.synthetic].json
 ```
 
 - `.plan.json` / `.plan.xml` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
@@ -608,12 +683,17 @@ fixtures/sqlserver/                 # 仅 estimated；全部为 synthetic ShowPl
 - MySQL 只有 `estimated/`：Host API 不提供 MySQL actual plan，MySQL `EXPLAIN ANALYZE` 也不是该 JSON 形状。
 - SQL Server 只有 `estimated/`：Host API 只提供 Estimated Plan，`RunTimeInformation` / `QueryTimeStats`
   等 Actual 专属元素会让 parser 抛 `MODE_MISMATCH`；fixture 的 `format` 必须是 `xml`。
+- OceanBase Oracle 只有 `estimated/`：Host API 只提供 Estimated Plan，fixture 的 `format` 必须是 `json`，
+  且 `.plan.json` 提交的是 Host 解码后的 JSON 计划对象（不是逐行驱动文本）。
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
 当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
 MySQL 14 个（12 个 V1 + 2 个 V2），全部为 shape-verified synthetic（明细见 `fixtures/mysql/README.md`）；
 SQL Server 14 个，全部为 synthetic ShowPlanXML（本机无 SQL Server 实例；形状对照公开 schema 与文档，
-明细见 `fixtures/sqlserver/README.md`）。
+明细见 `fixtures/sqlserver/README.md`）；
+OceanBase Oracle 12 个（1 个 official = OceanBase V4.3.5 Oracle 模式 `EXPLAIN` 文档中的 JSON 示例，
+11 个 synthetic；本机无 OceanBase 实例，键名与算子名对照官方文档与引擎 JSON plan writer，
+明细见 `fixtures/oceanbase-oracle/README.md`）。
 
 ## 8. Fixture Provenance
 
@@ -660,19 +740,20 @@ npm run test:update-goldens   # 有意变更 pipeline 后重新生成 golden
 npm run analyze -- estimated/seq-scan   # 开发用：对单个 fixture 跑完整 pipeline
 ```
 
-覆盖范围：契约校验、PostgreSQL / MySQL / SQL Server parser 字段映射与错误路径（含 XML namespace / malformed XML /
-多 statement / 未知 operator / 缺失字段）、estimated / actual 不混淆、未知节点与未知字段、
+覆盖范围：契约校验、PostgreSQL / MySQL / SQL Server / OceanBase Oracle parser 字段映射与错误路径
+（含 XML namespace / malformed XML / 多 statement / 未知 operator / 未知字段 / 缺失字段 / `CHILD_<n>` 数字排序 /
+非法根对象）、estimated / actual 不混淆、
 NormalizedPlan 语义与 id、Metrics 计数与增量代价、3 条规则的正反例与阈值边界、
 Hotspot 契约 / PostgreSQL 代价归因边界（Limit 截断、InitPlan / SubPlan、缺失代价）/ MySQL 行数与 cost_info 信号 /
-SQL Server `EstimateRows` 行数信号与成本 not-applicable、排序稳定性、
-Findings 契约、golden 五 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
+SQL Server `EstimateRows` 行数信号与成本 not-applicable / OceanBase Oracle `EST.ROWS` 行数信号与 `EST.TIME(us)` 不入信号、
+排序稳定性、Findings 契约、golden 五 stage、determinism 与 JSON 可序列化、Plan Core 无浏览器 / DBX 依赖。
 
 ## 11. 明确不在本轮范围
 
 本轮（Offline Core vertical slice）不实现：`dbx-adapter` 的真实 Host wiring（仅 `DBX response → RawPlanInput`
 离线契约已实现，见第 2.1 节）、Execution Plan 扩展点集成、
 DBX Host API 调用、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
-Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
+Oracle / Dameng / Doris / QuestDB parser（OceanBase Oracle 已由本轮实现）、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
 文本计划 parser、Plan Diff、History、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
 以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
@@ -699,3 +780,17 @@ Oracle / Dameng / Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL
 > / unknown operator / 缺失字段 / Top / Concatenation / Parallelism 覆盖）与对应 golden；root-only 的规则集合扩为
 > 3 条（`large-sequential-scan` / `expensive-sort` / `nested-loop-large-inner`）对 SQL Server 的适用范围已在第 6 节标注。
 > Actual Plan / RunTimeInformation / Plan Diff / AI / SQL Rewrite 仍不在范围内。
+
+> 更新（2026-09-22，Phase 3.2 · OceanBase Oracle Structured Parser）：
+> OceanBase Oracle 已从 raw-only 升级为 structured：新增 `src/core/oceanbase/parse-json-plan.js`（`ID` / `OPERATOR` /
+> `NAME` / `EST.ROWS` / `EST.TIME(us)` / `COST` / `output` / `CHILD_<n>` 映射）、
+> `src/core/normalize/normalize-oceanbase.js` 与 `src/core/parsers/oceanbase-oracle.js`（registry：
+> `oceanbase-oracle` + `json`，见第 4.4 节）。
+> 上游证据：DBX 对 OceanBase Oracle 走 `EXPLAIN FORMAT=JSON`（`estimated_plan_format == Json`），
+> Host 把驱动逐行返回的 JSON 文本拼接后解码，因此插件收到的是已解析的 JSON 对象；
+> `format: "text"`（宿主 `plan_not_json` 降级）仍走 raw-only，不猜文本计划。
+> `EST.TIME(us)` / `COST` 保留在 `engineSpecific.oceanBase`，**不**映射到 `startupCost` / `totalCost`，
+> `costAttribution.status = "not-applicable"`；本轮**不新增** OceanBase 专属 hotspot 规则，
+> 只让既有 `large-sequential-scan` / `nested-loop-amplification` 行数信号工作，并把它们的 `source`
+> 按引擎标为 `EST.ROWS`。新增 12 个 fixture（1 个 official 文档示例 + 11 个 synthetic）与对应 golden。
+> Oracle / Dameng / Doris / QuestDB、Actual Plan、Plan Diff / AI / SQL Rewrite 仍不在范围内。

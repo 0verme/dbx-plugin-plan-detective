@@ -576,9 +576,9 @@ export function buildNodeInspector(node) {
 }
 
 /**
- * Engine-specific fields. PostgreSQL, MySQL and SQL Server keep their own
- * vocabularies: the panel renders whatever the node's normalizer actually
- * reported and never renames one engine's fields into another's.
+ * Engine-specific fields. PostgreSQL, MySQL, SQL Server and OceanBase Oracle
+ * keep their own vocabularies: the panel renders whatever the node's normalizer
+ * actually reported and never renames one engine's fields into another's.
  *
  * @param {Record<string, any>} engine
  * @returns {Array<{ label: string, value: string }|null>}
@@ -586,6 +586,7 @@ export function buildNodeInspector(node) {
 function engineFields(engine) {
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
+  if (isPlainObject(engine.oceanBase)) return oceanBaseEngineFields(engine.oceanBase);
   return [
     flagField("Parallel Aware", engine.parallelAware),
     flagField("Async Capable", engine.asyncCapable),
@@ -598,6 +599,25 @@ function engineFields(engine) {
     field("Join Filter", engine.joinFilter),
     field("Recheck Condition", engine.recheckCondition),
     field("Presorted Keys", formatRawValue(engine.presortedKeys)),
+  ];
+}
+
+/**
+ * OceanBase Oracle `EXPLAIN FORMAT=JSON` fields. `EST.TIME(us)` and `COST` are
+ * shown here, not as PostgreSQL-style costs: they belong to OceanBase's own
+ * estimate model and are not comparable with PostgreSQL cost units.
+ *
+ * @param {Record<string, unknown>} oceanBase
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function oceanBaseEngineFields(oceanBase) {
+  return [
+    field("Operator ID (ID)", formatNumber(oceanBase.id)),
+    field("Operator (OPERATOR)", oceanBase.operator),
+    field("Object Name (NAME)", oceanBase.name),
+    field("Estimated Time (EST.TIME(us))", formatNumber(oceanBase.estimatedTimeUs)),
+    field("Cost (COST)", formatNumber(oceanBase.cost)),
+    field("Output", oceanBase.output),
   ];
 }
 

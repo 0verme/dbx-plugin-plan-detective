@@ -16,6 +16,7 @@ import { loadFixture } from "../helpers/fixtures.js";
 const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-scan" });
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "table-scan.synthetic" });
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
+const oceanBaseFixture = await loadFixture({ database: "oceanbase-oracle", mode: "estimated", name: "hash-join" });
 
 function pendingDialectInput() {
   return createRawPlanInput({
@@ -39,13 +40,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(sqlserver?.id, "sqlserver");
   assert.deepEqual(sqlserver?.formats, ["xml"]);
 
+  const oceanBaseOracle = getParser("oceanbase-oracle");
+  assert.equal(oceanBaseOracle?.id, "oceanbase-oracle");
+  assert.deepEqual(oceanBaseOracle?.formats, ["json"]);
+
   for (const database of ["oracle", "unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle"]);
 });
 
 test("describeParserSupport separates structured, pending and unknown families", () => {
@@ -70,7 +75,18 @@ test("describeParserSupport separates structured, pending and unknown families",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
-  for (const database of ["oracle", "oceanbase-oracle", "doris", "dameng", "questdb"]) {
+  assert.deepEqual(describeParserSupport("oceanbase-oracle", "json"), {
+    structured: true,
+    parser: "oceanbase-oracle",
+    reasonCode: null,
+  });
+  assert.deepEqual(describeParserSupport("oceanbase-oracle", "text"), {
+    structured: false,
+    parser: "oceanbase-oracle",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  for (const database of ["oracle", "doris", "dameng", "questdb"]) {
     assert.deepEqual(
       describeParserSupport(database, "text"),
       { structured: false, parser: "none", reasonCode: "PARSER_NOT_IMPLEMENTED" },
@@ -143,6 +159,26 @@ test("analyzeRawPlan runs the full structured pipeline for SQL Server ShowPlanXM
   assert.deepEqual(result.findings, strict.findings);
 });
 
+test("analyzeRawPlan runs the full structured pipeline for OceanBase Oracle JSON", () => {
+  const result = analyzeRawPlan(oceanBaseFixture.input);
+
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "oceanbase-oracle");
+  assert.equal(result.reasonCode, null);
+  assert.equal(result.reason, null);
+  assert.equal(result.parsed.database, "oceanbase-oracle");
+  assert.equal(result.parsed.format, "json");
+  assert.equal(result.normalized.database, "oceanbase-oracle");
+  assert.ok(result.metrics.nodeCount >= 1);
+  assert.ok(result.hotspots !== null);
+
+  const strict = analyzePlan(oceanBaseFixture.input);
+  assert.deepEqual(result.parsed, strict.parsed);
+  assert.deepEqual(result.normalized, strict.normalized);
+  assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+});
+
 test("analyzeRawPlan returns a raw-only result for a pending dialect", () => {
   const result = analyzeRawPlan(pendingDialectInput());
 
@@ -187,6 +223,13 @@ test("analyzeRawPlan reports a format mismatch instead of silently skipping the 
   assert.equal(sqlserverResult.status, "raw-only");
   assert.equal(sqlserverResult.parser, "sqlserver");
   assert.equal(sqlserverResult.reasonCode, "UNSUPPORTED_FORMAT");
+
+  const oceanBaseResult = analyzeRawPlan(
+    createRawPlanInput({ database: "oceanbase-oracle", mode: "estimated", format: "text", plan: "| 0 | HASH JOIN |" }),
+  );
+  assert.equal(oceanBaseResult.status, "raw-only");
+  assert.equal(oceanBaseResult.parser, "oceanbase-oracle");
+  assert.equal(oceanBaseResult.reasonCode, "UNSUPPORTED_FORMAT");
 });
 
 test("analyzePlan stays strict: a raw-only family throws instead of returning empty findings", () => {
@@ -244,6 +287,22 @@ test("a structured parser still fails loudly on a malformed payload", () => {
     (error) => {
       assert.ok(error instanceof PlanParseError);
       assert.equal(error.code, "MALFORMED_XML");
+      return true;
+    },
+  );
+
+  const malformedOceanBase = createRawPlanInput({
+    database: "oceanbase-oracle",
+    mode: "estimated",
+    format: "json",
+    plan: { not_a_plan_node: true },
+  });
+
+  assert.throws(
+    () => analyzeRawPlan(malformedOceanBase),
+    (error) => {
+      assert.ok(error instanceof PlanParseError);
+      assert.equal(error.code, "MALFORMED_PLAN");
       return true;
     },
   );

@@ -1,0 +1,327 @@
+{
+  "parsed": {
+    "database": "oceanbase-oracle",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "NESTED-LOOP JOIN",
+      "operator": "NESTED-LOOP JOIN",
+      "nodeId": 0,
+      "name": "",
+      "estimatedRows": 5000000,
+      "estimatedTimeUs": 62000000,
+      "cost": null,
+      "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])",
+      "children": [
+        {
+          "nodeType": "TABLE RANGE SCAN",
+          "operator": "TABLE RANGE SCAN",
+          "nodeId": 1,
+          "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+          "estimatedRows": 1000,
+          "estimatedTimeUs": 4200,
+          "cost": null,
+          "output": "output([T_CUSTOMERS.ID])",
+          "children": [],
+          "extra": {}
+        },
+        {
+          "nodeType": "TABLE FULL SCAN",
+          "operator": "TABLE FULL SCAN",
+          "nodeId": 2,
+          "name": "T_ORDERS",
+          "estimatedRows": 50000,
+          "estimatedTimeUs": 9100,
+          "cost": null,
+          "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])",
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "oceanbase-oracle",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "nested_loop",
+      "nodeType": "NESTED-LOOP JOIN",
+      "relation": null,
+      "estimatedRows": 5000000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "TABLE RANGE SCAN",
+          "relation": {
+            "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 1000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 1,
+              "operator": "TABLE RANGE SCAN",
+              "name": "T_CUSTOMERS(IDX_T_CUSTOMERS_REGION)",
+              "estimatedRows": 1000,
+              "estimatedTimeUs": 4200,
+              "cost": null,
+              "output": "output([T_CUSTOMERS.ID])"
+            },
+            "extra": {}
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "seq_scan",
+          "nodeType": "TABLE FULL SCAN",
+          "relation": {
+            "name": "T_ORDERS",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 50000,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "oceanbase-oracle",
+            "oceanBase": {
+              "id": 2,
+              "operator": "TABLE FULL SCAN",
+              "name": "T_ORDERS",
+              "estimatedRows": 50000,
+              "estimatedTimeUs": 9100,
+              "cost": null,
+              "output": "output([T_ORDERS.TOTAL], [T_ORDERS.CUSTOMER_ID])"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "oceanbase-oracle",
+        "oceanBase": {
+          "id": 0,
+          "operator": "NESTED-LOOP JOIN",
+          "name": "",
+          "estimatedRows": 5000000,
+          "estimatedTimeUs": 62000000,
+          "cost": null,
+          "output": "output([T_CUSTOMERS.ID], [T_ORDERS.TOTAL])"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 5000000,
+    "scanCount": 2,
+    "sequentialScanCount": 1,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "nested_loop",
+      "nodeType": "NESTED-LOOP JOIN",
+      "relation": null,
+      "estimatedRows": 5000000
+    },
+    "costAttribution": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0.1",
+      "ruleId": "large-sequential-scan",
+      "severity": "warning",
+      "title": "Large sequential scan",
+      "summary": "TABLE FULL SCAN on T_ORDERS with no filter reported is estimated to read 50000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0.1",
+      "facts": {
+        "database": "oceanbase-oracle",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "TABLE FULL SCAN",
+        "relation": "T_ORDERS",
+        "estimatedRows": 50000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": false
+      },
+      "evidence": {
+        "nodeId": "0.1",
+        "nodeType": "TABLE FULL SCAN",
+        "relation": "T_ORDERS",
+        "estimatedRows": 50000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": null,
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    },
+    {
+      "id": "nested-loop-large-inner:0",
+      "ruleId": "nested-loop-large-inner",
+      "severity": "warning",
+      "title": "Nested loop with a large inner estimate",
+      "summary": "Nested Loop is estimated to combine 1000 outer rows with an inner side estimated at 50000 rows, about 50000000 estimated row comparisons. The inner side is expected to be re-scanned for every outer row. These are planner estimates; no runtime loop count is available for this plan.",
+      "nodeRef": "0",
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "NESTED-LOOP JOIN",
+        "relation": null,
+        "estimatedRows": 5000000,
+        "estimatedTotalCost": null,
+        "outerNodeRef": "0.0",
+        "innerNodeRef": "0.1",
+        "outerEstimatedRows": 1000,
+        "innerEstimatedRows": 50000,
+        "estimatedRowComparisons": 50000000,
+        "actualLoops": null,
+        "estimateOnly": true,
+        "thresholds": {
+          "minOuterEstimatedRows": 10,
+          "warningInnerEstimatedRows": 10000,
+          "highInnerEstimatedRows": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "oceanbase-oracle",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "NESTED-LOOP JOIN",
+        "kind": "nested_loop",
+        "relation": null,
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "nested-loop-amplification",
+            "level": "warning",
+            "statement": "Nested Loop is estimated to drive 1000 outer rows into 50000 inner rows each, about 50000000 estimated row comparisons.",
+            "source": "EST.ROWS",
+            "evidence": {
+              "outerNodeRef": "0.0",
+              "innerNodeRef": "0.1",
+              "outerEstimatedRows": 1000,
+              "innerEstimatedRows": 50000,
+              "estimatedRowComparisons": 50000000,
+              "thresholds": {
+                "minOuterEstimatedRows": 10,
+                "warningInnerEstimatedRows": 10000,
+                "highInnerEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "NESTED-LOOP JOIN",
+          "kind": "nested_loop",
+          "estimatedRows": 5000000
+        },
+        "estimateOnly": true
+      },
+      {
+        "id": "hotspot:0.1",
+        "nodeId": "0.1",
+        "nodeType": "TABLE FULL SCAN",
+        "kind": "seq_scan",
+        "relation": "T_ORDERS",
+        "level": "warning",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "warning",
+            "statement": "TABLE FULL SCAN on T_ORDERS is estimated to return 50000 rows.",
+            "source": "EST.ROWS",
+            "evidence": {
+              "estimatedRows": 50000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0.1",
+          "nodeType": "TABLE FULL SCAN",
+          "kind": "seq_scan",
+          "relation": "T_ORDERS",
+          "estimatedRows": 50000
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

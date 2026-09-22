@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-21）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL / MySQL / SQL Server structured；其余 5 个方言 raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
+> 状态（2026-09-22）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL / MySQL / SQL Server / OceanBase Oracle structured；其余 4 个方言 raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
 
 ## 1. 已确认决策
 
@@ -165,7 +165,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 - 实现：`src/host/**`（Host adapter + 错误码）、`src/core/parsers/**`（registry）、
   `src/lib/analysis-session.js`（编排）、`src/lib/host-view-model.js`（纯 view model）、
   新组件（ConnectionContext / SqlInput / AnalysisNotice / RawPlanViewer）。
-- 结构化支持：PostgreSQL；其余 7 个方言 raw-only，明确标注 `structured parser not implemented`（这是 Phase 1 当时的范围；MySQL 已在 Phase 1.1、SQL Server 已在 Phase 3.1 接入）。
+- 结构化支持：PostgreSQL；其余 7 个方言 raw-only，明确标注 `structured parser not implemented`（这是 Phase 1 当时的范围；MySQL 已在 Phase 1.1、SQL Server 已在 Phase 3.1、OceanBase Oracle 已在 Phase 3.2 接入）。
 - 连接上下文：result-view 入口带入 `connectionId` / `database` / `sql`；standalone workbench 提供
   Connection ID 输入（仅引用已打开连接，不创建连接、不读凭据）。
 - 错误状态：宿主错误映射为稳定错误码，逐项 UI 文案；不使用通用 `Analysis failed`。
@@ -179,7 +179,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 ```text
 DBX Host Adapter          ← 已接入（Host API 1.2，权限 host.plans:read）
 → Estimated Raw Plan（EXPLAIN ...，宿主构造）
-→ Parser（PostgreSQL / MySQL / SQL Server structured；其余 5 个方言 raw-only）
+→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle structured；其余 4 个方言 raw-only）
 → Normalization
 → Metrics
 → Rules
@@ -212,8 +212,9 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 2 | Metrics Engine + Findings/Evidence 扩展（Hotspot / Estimate Error 等） | Hotspot Analysis ✅ 已实现（Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）；Estimate Error 等扩展属后续 Issue |
 | Phase 3 | Rule Engine 扩展与规则分级 | 3 条确定性规则已实现；更多规则属后续 Issue |
 | Phase 3.1 | SQL Server ShowPlanXML 结构化（ShowPlanXML → 现有 IR / metrics / hotspots） | ✅ 已实现（2026-09-21）；14 个 synthetic fixture + golden；代价不映射到 PostgreSQL 语义 |
+| Phase 3.2 | OceanBase Oracle JSON Estimated Plan 结构化（`EXPLAIN FORMAT=JSON` → 现有 IR / metrics / hotspots） | ✅ 已实现（2026-09-22）；12 个 fixture（1 official + 11 synthetic）+ golden；`EST.TIME(us)` / `COST` 不映射到 PostgreSQL 语义，不新增专属 hotspot 规则 |
 | Phase 4 | Plan Diff / History | 后续 Issue |
-| Phase 5 | Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现（MySQL 已在 Phase 1.1、SQL Server 已在 Phase 3.1 完成） |
+| Phase 5 | Oracle / Doris / Dameng / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现（MySQL 已在 Phase 1.1、SQL Server 已在 Phase 3.1、OceanBase Oracle 已在 Phase 3.2 完成） |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -229,7 +230,7 @@ raw plan → normalized plan → metrics → findings
 
 约定：
 
-- `fixtures/postgres/`、`fixtures/mysql/` 按数据库分目录。
+- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
 - Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` 四 stage 与预期快照比对；
@@ -240,7 +241,11 @@ PostgreSQL 样本已落地（Phase 0B：20 个）；MySQL 样本已落地
 sort / group / union / subquery；本机无 MySQL 实例，来源见 `fixtures/mysql/README.md`）；
 SQL Server 样本已落地（Phase 3.1：14 个，全部为 synthetic ShowPlanXML，覆盖 scan / seek / join /
 sort / aggregate / spool 类算子 / unknown operator / 缺失字段；本机无 SQL Server 实例，
-形状对照公开 schema 与文档，见 `fixtures/sqlserver/README.md`）。
+形状对照公开 schema 与文档，见 `fixtures/sqlserver/README.md`）；
+OceanBase Oracle 样本已落地（Phase 3.2：12 个 = 1 个官方 Oracle 模式 `EXPLAIN` 文档 JSON 示例 + 11 个 synthetic，
+覆盖 table full scan / index access / table get / nested-loop / hash join / sort / aggregate / multi-level tree /
+unknown operator / unknown fields / missing optional fields / `CHILD_<n>` 数字排序；本机无 OceanBase 实例，
+键名与算子名对照官方文档与引擎 JSON plan writer，见 `fixtures/oceanbase-oracle/README.md`）。
 
 ## 5. Host 接入与其它阶段仍禁止顺手实现
 
@@ -251,7 +256,7 @@ sort / aggregate / spool 类算子 / unknown operator / 缺失字段；本机无
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
-- Oracle / Doris / Dameng / QuestDB parser（MySQL 已由 Issue #15、SQL Server 已由 Phase 3.1 显式启动并完成）
+- Oracle / Doris / Dameng / QuestDB parser（MySQL 已由 Issue #15、SQL Server 已由 Phase 3.1、OceanBase Oracle 已由 Phase 3.2 显式启动并完成）
 - 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
 
