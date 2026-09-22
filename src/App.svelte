@@ -9,7 +9,9 @@
   import RawPlanViewer from "./components/RawPlanViewer.svelte";
   import SqlInput from "./components/SqlInput.svelte";
   import { describePlanApi, resolvePlanBridge } from "./host/index.js";
+  import { buildAiAnalysisPrompt } from "./lib/ai-analysis-prompt.js";
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
+  import { copyTextToClipboard } from "./lib/clipboard-copy.js";
   import { analyzeFixture, countByMode, findCatalogEntry, pickDefaultFixture } from "./lib/fixture-catalog.js";
   import { normalizeLocale } from "./lib/i18n/index.js";
   import {
@@ -17,6 +19,7 @@
     describeAnalysisNotice,
     describeCapabilities,
     describeConnectionContext,
+    describeCopyPromptAction,
     describeHostGate,
     describePlanWarning,
     formatRawPlan,
@@ -73,6 +76,9 @@
   let capabilityState = $state("idle");
   let capabilityError = $state(null);
   let session = $state(idleAnalysis());
+  /** `idle` | `copying` | `copied` | `failed` — see describeCopyPromptAction. */
+  let copyState = $state("idle");
+  let copyResetTimer = null;
 
   let selectedFixtureId = $state(initialEntry?.id ?? null);
   let selectedNodeId = $state("0");
@@ -111,6 +117,7 @@
     return () => {
       offContext?.();
       offInit?.();
+      if (copyResetTimer !== null) clearTimeout(copyResetTimer);
     };
   });
 
@@ -176,6 +183,7 @@
     session = loadingAnalysis();
     selectedNodeId = "0";
     collapsedIds = new Set();
+    copyState = "idle";
 
     const maxTimeoutMs = capabilities?.limits.maxTimeoutMs;
     const timeoutMs = typeof maxTimeoutMs === "number" ? Math.min(15_000, maxTimeoutMs) : null;
@@ -213,7 +221,7 @@
   const findingCounts = $derived(countFindingsBySeverity(activeAnalysis?.findings ?? []));
   const findingsByNodeRef = $derived(groupFindingsByNodeRef(activeAnalysis?.findings ?? []));
   const hotspotViews = $derived(
-    activeAnalysis ? buildHotspotViews(activeAnalysis.hotspots, rowsById, activeAnalysis.findings) : { items: [], costNote: null },
+    activeAnalysis ? buildHotspotViews(activeAnalysis.hotspots, rowsById, activeAnalysis.findings, diagnosisLocale) : { items: [], costNote: null },
   );
   const hotspotCounts = $derived(countHotspotLevels(hotspotViews.items));
   const hotspotsByNodeRef = $derived(groupHotspotsByNodeRef(hotspotViews.items));
@@ -230,6 +238,36 @@
   );
   const rawPlanPreview = $derived(session.hostResult ? formatRawPlan(session.hostResult) : null);
   const rawPlanWarnings = $derived((session.hostResult?.warnings ?? []).map(describePlanWarning));
+  const copyPromptAction = $derived(
+    session.status === "structured" ? { ...describeCopyPromptAction(copyState, diagnosisLocale), onCopy: copyAiAnalysisPrompt } : null,
+  );
+
+  /* ------------------------------------------------------------ copy prompt -- */
+
+  /**
+   * Build the local AI analysis prompt and copy it. The prompt builder is a
+   * pure function and the copy path is host.copy -> navigator.clipboard; this
+   * handler performs no network request and sends nothing anywhere.
+   */
+  async function copyAiAnalysisPrompt() {
+    if (session.status !== "structured" || session.analysis === null || session.rawInput === null) return;
+
+    copyState = "copying";
+    const prompt = buildAiAnalysisPrompt({
+      rawInput: session.rawInput,
+      analysis: session.analysis,
+      databaseType: session.capabilities?.dbType ?? null,
+      locale: diagnosisLocale,
+    });
+    const result = await copyTextToClipboard({ bridge, text: prompt });
+    copyState = result.ok ? "copied" : "failed";
+
+    if (copyResetTimer !== null) clearTimeout(copyResetTimer);
+    copyResetTimer = setTimeout(() => {
+      copyState = "idle";
+      copyResetTimer = null;
+    }, 2500);
+  }
 
   /* --------------------------------------------------------------- events -- */
 
@@ -338,7 +376,7 @@
         />
         <div class="sql-workspace">
           <SqlInput bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
-          <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} />
+          <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} copyPrompt={copyPromptAction} />
         </div>
       </div>
 

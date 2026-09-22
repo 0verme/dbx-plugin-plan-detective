@@ -404,6 +404,89 @@ test("countHotspotLevels and groupHotspotsByNodeRef summarize without re-running
 
 /* ------------------------------------------------------------------ extras -- */
 
+test("buildHotspotViews adds localized human summaries while keeping every Core field", () => {
+  const rows = buildTreeRows(largeSeqScanAnalysis.normalized.root);
+  const rowsById = indexRowsById(rows);
+  const zhView = buildHotspotViews(largeSeqScanAnalysis.hotspots, rowsById, largeSeqScanAnalysis.findings, "zh-CN");
+  const enView = buildHotspotViews(largeSeqScanAnalysis.hotspots, rowsById, largeSeqScanAnalysis.findings, "en");
+  const coreItem = largeSeqScanAnalysis.hotspots.items[0];
+  const [zhItem] = zhView.items;
+  const [enItem] = enView.items;
+
+  assert.equal(zhItem.reasons.length, coreItem.reasons.length);
+  zhItem.reasons.forEach((reason, index) => {
+    assert.equal(reason.code, coreItem.reasons[index].code);
+    assert.equal(reason.level, coreItem.reasons[index].level);
+    assert.equal(reason.statement, coreItem.reasons[index].statement, "the Core statement is preserved verbatim");
+    assert.equal(reason.source, coreItem.reasons[index].source);
+    assert.equal(typeof reason.summary, "string", `${reason.code} gets a human line`);
+    assert.ok(reason.summary.length > 0);
+  });
+
+  assert.match(zhItem.summary, /自代价/);
+  assert.match(zhItem.reasons[0].summary, /自代价/);
+  assert.match(zhItem.reasons[1].summary, /顺序扫描/);
+  assert.ok(zhItem.evidence.length > 0, "Evidence stays available");
+  assert.equal(enItem.reasons[0].summary.includes("self cost"), true);
+  assert.notEqual(enItem.summary, zhItem.summary);
+});
+
+test("buildHotspotViews falls back to the Core statement for an unknown reason code", () => {
+  const hotspot = {
+    id: "hotspot:0",
+    nodeId: "0",
+    nodeType: "Seq Scan",
+    kind: "seq_scan",
+    relation: "t",
+    level: "warning",
+    reasons: [{ code: "future-signal", level: "warning", statement: "A future signal fired.", source: "Future Field", evidence: {} }],
+    evidence: { nodeId: "0" },
+    estimateOnly: true,
+  };
+
+  const view = buildHotspotViews({ cost: { engine: "postgresql", status: "available", reason: null }, items: [hotspot] }, undefined, [], "zh-CN");
+
+  assert.equal(view.items.length, 1, "an unknown reason never hides the hotspot");
+  assert.equal(view.items[0].summary, null);
+  assert.equal(view.items[0].reasons[0].summary, null);
+  assert.equal(view.items[0].reasons[0].statement, "A future signal fired.");
+  assert.equal(view.items[0].reasons[0].source, "Future Field");
+});
+
+test("buildHotspotViews feeds the hotspot access type into the presenter", () => {
+  const hotspot = {
+    id: "hotspot:0.0",
+    nodeId: "0.0",
+    nodeType: "Table Scan",
+    kind: "seq_scan",
+    relation: "events",
+    level: "high",
+    reasons: [
+      {
+        code: "mysql-cost-concentration",
+        level: "high",
+        statement: "Table Scan on events accounts for 95% of its query block's estimated MySQL cost.",
+        source: "table.cost_info.read_cost + eval_cost / query_block.cost_info.query_cost",
+        evidence: { accessCost: 100, queryCost: 105, costShare: 0.95 },
+      },
+    ],
+    evidence: { nodeId: "0.0", accessType: "ALL" },
+    estimateOnly: true,
+  };
+
+  const view = buildHotspotViews({ cost: { engine: "mysql", status: "available", reason: null }, items: [hotspot] }, undefined, [], "zh-CN");
+
+  assert.match(view.items[0].reasons[0].summary, /全表扫描/);
+  assert.equal(view.items[0].reasons[0].summary.includes("索引"), false, "a full table scan is never described as index access");
+});
+
+test("describeHotspotCost is localized without changing the Core status", () => {
+  const en = describeHotspotCost({ status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }, "en");
+  assert.match(en, /SQL Server/);
+  assert.match(en, /EstimatedTotalSubtreeCost/);
+  assert.equal(describeHotspotCost({ status: "available", reason: null }, "en"), null);
+});
+
 test("view-model works on every committed fixture", async () => {
   const { loadAllFixtures } = await import("../helpers/fixtures.js");
   for (const fixture of await loadAllFixtures()) {

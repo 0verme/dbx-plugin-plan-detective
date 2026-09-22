@@ -11,7 +11,8 @@
 
 import { incrementalCostOf } from "../core/index.js";
 import { presentFinding } from "./finding-presentation.js";
-import { createTranslator } from "./i18n/index.js";
+import { presentHotspotCostNote, presentHotspotReason } from "./hotspot-presentation.js";
+import { createTranslator, DEFAULT_LOCALE } from "./i18n/index.js";
 import { formatNumber, formatPercent, formatRawValue } from "./format.js";
 
 /* ---------------------------------------------------------------- summary -- */
@@ -379,40 +380,27 @@ function formatEvidenceValue(path, value) {
 /* ---------------------------------------------------------------- hotspots -- */
 
 /**
- * Why cost-based hotspot signals were withheld. The note is display copy only:
- * the core already decided, and the UI must not re-derive or soften it.
- */
-const HOTSPOT_COST_NOTES = Object.freeze({
-  NO_PLAN_COST: "计划未报告根节点 Total Cost，已停用代价占比信号，仅使用行数信号（Estimated Plan）。",
-  MISSING_NODE_COST: "计划存在缺失 Total Cost 的节点，子树代价累加不可靠，已停用代价占比信号。",
-  PLAN_CONTAINS_SUBPLAN:
-    "计划包含 InitPlan / SubPlan / CTE：PostgreSQL 父节点代价不按子节点 Total Cost 累加，已停用代价占比信号。",
-  UNVERIFIED_COST_FLOW: "部分节点缺少可验证的 Parent Relationship，代价归因不可靠，已停用代价占比信号。",
-  NO_QUERY_COST: "MySQL 计划未报告 query_cost，已停用 MySQL 代价占比信号，仅使用行数与操作标记信号。",
-  NOT_POSTGRES_COST_MODEL:
-    "SQL Server 的 EstimatedTotalSubtreeCost 属于 SQL Server 自己的代价模型，未按 PostgreSQL 语义归因；仅使用行数信号。",
-});
-
-/**
  * Hotspot panel view model. The UI adds no ranking and no advice: reasons and
- * evidence come from the core, and the finding cross-reference is a lookup, not
- * a recalculation.
+ * evidence come from the core, the finding cross-reference is a lookup, and the
+ * human-readable line comes from the Hotspot presenter (which reads structured
+ * reason codes, never the legacy English statement).
  *
  * @param {import("../core/hotspots/compute-hotspots.js").HotspotAnalysis|null|undefined} hotspotAnalysis
  * @param {Map<string, ReturnType<typeof buildTreeRows>[number]>} [rowsById]
  * @param {import("../core/findings/finding.js").Finding[]} [findings]
+ * @param {unknown} [locale]
  * @returns {{
  *   costNote: string|null,
  *   items: Array<{
  *     id: string, rank: number, level: string, nodeId: string, nodeLabel: string,
- *     nodeType: string, relation: string|null,
- *     reasons: Array<{ code: string, level: string, statement: string, source: string }>,
+ *     nodeType: string, relation: string|null, summary: string|null,
+ *     reasons: Array<{ code: string, level: string, statement: string, source: string, summary: string|null, caveat: string|null }>,
  *     evidence: Array<{ path: string, value: string, depth: number }>,
  *     findingRuleIds: string[], estimateOnly: boolean,
  *   }>,
  * }}
  */
-export function buildHotspotViews(hotspotAnalysis, rowsById, findings = []) {
+export function buildHotspotViews(hotspotAnalysis, rowsById, findings = [], locale = DEFAULT_LOCALE) {
   const items = hotspotAnalysis?.items ?? [];
   const ruleIdsByNodeRef = new Map();
   for (const finding of findings) {
@@ -422,41 +410,55 @@ export function buildHotspotViews(hotspotAnalysis, rowsById, findings = []) {
   }
 
   return {
-    costNote: describeHotspotCost(hotspotAnalysis?.cost),
-    items: items.map((hotspot, index) => ({
-      id: hotspot.id,
-      rank: index + 1,
-      level: hotspot.level,
-      nodeId: hotspot.nodeId,
-      nodeLabel: rowsById?.get(hotspot.nodeId)?.label ?? hotspot.nodeType,
-      nodeType: hotspot.nodeType,
-      relation: hotspot.relation ?? null,
-      reasons: hotspot.reasons.map((reason) => ({
-        code: reason.code,
-        level: reason.level,
-        statement: reason.statement,
-        source: reason.source,
-      })),
-      evidence: flattenEvidence(hotspot.evidence),
-      findingRuleIds: ruleIdsByNodeRef.get(hotspot.nodeId) ?? [],
-      estimateOnly: hotspot.estimateOnly === true,
-    })),
+    costNote: describeHotspotCost(hotspotAnalysis?.cost, locale),
+    items: items.map((hotspot, index) => {
+      const row = rowsById?.get(hotspot.nodeId);
+      const nodeContext = {
+        relation: row?.relation ?? hotspot.relation ?? null,
+        alias: row?.alias ?? null,
+        indexName: row?.indexName ?? null,
+        accessType: typeof hotspot.evidence?.accessType === "string" ? hotspot.evidence.accessType : null,
+        nodeType: row?.nodeType ?? hotspot.nodeType ?? null,
+        kind: row?.kind ?? hotspot.kind ?? null,
+      };
+      const presentedReasons = hotspot.reasons.map((reason) => presentHotspotReason(reason, locale, nodeContext));
+      const summary = presentedReasons
+        .map((presented) => presented.summary)
+        .filter((text) => typeof text === "string" && text.length > 0)
+        .join(" ");
+
+      return {
+        id: hotspot.id,
+        rank: index + 1,
+        level: hotspot.level,
+        nodeId: hotspot.nodeId,
+        nodeLabel: row?.label ?? hotspot.nodeType,
+        nodeType: hotspot.nodeType,
+        relation: hotspot.relation ?? null,
+        summary: summary.length > 0 ? summary : null,
+        reasons: hotspot.reasons.map((reason, reasonIndex) => ({
+          code: reason.code,
+          level: reason.level,
+          statement: reason.statement,
+          source: reason.source,
+          summary: presentedReasons[reasonIndex]?.summary ?? null,
+          caveat: presentedReasons[reasonIndex]?.caveat ?? null,
+        })),
+        evidence: flattenEvidence(hotspot.evidence),
+        findingRuleIds: ruleIdsByNodeRef.get(hotspot.nodeId) ?? [],
+        estimateOnly: hotspot.estimateOnly === true,
+      };
+    }),
   };
 }
 
 /**
  * @param {{ status: string, reason: string|null }|null|undefined} cost
+ * @param {unknown} [locale]
  * @returns {string|null} display note, or `null` when cost signals are available
  */
-export function describeHotspotCost(cost) {
-  if (cost === null || cost === undefined) return null;
-  if (cost.status === "not-applicable") {
-    // MySQL reports its own cost signals, so `not-applicable` in practice means
-    // a plan whose engine has no shared cost attribution (SQL Server).
-    return HOTSPOT_COST_NOTES[cost.reason] ?? "该引擎没有可用的共享代价归因，已仅使用行数信号。";
-  }
-  if (cost.status !== "withheld") return null;
-  return HOTSPOT_COST_NOTES[cost.reason] ?? "该计划的代价信号不可用，已仅使用行数信号。";
+export function describeHotspotCost(cost, locale = DEFAULT_LOCALE) {
+  return presentHotspotCostNote(cost, locale);
 }
 
 /**

@@ -11,6 +11,7 @@
     notice = null,
     error = null,
     onRetry = () => {},
+    copyPrompt = null,
   } = $props();
 </script>
 
@@ -35,6 +36,14 @@
   <p class="banner {notice.tone}" role="status">
     <strong>{notice.title}</strong>
     {#if notice.detail}<span class="detail-text"> · {notice.detail}</span>{/if}
+    {#if copyPrompt}
+      <button type="button" class="copy-action" disabled={copyPrompt.disabled} onclick={copyPrompt.onCopy}>
+        {copyPrompt.label}
+      </button>
+      {#if copyPrompt.feedback}
+        <span class="copy-feedback {copyPrompt.tone}" aria-live="polite">{copyPrompt.feedback}</span>
+      {/if}
+    {/if}
   </p>
 {/if}
 
@@ -105,5 +114,36 @@
 
   .detail-text {
     color: var(--pd-muted);
+  }
+
+  .copy-action {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border: 1px solid var(--pd-border-strong);
+    border-radius: 5px;
+    background: var(--pd-surface);
+    color: inherit;
+    font: inherit;
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .copy-action:disabled {
+    cursor: default;
+    opacity: 0.7;
+  }
+
+  .copy-feedback {
+    margin-left: 8px;
+    font-size: 11px;
+  }
+
+  .copy-feedback.success {
+    color: var(--pd-ok-fg);
+  }
+
+  .copy-feedback.error {
+    color: var(--pd-high-fg);
   }
 </style>

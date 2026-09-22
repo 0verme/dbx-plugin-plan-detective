@@ -45,8 +45,14 @@
               <li class="reason">
                 <div class="reason-line">
                   <span class="badge {reason.level}">{reason.level}</span>
-                  <span class="reason-text">{reason.statement}</span>
+                  <span class="reason-human">{reason.summary ?? reason.statement}</span>
                 </div>
+                {#if reason.summary}
+                  <div class="reason-text">{reason.statement}</div>
+                {/if}
+                {#if reason.caveat}
+                  <div class="reason-caveat">{reason.caveat}</div>
+                {/if}
                 <div class="reason-meta mono">{reason.code} · {reason.source}</div>
               </li>
             {/each}
@@ -187,8 +193,20 @@
     align-items: baseline;
   }
 
-  .reason-text {
+  .reason-human {
     font-size: 12px;
+  }
+
+  .reason-text {
+    margin-top: 2px;
+    color: var(--pd-muted);
+    font-size: 11px;
+  }
+
+  .reason-caveat {
+    margin-top: 2px;
+    color: var(--pd-muted);
+    font-size: 11px;
   }
 
   .reason-meta {
