@@ -3,9 +3,9 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.4 已完成；Phase 3.5 · QuestDB Estimated EXPLAIN Structured Parser（feature branch READY，待创建 PR）；v0.6.4 已发布 |
+| 当前阶段 | **Phase 1–3.4 已完成；Phase 3.5 · QuestDB Estimated EXPLAIN Structured Parser（PR #56 OPEN）；v0.6.4 已发布 |
 | 插件版本 | 0.6.4（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | QuestDB estimated text parser / normalizer / registry / metrics / UI 与 6 个 provenance 明确的 fixture 已完成；`npm test` 1193/1193、`npm run build` 成功。无 QuestDB / DBX Desktop Host，真实 Host smoke NOT RUN。Feature PR 合并前不准备或发布 v0.6.5；Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 阶段结论 | QuestDB estimated text parser / normalizer / registry / metrics / UI 与 6 个 provenance 明确的 fixture 已完成；PR #56 已创建。`npm test` 1193/1193、`npm run build` 成功。无 QuestDB / DBX Desktop Host，真实 Host smoke NOT RUN。PR 合并前不准备或发布 v0.6.5；Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / Plan Diff；不在 Phase 3.5 PR 合并前准备或发布 v0.6.5 |
 
 ## 当前任务快照（Phase 3.5）
@@ -15,7 +15,7 @@
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
 - Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；本轮 feature 基线为 `origin/main ecf0e11d872f3f362aee35e10fd8dd6e5c2fd95f`；原 main worktree 的本地 branch 保留未同步历史
 - Active Tasks:
-  - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/questdb-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `Pending`；Notes: host contract 已核验；3 official doc transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build / diff-check passed；Host Smoke NOT RUN；PR merge 前不做 v0.6.5 release prep。
+  - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/questdb-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#56`；Notes: https://github.com/0verme/dbx-plugin-plan-detective/pull/56；host contract 已核验；3 official doc transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build / diff-check passed；Host Smoke NOT RUN；PR merge 前不做 v0.6.5 release prep。
   - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#52`；Notes: merge `3f1ee8b`，`npm test` 1128/1128、golden 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。
   - Issue / Task: v0.6.4 Release；Branch: `chore/prepare-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.4-release`；State: `MERGED`；Conflict Risk: `MEDIUM`；PR: `#53`；Notes: merge `c35f2d2`；annotated tag `v0.6.4` 与 GitHub Release 已发布，workflow / artifact 已校验；DBX Store 不在本轮范围。
   - Issue / Task: v0.6.4 Release Verification Record；Branch: `docs/record-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/record-v0.6.4-release`；State: `MERGED`；Conflict Risk: `LOW`；PR: `#54`；Notes: merge `8c1961b`；tag / GitHub Release / workflow / artifact 校验已记录。
@@ -23,10 +23,10 @@
 - Hotspot Files: `src/core/parsers/index.js`、`src/core/raw-plan-input.js`、`src/core/hotspots/compute-hotspots.js`、`src/lib/view-model.js`、`tests/helpers/fixtures.js`、fixture convention / golden tests。
 - Blocked: 无代码阻塞；真实 QuestDB / DBX Desktop Host smoke 未运行（当前环境无 DBX Desktop Host 或 QuestDB 实例）。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: Phase 3.5 Feature PR（验证通过，待创建）；v0.6.4 release verification record PR #54 已合并。
+- Merge Queue: Phase 3.5 Feature PR #56 OPEN（等待 review / CI）；v0.6.4 release verification record PR #54 已合并。
 - Recently Merged: PR #52 Phase 3.4 Dameng structured（`3f1ee8b`）；PR #53 v0.6.4 release prep（`c35f2d2`）；PR #54 v0.6.4 release verification（`8c1961b`）；v0.6.4 已发布。
 
-- Next Actions: 提交 Phase 3.5；push feature branch 并创建中文 Feature PR。PR 合并前不准备 / 发布 v0.6.5。
+- Next Actions: 等待 PR #56 review / CI；按 review 反馈更新。PR 合并前不准备 / 发布 v0.6.5。
 
 ## 0. 当前状态
 

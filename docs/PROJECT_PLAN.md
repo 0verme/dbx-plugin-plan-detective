@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」当前在独立 feature branch 开发，尚未合并；PR 合并前不准备或发布 v0.6.5。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
+> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已提交 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56)，尚未合并；PR 合并前不准备或发布 v0.6.5。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
 
 ## 1. 已确认决策
 
@@ -215,7 +215,7 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 3.2 | OceanBase Oracle JSON Estimated Plan 结构化（`EXPLAIN FORMAT=JSON` → 现有 IR / metrics / hotspots） | ✅ 已实现（2026-09-22）；12 个 fixture（1 official + 11 synthetic）+ golden；`EST.TIME(us)` / `COST` 不映射到 PostgreSQL 语义，不新增专属 hotspot 规则 |
 | Phase 3.3 | Oracle DBMS_XPLAN Estimated Plan 文本结构化（`TYPICAL +PREDICATE` → 现有 IR / metrics / hotspots） | ✅ 已实现；5 个 synthetic text fixture + golden；`Rows` 进入 `estimatedRows`，Oracle `Cost` 保留在 `engineSpecific.oracle` |
 | Phase 3.4 | Dameng Estimated Plan 原生文本结构化（`[cost, rows, bytes-per-row]` → 现有 IR / metrics / hotspots） | ✅ 已实现；1 个 official + 6 个 synthetic text fixture + golden；Dameng cost 保留在 `engineSpecific.dameng`，只用 rows 信号 |
-| Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现于 feature branch；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导，PR merge 前不做 v0.6.5 release prep |
+| Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现；PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) OPEN；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导，PR merge 前不做 v0.6.5 release prep |
 | Phase 4 | Plan Diff / History | 后续 Issue |
 | Phase 5 | Doris 结构化 parser | 需要可靠 sample / contract 后再实现（QuestDB 已在 Phase 3.5 完成） |
 
