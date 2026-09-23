@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；当前启动独立的 v0.6.5 Release。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
+> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；v0.6.5 已由 Release PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) 合并并发布。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
 
 ## 1. 已确认决策
 
