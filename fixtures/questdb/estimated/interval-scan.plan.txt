@@ -1,0 +1,7 @@
+Update table: trades
+  VirtualRecord
+    functions: [0]
+      PageFrame
+        Row forward scan
+          Interval forward scan on: trades
+            intervals: [static=[1668124800000000,1668211199999999]

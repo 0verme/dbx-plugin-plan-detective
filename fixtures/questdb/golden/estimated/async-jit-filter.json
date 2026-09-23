@@ -1,0 +1,300 @@
+{
+  "parsed": {
+    "database": "questdb",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Async JIT Filter",
+      "rawNodeType": "Async JIT Filter",
+      "rawLine": "Async JIT Filter workers: 47",
+      "indent": 0,
+      "relation": null,
+      "scanDirection": null,
+      "properties": [
+        {
+          "name": "filter",
+          "value": "100.0<amount [pre-touch]",
+          "rawLine": "  filter: 100.0<amount [pre-touch]",
+          "indent": 2
+        }
+      ],
+      "inlineProperties": [
+        {
+          "name": "workers",
+          "value": "47",
+          "rawLine": "Async JIT Filter workers: 47",
+          "indent": 0
+        }
+      ],
+      "filter": "100.0<amount [pre-touch]",
+      "condition": null,
+      "workers": 47,
+      "vectorized": null,
+      "children": [
+        {
+          "nodeType": "PageFrame",
+          "rawNodeType": "PageFrame",
+          "rawLine": "    PageFrame",
+          "indent": 4,
+          "relation": null,
+          "scanDirection": null,
+          "properties": [],
+          "inlineProperties": [],
+          "filter": null,
+          "condition": null,
+          "workers": null,
+          "vectorized": null,
+          "children": [
+            {
+              "nodeType": "Row forward scan",
+              "rawNodeType": "Row forward scan",
+              "rawLine": "        Row forward scan",
+              "indent": 8,
+              "relation": null,
+              "scanDirection": "forward",
+              "properties": [],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": null,
+              "workers": null,
+              "vectorized": null,
+              "children": [],
+              "extra": {}
+            },
+            {
+              "nodeType": "Frame forward scan",
+              "rawNodeType": "Frame forward scan",
+              "rawLine": "        Frame forward scan on: trades",
+              "indent": 8,
+              "relation": "trades",
+              "scanDirection": "forward",
+              "properties": [],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": null,
+              "workers": null,
+              "vectorized": null,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "orphanProperties": []
+  },
+  "normalized": {
+    "database": "questdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "filter",
+      "nodeType": "Async JIT Filter",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": "100.0<amount [pre-touch]",
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "pipeline",
+          "nodeType": "PageFrame",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "pipeline",
+              "nodeType": "Row forward scan",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "Row forward scan",
+                  "rawNodeType": "Row forward scan",
+                  "rawLine": "        Row forward scan",
+                  "indent": 8,
+                  "relation": null,
+                  "scanDirection": "forward",
+                  "workers": null,
+                  "filter": null,
+                  "condition": null,
+                  "vectorized": null,
+                  "properties": [],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            },
+            {
+              "id": "0.0.1",
+              "kind": "scan",
+              "nodeType": "Frame forward scan",
+              "relation": {
+                "name": "trades",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "Frame forward scan",
+                  "rawNodeType": "Frame forward scan",
+                  "rawLine": "        Frame forward scan on: trades",
+                  "indent": 8,
+                  "relation": "trades",
+                  "scanDirection": "forward",
+                  "workers": null,
+                  "filter": null,
+                  "condition": null,
+                  "vectorized": null,
+                  "properties": [],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "questdb",
+            "questdb": {
+              "nodeType": "PageFrame",
+              "rawNodeType": "PageFrame",
+              "rawLine": "    PageFrame",
+              "indent": 4,
+              "relation": null,
+              "scanDirection": null,
+              "workers": null,
+              "filter": null,
+              "condition": null,
+              "vectorized": null,
+              "properties": [],
+              "inlineProperties": []
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "questdb",
+        "questdb": {
+          "nodeType": "Async JIT Filter",
+          "rawNodeType": "Async JIT Filter",
+          "rawLine": "Async JIT Filter workers: 47",
+          "indent": 0,
+          "relation": null,
+          "scanDirection": null,
+          "workers": 47,
+          "filter": "100.0<amount [pre-touch]",
+          "condition": null,
+          "vectorized": null,
+          "properties": [
+            {
+              "name": "filter",
+              "value": "100.0<amount [pre-touch]",
+              "rawLine": "  filter: 100.0<amount [pre-touch]",
+              "indent": 2
+            }
+          ],
+          "inlineProperties": [
+            {
+              "name": "workers",
+              "value": "47",
+              "rawLine": "Async JIT Filter workers: 47",
+              "indent": 0
+            }
+          ]
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

@@ -5,8 +5,8 @@
  *
  * The registry is the only place that decides whether a database family has a
  * structured parser. A family without one is not an error: the host can return
- * a perfectly valid estimated plan for Doris or QuestDB, and the UI still shows
- * the Raw Plan and the host warnings. What it must not do is
+ * a perfectly valid estimated plan for Doris, and the UI still shows the Raw
+ * Plan and the host warnings. What it must not do is
  * pretend to parse a payload no one has validated against a real sample.
  *
  * Adding a database means adding one parser module here; the UI, rules and
@@ -23,6 +23,7 @@ import { mysqlParser } from "./mysql.js";
 import { oceanBaseOracleParser } from "./oceanbase-oracle.js";
 import { oracleParser } from "./oracle.js";
 import { postgresParser } from "./postgres.js";
+import { questDbParser } from "./questdb.js";
 import { sqlserverParser } from "./sqlserver.js";
 
 /**
@@ -37,6 +38,7 @@ const PARSERS = new Map([
   [oceanBaseOracleParser.database, oceanBaseOracleParser],
   [oracleParser.database, oracleParser],
   [damengParser.database, damengParser],
+  [questDbParser.database, questDbParser],
 ]);
 
 /**
@@ -46,10 +48,7 @@ const PARSERS = new Map([
  *
  * @type {Map<string, string>}
  */
-const PENDING_PARSERS = new Map([
-  ["doris", "PARSER_NOT_IMPLEMENTED"],
-  ["questdb", "PARSER_NOT_IMPLEMENTED"],
-]);
+const PENDING_PARSERS = new Map([["doris", "PARSER_NOT_IMPLEMENTED"]]);
 
 /**
  * @typedef {Object} PlanAnalysis

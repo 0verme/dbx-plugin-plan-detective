@@ -12,6 +12,7 @@ export const SQLSERVER_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlserve
 export const OCEANBASE_ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oceanbase-oracle");
 export const ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oracle");
 export const DAMENG_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "dameng");
+export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
@@ -25,9 +26,10 @@ export const FIXTURE_DIRS = Object.freeze({
   "oceanbase-oracle": OCEANBASE_ORACLE_FIXTURES_DIR,
   oracle: ORACLE_FIXTURES_DIR,
   dameng: DAMENG_FIXTURES_DIR,
+  questdb: QUESTDB_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb"]);
 export const MODES = ["estimated", "actual"];
 /**
  * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle,
@@ -42,6 +44,7 @@ export const MODES_BY_DATABASE = Object.freeze({
   "oceanbase-oracle": ["estimated"],
   oracle: ["estimated"],
   dameng: ["estimated"],
+  questdb: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
@@ -53,6 +56,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   "oceanbase-oracle": ".plan.json",
   oracle: ".plan.txt",
   dameng: ".plan.txt",
+  questdb: ".plan.txt",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -63,6 +67,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   "oceanbase-oracle": "json",
   oracle: "text",
   dameng: "text",
+  questdb: "text",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -184,12 +189,12 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle` / `dameng`) and must match
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle` / `dameng` / `questdb`) and must match
  *   the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;
  * - `format` must match the family's committed payload format (`json` for
- *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle / Dameng);
+ *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle / Dameng / QuestDB);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;

@@ -29,7 +29,7 @@
  *   evidence and never becomes a shared cost signal.
  *
  * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL,
- * SQL Server, OceanBase Oracle, Oracle and Dameng cost numbers never meet. Ordering is a stated attention order
+ * SQL Server, OceanBase Oracle, Oracle, Dameng and QuestDB cost models never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -64,7 +64,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng"|"questdb",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -110,7 +110,7 @@ export function computeHotspots(normalized, metrics) {
 /**
  * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
  * attribution; MySQL has its own block-scoped model; SQL Server, OceanBase
- * Oracle, Oracle and Dameng do not feed their own cost / time estimates into
+ * Oracle, Dameng and QuestDB do not feed their own cost / time estimates into
  * any cost signal this round, so the stage reports `not-applicable` instead of
  * inventing an attribution.
  *

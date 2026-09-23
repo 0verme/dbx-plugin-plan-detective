@@ -52,6 +52,7 @@ const ENGINE_COST_NOTE_KEYS = Object.freeze({
   "oceanbase-oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseOracleCostModel",
   "oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oracleCostModel",
   "dameng:NOT_POSTGRES_COST_MODEL": "hotspot.cost.damengCostModel",
+  "questdb:NOT_POSTGRES_COST_MODEL": "hotspot.cost.questdbCostModel",
 });
 
 /**

@@ -1,0 +1,26 @@
+{
+  "database": "questdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": "QuestDB documentation example (version unspecified)",
+  "capturedAt": "2026-09-23",
+  "captureCommand": "EXPLAIN SELECT * FROM trades ORDER BY timestamp DESC; (transcribed from official documentation; not executed locally)",
+  "sql": "SELECT * FROM trades ORDER BY timestamp DESC;",
+  "source": {
+    "kind": "official",
+    "detail": "Official QuestDB EXPLAIN documentation example, transcribed as a documentation sample. The plan is not a local database capture; capturedAt records transcription/access date.",
+    "reference": "https://questdb.com/docs/query/sql/explain/"
+  },
+  "features": [
+    "official backward PageFrame scan pipeline",
+    "row cursor and frame cursor separation",
+    "relation extraction from documented scan on syntax"
+  ],
+  "expect": {
+    "rootNodeType": "PageFrame",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

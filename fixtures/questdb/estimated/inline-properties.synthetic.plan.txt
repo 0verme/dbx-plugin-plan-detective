@@ -1,0 +1,7 @@
+Limit lo: 10
+   GroupByRecord vectorized: true
+       workers: 2
+       future_group_option: preserved
+       PageFrame
+           Row forward scan
+               Frame forward scan on: trades

@@ -2,30 +2,31 @@
 
 | 项 | 值 |
 | --- | --- |
-| 最后更新 | 2026-09-22 |
-| 当前阶段 | **Phase 1 · Host Plan API MVP 闭环（已实现）+ Phase 1.1 · MySQL Estimated Plan 结构化（已实现）+ Phase 2 · Hotspot Analysis（已实现）+ Phase 3.1 · SQL Server ShowPlanXML 结构化（已实现）+ Phase 3.2 · OceanBase Oracle JSON Estimated Plan 结构化（已实现）+ Phase 3.3 · Oracle DBMS_XPLAN Estimated Plan 结构化（已实现）+ Phase 3.4 · Dameng Structured Estimated Plan（PR #52 已合并）+ v0.6.4 Release（已发布） |
+| 最后更新 | 2026-09-23 |
+| 当前阶段 | **Phase 1–3.4 已完成；Phase 3.5 · QuestDB Estimated EXPLAIN Structured Parser（feature branch READY，待创建 PR）；v0.6.4 已发布 |
 | 插件版本 | 0.6.4（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Phase 3.4 已随 PR #52 合并（merge `3f1ee8b`）；v0.6.4 已打 tag 并发布。`npm test` 1128/1128、golden 72 unchanged、`npm run build`、`dbx-plugin package .`、GitHub Release workflow 与 CI artifact 校验均已通过。Dameng 为 Estimated-only structured；Doris / QuestDB raw-only。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
-| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / QuestDB / Plan Diff；本次 0.6.4 已发布，不更新 DBX Store |
+| 阶段结论 | QuestDB estimated text parser / normalizer / registry / metrics / UI 与 6 个 provenance 明确的 fixture 已完成；`npm test` 1193/1193、`npm run build` 成功。无 QuestDB / DBX Desktop Host，真实 Host smoke NOT RUN。Feature PR 合并前不准备或发布 v0.6.5；Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
+| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务（Issue #42 仅做本地 prompt / context packaging），不改 DBX / Doris / Plan Diff；不在 Phase 3.5 PR 合并前准备或发布 v0.6.5 |
 
-## 当前任务快照（Phase 3.4）
+## 当前任务快照（Phase 3.5）
 
 - Project: `dbx-plugin-plan-detective`
 - Bootstrap Root: `/vol5/1000/ai-workspace`
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
-- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；最新 main `8c1961b`；release commit `c35f2d2`
+- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；本轮 feature 基线为 `origin/main ecf0e11d872f3f362aee35e10fd8dd6e5c2fd95f`；原 main worktree 的本地 branch 保留未同步历史
 - Active Tasks:
+  - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/questdb-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `Pending`；Notes: host contract 已核验；3 official doc transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build / diff-check passed；Host Smoke NOT RUN；PR merge 前不做 v0.6.5 release prep。
   - Issue / Task: Phase 3.4 Dameng Structured Estimated Plan；Branch: `feat/dameng-structured-plan`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/dameng-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#52`；Notes: merge `3f1ee8b`，`npm test` 1128/1128、golden 7 updated / 65 unchanged、build passed；Host Smoke NOT RUN（无 DBX Desktop Host）。
   - Issue / Task: v0.6.4 Release；Branch: `chore/prepare-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.4-release`；State: `MERGED`；Conflict Risk: `MEDIUM`；PR: `#53`；Notes: merge `c35f2d2`；annotated tag `v0.6.4` 与 GitHub Release 已发布，workflow / artifact 已校验；DBX Store 不在本轮范围。
   - Issue / Task: v0.6.4 Release Verification Record；Branch: `docs/record-v0.6.4-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/record-v0.6.4-release`；State: `MERGED`；Conflict Risk: `LOW`；PR: `#54`；Notes: merge `8c1961b`；tag / GitHub Release / workflow / artifact 校验已记录。
-- Integration Baseline: `c35f2d2`。
+- Integration Baseline: `origin/main ecf0e11d872f3f362aee35e10fd8dd6e5c2fd95f`；新 worktree 从该基线创建。
 - Hotspot Files: `src/core/parsers/index.js`、`src/core/raw-plan-input.js`、`src/core/hotspots/compute-hotspots.js`、`src/lib/view-model.js`、`tests/helpers/fixtures.js`、fixture convention / golden tests。
-- Blocked: None identified；Host/API 审计和官方 Dameng plan contract 已完成；Host Smoke 未运行（当前环境无 DBX Desktop Host）。
+- Blocked: 无代码阻塞；真实 QuestDB / DBX Desktop Host smoke 未运行（当前环境无 DBX Desktop Host 或 QuestDB 实例）。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: None；v0.6.4 release verification record PR #54 已合并。
+- Merge Queue: Phase 3.5 Feature PR（验证通过，待创建）；v0.6.4 release verification record PR #54 已合并。
 - Recently Merged: PR #52 Phase 3.4 Dameng structured（`3f1ee8b`）；PR #53 v0.6.4 release prep（`c35f2d2`）；PR #54 v0.6.4 release verification（`8c1961b`）；v0.6.4 已发布。
 
-- Next Actions: 无；v0.6.4 tag、GitHub Release、CI artifact 与发布记录均已完成。
+- Next Actions: 提交 Phase 3.5；push feature branch 并创建中文 Feature PR。PR 合并前不准备 / 发布 v0.6.5。
 
 ## 0. 当前状态
 
@@ -41,7 +42,7 @@
   - 插件不能传 EXPLAIN 语句、不能执行 SQL、不能请求 Actual Plan；EXPLAIN 由宿主构造并受只读安全门约束
   - 插件拿不到 credential / connection string / driver internals
   - 返回计划原样保留；`truncated` / `warnings`（`plan_not_json` / `plan_truncated` / `plan_rows_truncated`）由宿主给出
-- 宿主支持 estimated plan 的方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、OceanBase Oracle、Doris、Dameng、QuestDB；format 分别为 json / json / xml / text / json / text / text / text。Plan Detective 当前对 Dameng 进入 structured pipeline，Doris / QuestDB 仍 raw-only。
+- 宿主支持 estimated plan 的方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、OceanBase Oracle、Doris、Dameng、QuestDB；format 分别为 json / json / xml / text / json / text / text / text。Plan Detective 当前对 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 进入 structured pipeline，Doris 保持 raw-only。
 - 查询结果页入口（`result-view`）会向插件上下文传入 `connectionId` / `database` / `sql` / result 快照；standalone workbench 不传连接上下文。
 
 ### 0.2 本轮交付（Issue #11）
@@ -53,7 +54,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 
 - `src/host/**`：Host adapter（结构校验、稳定错误码、UI 侧 timeout guard），唯一接触 `window.dbxPlugin` 的模块。
 - `src/core/adapter/dbx-plan-response.js`：8 个 dbType → Plan Core family；json / text / xml；截断 fail-closed。
-- `src/core/parsers/**`：parser registry；PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng structured；Doris / QuestDB raw-only（`PARSER_NOT_IMPLEMENTED`）。
+- `src/core/parsers/**`：parser registry；PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only（`PARSER_NOT_IMPLEMENTED`）。
 - `src/lib/analysis-session.js`：Host → Parser → IR → Rules 编排，状态为 `idle / loading / structured / raw-only / truncated / unsupported / error`。
 - `src/lib/host-view-model.js` + 组件：ConnectionContext / SqlInput / AnalysisNotice / RawPlanViewer；复用 PlanSummary / PlanTree / NodeInspector / FindingsList。
 - `manifest.json`：`engines.host_api: ^1.2`、`permissions: ["host.plans:read"]`、版本 0.2.0。
@@ -340,7 +341,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
-| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng structured；Doris / QuestDB raw-only） |
+| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only） |
 | **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Hotspots / Findings / Plan Tree / Node Inspector / Raw Plan |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`） |
 | Fixture-driven 开发 UI | ✅ 保留为开发模式（不进入生产路径） |
@@ -348,8 +349,8 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
-| Execution Plan Parsing | ✅ PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng structured；Doris / QuestDB raw-only（不伪造 parser） |
-| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng；公共字段 + `engineSpecific`） |
+| Execution Plan Parsing | ✅ PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only（不伪造 parser） |
+| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB；公共字段 + `engineSpecific`） |
 | Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
 | Hotspot Analysis | ✅ 已实现（确定性、engine-aware 注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号；无综合评分） |
 | Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
@@ -402,7 +403,7 @@ src/lib/analysis-session.js → UI
 | Oracle | text | structured（Estimated DBMS_XPLAN `TYPICAL +PREDICATE`） |
 | Dameng | text | structured（Estimated native text） |
 | Doris | text | raw only |
-| QuestDB | text | raw only |
+| QuestDB | text | structured（Estimated EXPLAIN text；无 shared rows / PostgreSQL cost 信号） |
 
 ## 2. 初始化的实测验证记录（历史）
 
@@ -500,7 +501,7 @@ Build failed (exit 1)
 1. **真实 DBX 宿主端到端手测**（需要 DBX v0.6.18 / Host API 1.2+）：v0.6.3 已发布，等待在 Windows DBX 安装验证 Oracle DBMS_XPLAN 结构化链路（Plan Tree / Node Inspector 的 `Rows` / `Cost` / predicates / Raw Plan）与 estimated-only 边界，并复测 OceanBase Oracle 与 Issue #42 的人工验收。
 2. **DBX Store 首次收录**：PR [#112](https://github.com/t8y2/dbx-store/pull/112) 等待 maintainer review、`/sign`、protected signing workflow 和最终 catalog 生成；本仓库不管理 Store signing key。
 3. **宿主兼容边界**：v0.6.3 已按 `engines.dbx >=0.6.18`、`engines.host_api ^1.2` / `host.plans:read` contract 发布；更旧 DBX 不满足 Plan Detective 的 Host Plan API 依赖。
-4. 后续增量（独立 Issue）：Doris / QuestDB 文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展；Dameng 侧真实 Host / 实例 smoke（当前未运行）、更多版本 operator / detail contract；OceanBase Oracle 侧：真实 fixture 采集（替换 synthetic / official 文档样本）、`TABLE(INDEX)` 的 indexName 语义、`EST.TIME(us)` 是否值得独立热点信号。
+4. 后续增量（独立 Issue）：Doris 文本计划 parser、MySQL `FORMAT=TRADITIONAL` / `TREE` 与兼容方言、Actual Plan（需独立 upstream proposal）、Plan Diff、Estimate Error 等更多 metrics、更多 rules、UI 扩展；Dameng 侧真实 Host / 实例 smoke（当前未运行）、更多版本 operator / detail contract；OceanBase Oracle 侧：真实 fixture 采集（替换 synthetic / official 文档样本）、`TABLE(INDEX)` 的 indexName 语义、`EST.TIME(us)` 是否值得独立热点信号。
 5. 就第 4 节其余上游问题决定处理方式：4.1（Windows `create` 相对路径）、4.2（`$schema` 指向不存在 ref）、4.4（Windows `dbx-plugin dev`）、4.5（模板 README 链接）仍未修，等待是否向上游反馈；4.3 / 4.6 已在 v0.3.0 发布准备中本地修正。
 
 ## 6. 相关文档

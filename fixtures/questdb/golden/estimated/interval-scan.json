@@ -1,0 +1,359 @@
+{
+  "parsed": {
+    "database": "questdb",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Update table: trades",
+      "rawNodeType": "Update table: trades",
+      "rawLine": "Update table: trades",
+      "indent": 0,
+      "relation": null,
+      "scanDirection": null,
+      "properties": [],
+      "inlineProperties": [],
+      "filter": null,
+      "condition": null,
+      "workers": null,
+      "vectorized": null,
+      "children": [
+        {
+          "nodeType": "VirtualRecord",
+          "rawNodeType": "VirtualRecord",
+          "rawLine": "  VirtualRecord",
+          "indent": 2,
+          "relation": null,
+          "scanDirection": null,
+          "properties": [
+            {
+              "name": "functions",
+              "value": "[0]",
+              "rawLine": "    functions: [0]",
+              "indent": 4
+            }
+          ],
+          "inlineProperties": [],
+          "filter": null,
+          "condition": null,
+          "workers": null,
+          "vectorized": null,
+          "children": [
+            {
+              "nodeType": "PageFrame",
+              "rawNodeType": "PageFrame",
+              "rawLine": "      PageFrame",
+              "indent": 6,
+              "relation": null,
+              "scanDirection": null,
+              "properties": [],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": null,
+              "workers": null,
+              "vectorized": null,
+              "children": [
+                {
+                  "nodeType": "Row forward scan",
+                  "rawNodeType": "Row forward scan",
+                  "rawLine": "        Row forward scan",
+                  "indent": 8,
+                  "relation": null,
+                  "scanDirection": "forward",
+                  "properties": [],
+                  "inlineProperties": [],
+                  "filter": null,
+                  "condition": null,
+                  "workers": null,
+                  "vectorized": null,
+                  "children": [
+                    {
+                      "nodeType": "Interval forward scan",
+                      "rawNodeType": "Interval forward scan",
+                      "rawLine": "          Interval forward scan on: trades",
+                      "indent": 10,
+                      "relation": "trades",
+                      "scanDirection": "forward",
+                      "properties": [
+                        {
+                          "name": "intervals",
+                          "value": "[static=[1668124800000000,1668211199999999]",
+                          "rawLine": "            intervals: [static=[1668124800000000,1668211199999999]",
+                          "indent": 12
+                        }
+                      ],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "orphanProperties": []
+  },
+  "normalized": {
+    "database": "questdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "modify_table",
+      "nodeType": "Update table: trades",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "project",
+          "nodeType": "VirtualRecord",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "pipeline",
+              "nodeType": "PageFrame",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "pipeline",
+                  "nodeType": "Row forward scan",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "scan",
+                      "nodeType": "Interval forward scan",
+                      "relation": {
+                        "name": "trades",
+                        "alias": null,
+                        "indexName": null
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Interval forward scan",
+                          "rawNodeType": "Interval forward scan",
+                          "rawLine": "          Interval forward scan on: trades",
+                          "indent": 10,
+                          "relation": "trades",
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [
+                            {
+                              "name": "intervals",
+                              "value": "[static=[1668124800000000,1668211199999999]",
+                              "rawLine": "            intervals: [static=[1668124800000000,1668211199999999]",
+                              "indent": 12
+                            }
+                          ],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "questdb",
+                    "questdb": {
+                      "nodeType": "Row forward scan",
+                      "rawNodeType": "Row forward scan",
+                      "rawLine": "        Row forward scan",
+                      "indent": 8,
+                      "relation": null,
+                      "scanDirection": "forward",
+                      "workers": null,
+                      "filter": null,
+                      "condition": null,
+                      "vectorized": null,
+                      "properties": [],
+                      "inlineProperties": []
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "PageFrame",
+                  "rawNodeType": "PageFrame",
+                  "rawLine": "      PageFrame",
+                  "indent": 6,
+                  "relation": null,
+                  "scanDirection": null,
+                  "workers": null,
+                  "filter": null,
+                  "condition": null,
+                  "vectorized": null,
+                  "properties": [],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "questdb",
+            "questdb": {
+              "nodeType": "VirtualRecord",
+              "rawNodeType": "VirtualRecord",
+              "rawLine": "  VirtualRecord",
+              "indent": 2,
+              "relation": null,
+              "scanDirection": null,
+              "workers": null,
+              "filter": null,
+              "condition": null,
+              "vectorized": null,
+              "properties": [
+                {
+                  "name": "functions",
+                  "value": "[0]",
+                  "rawLine": "    functions: [0]",
+                  "indent": 4
+                }
+              ],
+              "inlineProperties": []
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "questdb",
+        "questdb": {
+          "nodeType": "Update table: trades",
+          "rawNodeType": "Update table: trades",
+          "rawLine": "Update table: trades",
+          "indent": 0,
+          "relation": null,
+          "scanDirection": null,
+          "workers": null,
+          "filter": null,
+          "condition": null,
+          "vectorized": null,
+          "properties": [],
+          "inlineProperties": []
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 5,
+    "maxDepth": 5,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}
