@@ -29,7 +29,7 @@
  *   evidence and never becomes a shared cost signal.
  *
  * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL,
- * SQL Server, OceanBase Oracle, Oracle, Dameng and QuestDB cost models never meet. Ordering is a stated attention order
+ * SQL Server, OceanBase Oracle, Oracle, Dameng, QuestDB and Doris cost models never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -37,7 +37,7 @@
  */
 
 import { analyzePostgresCost } from "../cost/postgres-cost.js";
-import { flattenNodes } from "../tree.js";
+import { flattenOperatorNodes } from "../tree.js";
 import { HOTSPOT } from "./thresholds.js";
 
 /** Attention ladder, strongest first. */
@@ -64,7 +64,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng"|"questdb",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng"|"questdb"|"doris",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -83,7 +83,7 @@ export function computeHotspots(normalized, metrics) {
   /** @type {Array<{ hotspot: Hotspot, order: number }>} */
   const found = [];
 
-  flattenNodes(normalized.root).forEach((node, order) => {
+  flattenOperatorNodes(normalized.root).forEach((node, order) => {
     const reasons = [];
     if (database === "postgresql") collectPostgresReasons(node, cost, reasons);
     if (database === "mysql") collectMySqlReasons(node, cost, reasons);
@@ -110,8 +110,8 @@ export function computeHotspots(normalized, metrics) {
 /**
  * Cost context for the plan's engine. Only PostgreSQL runs cumulative-cost
  * attribution; MySQL has its own block-scoped model; SQL Server, OceanBase
- * Oracle, Dameng and QuestDB do not feed their own cost / time estimates into
- * any cost signal this round, so the stage reports `not-applicable` instead of
+ * Oracle, Dameng, QuestDB and Doris do not feed their own cost / time estimates
+ * into any cost signal this round, so the stage reports `not-applicable` instead of
  * inventing an attribution.
  *
  * @param {import("../normalize/normalize-postgres.js").NormalizedPlan} normalized

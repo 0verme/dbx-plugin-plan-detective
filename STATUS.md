@@ -3,28 +3,29 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.5 已完成；v0.6.5 已发布** |
+| 当前阶段 | **Phase 1–3.5 已合并；Phase 3.6 Doris Estimated text parser PR #59 已提交，READY（未合并）** |
 | 插件版本 | 0.6.5（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Phase 3.5 QuestDB Estimated EXPLAIN 已由 PR #56 合并；v0.6.5 已由 PR #57 合并并发布。`npm test` 1193/1193、build、package 与 artifact 验证通过；release workflow 成功。真实 QuestDB / DBX Desktop Host smoke NOT RUN。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
-| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务、不改 DBX / Doris / Plan Diff；DBX Store candidate / signing 为独立流程，本次仅发布 GitHub Release |
+| 阶段结论 | Phase 3.6 按 Host Contract → Plan Contract → IR Gap audit → Decision Gate 顺序完成审计，Gate `B — SMALL_IR_GAP`；Doris Estimated `format: text` parser / normalizer / generic structural traversal / UI metadata / 1 official docs transcription + 4 synthetic fixtures 与 goldens 已实现。`npm test` 1243/1243、`npm run build` 通过；78 个既有 goldens unchanged。真实 Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`。Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已提交，`READY != MERGED`；不发布版本 |
+| 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual / ANALYZE / PROFILE Plan、不接 AI 服务、不修改 DBX upstream 或 Doris server、不重构 IR 为 DAG、不做 Plan Diff、不改版本 / 不发布；DBX Store candidate / signing 为独立流程 |
 
-## 当前任务快照（v0.6.5 Release）
+## 当前任务快照（Phase 3.6 Doris Estimated parser）
 
 - Project: `dbx-plugin-plan-detective`
 - Bootstrap Root: `/vol5/1000/ai-workspace`
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
-- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；Release commit `eca0052246ce42771e1b1e1dce883155a2869704`；本地 `main` 的未推送 commit `57e4730` 保留、不纳入本次 release worktree
+- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；本地 `main` 当前 `57e473029cffac3d565f26042ad1f2e1b67ba6ad`（ahead 1 / behind 29 of origin/main），保持原样、不在 Main Workspace 开发本任务
 - Active Tasks:
+  - Issue / Task: Phase 3.6 Doris Estimated EXPLAIN text structured parser；Branch: `feat/doris-structured-plan`；Worktree: `worktrees/doris-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#59`；Notes: commit `23115b7`；baseline `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`；Host / Plan contracts 与 `B — SMALL_IR_GAP` gate 审计完成；`npm test` 1243/1243、build passed；1 official docs transcription + 4 synthetic; Real Doris `NOT AVAILABLE`; Host Smoke `NOT RUN`; PR #59 is OPEN / merge state CLEAN, no status checks reported yet; READY != MERGED；不发 release。
   - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `worktrees/questdb-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#56`；Notes: merge `62bef56`；3 official documentation transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build passed；Host Smoke NOT RUN。
   - Issue / Task: v0.6.5 Release；Branch: `chore/prepare-v0.6.5-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.5-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: `#57`；Notes: merge / release commit `eca0052`；tag `v0.6.5` 与 GitHub Release 已发布；workflow `35817327732` success；universal artifact 87012 bytes / SHA-256 `2140f568…` 已核验；Host Smoke NOT RUN。
-- Integration Baseline: release commit `eca0052246ce42771e1b1e1dce883155a2869704`（PR #57 merge / tag target）。
-- Hotspot Files: `manifest.json`、`README.md`、`STATUS.md`、`docs/PROJECT_PLAN.md`；`ui/**` 已随 release commit 对齐。
-- Blocked: 无代码 blocker；真实 QuestDB / DBX Desktop Host smoke 未运行（当前环境无实例 / Host）。
+- Integration Baseline: `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`（本任务 feature worktree 起点；与 divergent local Main 区分）。
+- Hotspot Files: `src/core/tree.js`、Metrics / Rules / Hotspots traversal、Doris parser registry / normalizer、fixture convention / goldens、`README.md`、`STATUS.md`、`docs/PROJECT_PLAN.md`、tracked `ui/**`；Conflict Risk `HIGH`。
+- Blocked: Real Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`。本地回归与 production build 已通过。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: 无未合并的 Plan Detective PR；PR #57 已合并，v0.6.5 Release 完成。
+- Merge Queue: Phase 3.6 Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已提交，等待 review / CI；不包含 Release PR。
 - Recently Merged: PR #57 v0.6.5 release prep（merge `eca0052`）；PR #56 QuestDB structured（merge `62bef56`）；v0.6.5 已发布。
 
-- Next Actions: 维护者可在 Windows DBX / 真实 QuestDB 环境完成 Host Smoke；Store 收录 / signing 按独立维护者流程处理。
+- Next Actions: 等待 PR #59 review / CI；按 review 在当前 worktree 修订。如维护者可用真实 Doris / Windows DBX，可补 Host Smoke；不得发 Release。
 
 ## 0. 当前状态
 
@@ -40,7 +41,7 @@
   - 插件不能传 EXPLAIN 语句、不能执行 SQL、不能请求 Actual Plan；EXPLAIN 由宿主构造并受只读安全门约束
   - 插件拿不到 credential / connection string / driver internals
   - 返回计划原样保留；`truncated` / `warnings`（`plan_not_json` / `plan_truncated` / `plan_rows_truncated`）由宿主给出
-- 宿主支持 estimated plan 的方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、OceanBase Oracle、Doris、Dameng、QuestDB；format 分别为 json / json / xml / text / json / text / text / text。Plan Detective 当前对 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 进入 structured pipeline，Doris 保持 raw-only。
+- 宿主支持 estimated plan 的方言（`supports_explain_plan`）：PostgreSQL、MySQL、SQL Server、Oracle、OceanBase Oracle、Doris、Dameng、QuestDB；format 分别为 json / json / xml / text / json / text / text / text。Plan Detective 当前对 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris 进入 structured pipeline（Doris 仅 Estimated text）。
 - 查询结果页入口（`result-view`）会向插件上下文传入 `connectionId` / `database` / `sql` / result 快照；standalone workbench 不传连接上下文。
 
 ### 0.2 本轮交付（Issue #11）
@@ -52,7 +53,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 
 - `src/host/**`：Host adapter（结构校验、稳定错误码、UI 侧 timeout guard），唯一接触 `window.dbxPlugin` 的模块。
 - `src/core/adapter/dbx-plan-response.js`：8 个 dbType → Plan Core family；json / text / xml；截断 fail-closed。
-- `src/core/parsers/**`：parser registry；PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only（`PARSER_NOT_IMPLEMENTED`）。
+- `src/core/parsers/**`：parser registry；PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris structured；Doris 只注册 Estimated `format: "text"`。
 - `src/lib/analysis-session.js`：Host → Parser → IR → Rules 编排，状态为 `idle / loading / structured / raw-only / truncated / unsupported / error`。
 - `src/lib/host-view-model.js` + 组件：ConnectionContext / SqlInput / AnalysisNotice / RawPlanViewer；复用 PlanSummary / PlanTree / NodeInspector / FindingsList。
 - `manifest.json`：`engines.host_api: ^1.2`、`permissions: ["host.plans:read"]`、版本 0.2.0。
@@ -184,6 +185,17 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
   （registry、fixture loader / convention、core isolation、metrics、hotspots）；`npm test` 1019/1019，既有 48 个 golden 未变化。
 - Gate：`npm test` 1019/1019；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 与 `git diff --check` 通过；
   Host Smoke **NOT RUN**（当前环境无 DBX Desktop Host）。本轮不发 Release（不改版本号 / 不打 tag / 不建 GitHub Release / 不更新 DBX Store）。
+
+### 0.2.7 Doris Estimated EXPLAIN text 结构化（Phase 3.6，PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59)，READY）
+
+- 基线：独立 worktree `worktrees/doris-structured-plan`、branch `feat/doris-structured-plan`，起点 `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`；canonical Main Workspace 未修改。
+- Gate 顺序：Host Contract → Plan Contract → IR Gap audit → Decision Gate；结论 `B — SMALL_IR_GAP`。完整审计见 `docs/DORIS_HOST_CONTRACT_AUDIT.md`、`docs/DORIS_PLAN_CONTRACT_AUDIT.md`、`docs/DORIS_IR_GAP_AUDIT.md`。
+- 支持范围：Host `dbType: doris` / `format: text` / Estimated `EXPLAIN <sql>`；只实现 Estimated。Fragment / Sink metadata 与 branch-rail local operator trees 被保留；Fragment child order 按文档规则恢复；跨 Fragment Sink→Exchange edge 只进 metadata，不伪造 operator child edge。
+- IR：保留 public single-root `NormalizedPlan`；新增可选 generic `engineSpecific.structural: true` 与 operator-only traversal / depth；Metrics / Rules / Hotspots 忽略 wrapper 自身、继续访问 children；Plan Tree / Inspector 使用通用字段展示 wrapper / properties。
+- 语义边界：仅可靠 `cardinality` → `estimatedRows`；scan 用中性 `scan`；不映射 Doris cost / `avgRowSize` 到 PostgreSQL cost / shared width；不建 runtime Pipeline DAG、不改 DBX upstream。
+- Fixtures：1 official Apache Doris documentation transcription + 4 synthetic，全部 `estimated/`，无假造 capture metadata；新增 5 个 goldens。`npm run test:update-goldens` 报告 78 个既有 goldens unchanged。
+- Gate：`npm test` **1243/1243**；`npm run build` **通过**（`DBX_UI_BUILD_SUCCESS`）。本地 `npm ci` 的 esbuild bundled binary 在工作区呈 mode `000` 导致安装脚本 `EACCES`；忽略脚本安装后只修复 ignored `node_modules` binary 的执行位并验证版本，production build 成功。`git diff --check` **通过**。
+- Real Doris：**NOT AVAILABLE**；Windows DBX Host Smoke：**NOT RUN**。PR #59 已提交；**READY != MERGED**；无版本变更 / 不发布。
 
 ### 0.10 v0.6.3 Release（2026-09-22）
 
@@ -351,7 +363,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 | Host Capability Audit（Phase 0） | ✅ 已完成（历史结论 BLOCKED，见 §0.3） |
 | Audit Harness（开发/审计页） | ✅ 保留为 UI 内“宿主审计（开发）”视图，并加入真实 Plan API 方法探测 |
 | **Host Plan API 接入（生产路径）** | ✅ 已实现（`src/host/**`；capabilities 门控 + `mode: "estimated"`） |
-| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only） |
+| **Estimated Plan 获取 → 解析闭环** | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris structured；Doris Estimated text only） |
 | **Host 分析 UI** | ✅ Connection Context / SQL Input / Plan Summary / Hotspots / Findings / Plan Tree / Node Inspector / Raw Plan |
 | Offline Plan Core（fixture-first） | ✅ 已实现（`src/core/**`） |
 | Fixture-driven 开发 UI | ✅ 保留为开发模式（不进入生产路径） |
@@ -359,8 +371,8 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 | native backend（Rust / Go） | ❌ 不存在（符合 Thin Plugin 原则） |
 | 数据库驱动依赖 | ❌ 不存在（符合禁止清单） |
 | AI / LLM 依赖 | ❌ 不存在 |
-| Execution Plan Parsing | ✅ PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only（不伪造 parser） |
-| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB；公共字段 + `engineSpecific`） |
+| Execution Plan Parsing | ✅ PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris structured（Doris Estimated text only） |
+| Plan Normalization | ✅ 已实现（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris；公共字段 + `engineSpecific`） |
 | Metrics Engine | ✅ 已实现（确定性基础指标，不含综合评分） |
 | Hotspot Analysis | ✅ 已实现（确定性、engine-aware 注意力列表；PostgreSQL 代价归因边界 + MySQL rows / cost_info 信号；无综合评分） |
 | Rule-based Diagnosis | ✅ 已实现（3 条确定性规则：large-sequential-scan / expensive-sort / nested-loop-large-inner） |
@@ -412,7 +424,7 @@ src/lib/analysis-session.js → UI
 | OceanBase Oracle | json | structured（`EXPLAIN FORMAT=JSON`；`CHILD_<n>` 递归树；`EST.TIME(us)` / `COST` 不映射到 PostgreSQL 语义；`format: "text"` 降级仍 raw only） |
 | Oracle | text | structured（Estimated DBMS_XPLAN `TYPICAL +PREDICATE`） |
 | Dameng | text | structured（Estimated native text） |
-| Doris | text | raw only |
+| Doris | text | structured（Estimated EXPLAIN only；Fragment wrappers structural；跨 Fragment Exchange link 保留为 metadata） |
 | QuestDB | text | structured（Estimated EXPLAIN text；无 shared rows / PostgreSQL cost 信号） |
 
 ## 2. 初始化的实测验证记录（历史）

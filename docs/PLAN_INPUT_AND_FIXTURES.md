@@ -2,7 +2,7 @@
 
 > 本文定义 Plan Detective **离线分析内核**（Plan Core）的全部契约：
 > `RawPlanInput`、parser registry、各数据库 parser 输出、`NormalizedPlan`、Metrics、Findings/Rules、
-> fixture 目录约定与 Golden Test 机制。当前 structured parser 包括 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng 与 QuestDB。
+> fixture 目录约定与 Golden Test 机制。当前 structured parser 包括 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng、QuestDB 与 Doris。
 > DBX Host Plan API（已合并的 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)）到 `RawPlanInput` 的映射见
 > 第 2.1 节；Host adapter 位于 `src/host/**`，与本文件定义的 Core 契约分层。
 
@@ -22,7 +22,7 @@ RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入
 src/core/parsers/（registry：database family → structured parser）
    │
    ▼
-Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB） → ParsedPlan（引擎专有、字段完整）
+Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris） → ParsedPlan（引擎专有、字段完整）
    │
    ▼
 Normalizer                        → NormalizedPlan（数据库无关语义 + engineSpecific）
@@ -43,7 +43,7 @@ src/lib/analysis-session.js（编排） + UI（Host 分析 / Fixtures 开发模�
   不重跑规则、不重算热点。
 - `window.dbxPlugin` 只在 `src/host/**` 与开发用 HostAudit 视图中出现；依赖方向由测试强制：
   `tests/core-isolation.test.js` 检查「不得引用 `window` / `document` / `dbxPlugin` / `svelte` / `@dbx-app` / `tauri`」
-  与「`parsers` / `postgres` / `mysql` / `sqlserver` / `oceanbase` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
+  与「`parsers` / `postgres` / `mysql` / `sqlserver` / `oceanbase` / `doris` / `normalize` / `metrics` / `rules` / `findings` 阶段不得出现 `connectionId` / `credential` /
   `password` / `manifest` / `iframe` / `result-view` / `queryTab`」。
 - DBX 的只读契约不包含 credential / connection string；插件拿不到它们。`timeout` 由 Host 执行，
   Host adapter 只做 UI 侧 guard。
@@ -67,9 +67,9 @@ interface RawPlanInput {
 
 | 字段 | 必填 | 为什么需要 |
 | --- | --- | --- |
-| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"` / `"oceanbase-oracle"` / `"oracle"` / `"dameng"` / `"questdb"`；raw-only：`"doris"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
+| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"` / `"oceanbase-oracle"` / `"oracle"` / `"dameng"` / `"questdb"` / `"doris"`；已知 family 无受支持 format 时返回 `UNSUPPORTED_FORMAT`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
 | `mode` | 是 | 决定是否期望 Actual 执行字段。`EXPLAIN` → `estimated`，`EXPLAIN ANALYZE` → `actual`。DBX Host API 只返回 estimated；actual 值保留给离线 fixture / 未来契约。 |
-| `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / QuestDB / Doris；Oracle 只接受 DBMS_XPLAN `TYPICAL +PREDICATE`，Dameng 与 QuestDB 只接受 Estimated 原生 EXPLAIN 文本）。registry 对 family + format 组合判定是否 structured。 |
+| `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / QuestDB / Doris；Oracle 只接受 DBMS_XPLAN `TYPICAL +PREDICATE`，Dameng / QuestDB / Doris 只接受 Estimated 原生 EXPLAIN 文本）。registry 对 family + format 组合判定是否 structured。 |
 | `plan` | 是 | 原始 payload，原样传递。PostgreSQL 必须保留完整顶层 envelope（单元素数组），而不是内部 `Plan` object；text / xml 为字符串。 |
 | `sql` | 否 | 仅用于展示 / 证据材料。parser 不得依赖，且不得包含凭据。 |
 | `databaseVersion` | 否 | 仅用于 provenance，不参与解析。 |
@@ -114,7 +114,7 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | `dbType: "sqlserver"` | `database: "sqlserver"` | structured（ShowPlanXML，见 4.3） |
 | `dbType: "oceanbase-oracle"` | `database: "oceanbase-oracle"` | structured（`EXPLAIN FORMAT=JSON`，见 4.4） |
 | `dbType: "oracle"` | `database: "oracle"` | structured（DBX 当前返回 DBMS_XPLAN `TYPICAL +PREDICATE` text，见 4.5） |
-| `dbType: "doris"` | 同名 family | raw-only |
+| `dbType: "doris"` | 同名 family | structured（Estimated `format: "text"`；见 4.8） |
 | `dbType: "questdb"` | `database: "questdb"` | structured（`format: "text"`，Estimated only；见 4.7） |
 | `dbType: "dameng"` | `database: "dameng"` | structured（`format: "text"`，Estimated only） |
 | （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径 |
@@ -150,7 +150,7 @@ analyzeRawPlan(rawInput) -> {
 }
 ```
 
-- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`、`sqlserver` + `xml`、`oceanbase-oracle` + `json`、`oracle` + `text`、`dameng` + `text`、`questdb` + `text`）；跑完整 Core pipeline。
+- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`、`sqlserver` + `xml`、`oceanbase-oracle` + `json`、`oracle` + `text`、`dameng` + `text`、`questdb` + `text`、`doris` + `text`）；跑完整 Core pipeline。
 - `raw-only`：`PARSER_NOT_IMPLEMENTED`（family 已知）/ `UNSUPPORTED_FORMAT`（parser 不支持该 format）/ `UNKNOWN_DATABASE`；
   `parsed` / `normalized` / `metrics` 为 `null`，`findings` 为空。UI 展示 Raw Plan 并标注原因，不伪造 parser。
 - 严格入口 `analyzePlan(rawInput)` 对 raw-only 抛 `PlanParseError`，供 fixture / golden 测试使用；
@@ -184,6 +184,7 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | Oracle | `src/core/oracle/parse-text-plan.js` | `src/core/normalize/normalize-oracle.js` | `src/core/parsers/oracle.js` |
 | Dameng | `src/core/dameng/parse-text-plan.js` | `src/core/normalize/normalize-dameng.js` | `src/core/parsers/dameng.js` |
 | QuestDB | `src/core/questdb/parse-text-plan.js` | `src/core/normalize/normalize-questdb.js` | `src/core/parsers/questdb.js` |
+| Doris | `src/core/doris/parse-text-plan.js` | `src/core/normalize/normalize-doris.js` | `src/core/parsers/doris.js` |
 
 ### 4.1 PostgreSQL
 
@@ -447,16 +448,29 @@ Host 负责运行 `EXPLAIN <source SQL>` 与只读边界，Plan Core 不创建�
 - **估值边界**：QuestDB EXPLAIN 样本未报告共享 estimated rows 或 PostgreSQL cost；`estimatedRows`、`startupCost`、`totalCost`、actual 字段等保持 `null`。Worker / filter / vectorized 和其他 native properties 只作为 evidence；不据此运行共享行数规则、cost hotspots 或性能判断。
 - **失败模型**：`INVALID_RAW_PLAN_INPUT`、`MALFORMED_PLAN`、`MODE_MISMATCH`；未知 node / property fail-soft 保留，不冒充已知语义。
 
+### 4.8 Doris Estimated EXPLAIN text
+
+实现：`src/core/doris/parse-text-plan.js`、`src/core/normalize/normalize-doris.js` 与 `src/core/parsers/doris.js`。Host `dbType: "doris"` 返回 `format: "text"`；parser 只接受 `mode: "estimated"`。Host 负责构造 `EXPLAIN <sql>`、普通连接执行、行 / payload 上限与 truncation 标记；截断 payload 在 adapter 阶段拒绝，不进入 parser。
+
+- **ParsedPlan**：保留 `fragments[]`、Fragment `partition` / `hasColoPlanNode` / `outputExpressions`、`sink`、Fragment-local `root`、每节点 operation id / raw operator / 所有 properties / 原始行，以及解析得到的 `exchangeEdges[]`。Operation ID 只用于身份与 Sink→Exchange 关联，不用于推断 parent。
+- **local tree**：支持 Doris `|` / `|----` branch glyph、相对列位置、树 rails 和 result ASCII table frame；多 child 按官方 right-to-left 输出约定 reverse 为 logical child 顺序。歧义的同列无 connector、孤立 branch connector、多 Fragment local roots、重复 Fragment header fail-closed；未知行和属性保持 raw evidence。
+- **distributed IR**：NormalizedPlan 仍为单 root tree：`Doris Distributed Plan` → structural `Fragment N` → Fragment-local operator root。容器使用通用 `engineSpecific.structural: true`；Metrics / Rules / Hotspots 跳过 wrapper 本身但继续访问 children。Fragment 间 producer `STREAM DATA SINK` → receiver `EXCHANGE ID` 仅作为 metadata，绝不成为 `children` edge；匹配不唯一或失败时保留 ambiguous / unmatched edge 与候选。
+- **有限映射**：有限、非负 numeric `cardinality` → `estimatedRows`；扫描采用中性 `scan` 而非 `seq_scan`；明确 operator 才映射 `hash_join` / `nested_loop` / `aggregate` / `analytic` / `sort` / `filter` / `append` / `setop` / `exchange` 等。`joinType` 与 Doris join strategy 分离。
+- **保留 / 估值边界**：`avgRowSize` 不映射共享 `width`；Doris 不映射 PostgreSQL `startupCost` / `totalCost`；Fragment wrapper root 的 `rootEstimatedRows` 为 `null`；`costAttribution` 为 `not-applicable`。Sink、distribute expr lists、runtime filters、partition / tablet / preaggregation / unknown fields 保留在 `engineSpecific.doris` / generic Inspector extra。
+- **运行时非目标**：不解析 Actual / `EXPLAIN ANALYZE` / PROFILE、BE Pipeline DAG、PipelineTask 或 runtime metrics，不重构公共 IR 为 DAG。
+- **Fixture 声明**：当前 1 个 official documentation transcription + 4 个 synthetic；无真实 Doris capture。官方转录的 capture metadata 为 `null`，来源 detail 明确说明没有本地执行。当前环境 `Real Doris: NOT AVAILABLE`、`Host Smoke: NOT RUN`。来源审计见 [Doris Host contract](DORIS_HOST_CONTRACT_AUDIT.md)、[Plan contract](DORIS_PLAN_CONTRACT_AUDIT.md)、[IR Gate](DORIS_IR_GAP_AUDIT.md) 与 [fixtures README](../fixtures/doris/README.md)。
+
 ## 5. NormalizedPlan
 
 实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）、
 `src/core/normalize/normalize-mysql.js`（MySQL）、`src/core/normalize/normalize-sqlserver.js`（SQL Server）、
-`src/core/normalize/normalize-oceanbase.js`（OceanBase Oracle）、`src/core/normalize/normalize-oracle.js`（Oracle）与
-`src/core/normalize/normalize-dameng.js`（Dameng）与 `src/core/normalize/normalize-questdb.js`（QuestDB）。NormalizedPlan 不是字段改名，而是稳定语义层：
+`src/core/normalize/normalize-oceanbase.js`（OceanBase Oracle）、`src/core/normalize/normalize-oracle.js`（Oracle）、
+`src/core/normalize/normalize-dameng.js`（Dameng）、`src/core/normalize/normalize-questdb.js`（QuestDB）与
+`src/core/normalize/normalize-doris.js`（Doris）。NormalizedPlan 不是字段改名，而是稳定语义层：
 
 ```text
 NormalizedPlan {
-  database: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb",
+  database: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb" | "doris",
   mode, format,
   root: NormalizedNode,
   unknownNodeTypes: string[]   // 排序去重，便于测试与 UI 提示
@@ -468,13 +482,13 @@ NormalizedPlan {
 | 字段 | 类型 | 来源 / 语义 |
 | --- | --- | --- |
 | `id` | `string` | 稳定路径 id：根为 `"0"`，第 n 个子节点为 `"<parent>.<n>"` |
-| `kind` | `string` | 数据库无关语义（见下表），未知类型为 `"unknown"` |
-| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值；SQL Server `PhysicalOp`；OceanBase Oracle `OPERATOR`；Oracle `Operation`；Dameng operator；QuestDB operator） |
+| `kind` | `string` | 数据库无关语义（见下表）；展示 / 分组容器为 `"structural"` 并标记 `engineSpecific.structural: true`，未知 operator 为 `"unknown"` |
+| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值；SQL Server `PhysicalOp`；OceanBase Oracle `OPERATOR`；Oracle `Operation`；Dameng / QuestDB / Doris operator label） |
 | `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null`；OceanBase Oracle 取 `NAME`（索引访问时为 `TABLE(INDEX)`，原样保留）；Oracle 的 `TABLE ACCESS` / `VIEW` 取 `Name`，`INDEX ... SCAN` 的 `Name` 放 `indexName` |
-| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点）；SQL Server `EstimateRows`；OceanBase Oracle `EST.ROWS`；Oracle `Rows`；Dameng tuple 的 `rows`；QuestDB 恒为 `null`（未报告估算行数） |
+| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点）；SQL Server `EstimateRows`；OceanBase Oracle `EST.ROWS`；Oracle `Rows`；Dameng tuple 的 `rows`；QuestDB 恒为 `null`（未报告估算行数）；Doris 仅映射严格解析的有限、非负 `cardinality`，结构容器为 `null` |
 | `actualRows` / `actualStartupTime` / `actualTotalTime` / `loops` | `number \| null` | Actual 字段 |
-| `startupCost` / `totalCost` | `number \| null` | 仅 PostgreSQL 填共享估计代价；MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 恒为 `null`，各引擎原生 cost / 时间值若有则只保留在 `engineSpecific`，不可跨引擎比较 |
-| `width` | `number \| null` | Plan Width；Dameng 为 `bytes-per-row`；QuestDB 恒为 `null` |
+| `startupCost` / `totalCost` | `number \| null` | 仅 PostgreSQL 填共享估计代价；MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris 恒为 `null`，各引擎原生 cost / 时间值若有则只保留在 `engineSpecific`，不可跨引擎比较 |
+| `width` | `number \| null` | Plan Width；Dameng 为 `bytes-per-row`；QuestDB / Doris 恒为 `null`（Doris `avgRowSize` 单位证据不足） |
 | `filter` | `string \| null` | 过滤谓词 |
 | `joinType` | `string \| null` | Inner / Left / … |
 | `joinCondition` | `string \| null` | 取 Hash Cond → Merge Cond → Join Filter 中第一个存在者 |
@@ -525,6 +539,12 @@ NormalizedPlan {
 `scanDirection` / `workers` / `filter` / `condition` / `vectorized` / 原样 `properties` / `inlineProperties`）、`extra`。
 QuestDB 只将 scan-on 的 Frame / Interval relation 提升到中立 relation；cursor pipeline、未知 operators / properties
 均保留，且不填充共享 rows / cost / actual 字段。**不为了"统一"丢弃数据库专有信息。**
+
+`engineSpecific`（Doris）：`database`、`structural`（仅分布式 root / Fragment wrapper 为 `true`）、`doris`（root 的 `fragmentCount` / `exchangeEdges`；Fragment 的 `fragmentId` / `description` / `partition` / `outputExpressions` / `hasColoPlanNode` / sink descriptor / raw properties；operator 的 `fragmentId` / `operationId` / `operator` / 原始 `cardinality` / `avgRowSize` / `joinOp` / `joinStrategy` / `distributionMode` / table / predicates / runtime filters / partitions / tablets / numNodes / output / projections / limit / offset / properties / raw lines）。`engineSpecific.extra` 复用同一 native metadata object，generic Node Inspector 可展示，不引入 Doris-only component branch。Doris scan 仅提升为中性 `scan`；不映射 Doris cost / `avgRowSize` 到 PostgreSQL cost / width。**不为了"统一"丢弃数据库专有信息。**
+
+### Structural container 与 operator traversal
+
+可选的数据库中立 marker `engineSpecific.structural === true` 表示节点仅为展示 / 分组容器，而非 operator。通用 `walkOperatorNodes()` / `flattenOperatorNodes()` 省略容器本身但继续递归 children；`operatorDepthOf()` 不增加容器层级。Metrics、Rules、Hotspots 使用 operator traversal；完整 `walkNodes()` / `flattenNodes()` 与 Plan Tree / Node Inspector 继续包括所有节点。无 marker 的既有数据库树语义不变。Doris 的跨 Fragment `exchangeEdges` 是 metadata，不是 `NormalizedNode.children`。
 
 `kind` 主要映射：
 
@@ -610,6 +630,17 @@ Oracle 侧追加的 kind（现有 metrics / rules 不依赖）：
 | `filter` / `subquery_scan` / `append` / `setop` | `FILTER` / `VIEW` / `UNION-ALL` / `MINUS` / `INTERSECTION` |
 | `unknown` | 未登记 Operation；原始 label 与子树完整保留并记录到 `unknownNodeTypes` |
 
+Doris 侧追加的 kind（当前 metrics 仅对真实 operator 节点统计）：
+
+| kind | Doris operator / wrapper |
+| --- | --- |
+| `structural` | 分布式 `Doris Distributed Plan` root 与 `Fragment N` wrapper；必须有 `engineSpecific.structural: true`，不属于 `unknownNodeTypes`，不计入 Metrics / Rules / Hotspots |
+| `scan` | `OlapScanNode` / `VOlapScanNode`、Hive / Hudi / Iceberg / Paimon / JDBC / ES scan 等明确 scan operator；中性访问类型，不触发 `large-sequential-scan` |
+| `hash_join` / `nested_loop` / `join` | 明确识别的 join operator；Doris join op 与 strategy 分开保留 |
+| `aggregate` / `analytic` / `sort` / `filter` | AGGREGATE / ANALYTIC / SORT / TOP-N / SELECT 等 |
+| `append` / `setop` / `exchange` / `repeat` / `assert` / `table_function` | 明确识别的 UNION / EXCEPT / INTERSECT / EXCHANGE / REPEAT_NODE / ASSERT NUMBER OF ROWS / TABLE FUNCTION NODE |
+| `unknown` | 未登记 operator；保留原始 label、全部 properties 与完整 local subtree，并登记 `unknownNodeTypes` |
+
 算子标签比较前会做 `trim` + 大写 + 连字符 / 空白折叠，**只用于分类**；`nodeType` 始终保留引擎原始拼写。
 
 NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测试，且不依赖 UI。
@@ -622,9 +653,9 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 
 | 指标 | 含义 |
 | --- | --- |
-| `nodeCount` / `maxDepth` | 节点数；最长 root-to-leaf 路径（单节点 = 1） |
+| `nodeCount` / `maxDepth` | operator node 数；最长 operator root-to-leaf 路径（单节点 = 1），不计 `engineSpecific.structural: true` 的容器，但遍历容器 children |
 | `totalEstimatedCost` / `rootEstimatedRows` | 根节点 Total Cost / Plan Rows |
-| `scanCount` | 所有 scan 类节点（seq / index / index-only / bitmap / tid / sample / QuestDB `scan`） |
+| `scanCount` | 所有 scan 类 operator（seq / index / index-only / bitmap / tid / sample / QuestDB / Doris 中性 `scan`）；不会计 structural wrapper |
 | `sequentialScanCount` / `indexScanCount` / `bitmapScanCount` | 分类计数 |
 | `joinCount` / `sortCount` / `aggregateCount` | join / sort / aggregate+group 计数 |
 | `unknownNodeTypeCount` | 未登记节点类型数 |
@@ -639,7 +670,7 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 ```text
 costAttribution.status = "available"       归因可靠，highestIncrementalCost 可展示
                        = "withheld"        边界不成立或没有可归因节点，指标为 null
-                       = "not-applicable"  MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 等非 PostgreSQL 计划，不进入该语义
+                       = "not-applicable"  MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris 等非 PostgreSQL 计划，不进入该语义
 ```
 
 withheld reason（与 `hotspots.cost.reason` 同一套）：
@@ -651,7 +682,7 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `PLAN_CONTAINS_SUBPLAN` | 含 InitPlan / SubPlan，父代价按 `cost_subplan()` 计入，不按子树累加 |
 | `UNVERIFIED_COST_FLOW` | 缺失或未知 `Parent Relationship`，代价流向无法验证 |
 | `NO_ATTRIBUTABLE_COST` | 边界可靠，但没有任何可归因节点（例如根节点自身截断子节点） |
-| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 使用各自的 cost model（OceanBase 为 `EST.TIME(us)` / `COST`，Oracle 为 `Cost` / `%CPU` / `Time`，Dameng 为 `[cost, rows, bytes-per-row]`）；QuestDB 未报告 rows / cost；均不进入共享 PostgreSQL 代价信号 |
+| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 使用各自的 cost model（OceanBase 为 `EST.TIME(us)` / `COST`，Oracle 为 `Cost` / `%CPU` / `Time`，Dameng 为 `[cost, rows, bytes-per-row]`）；QuestDB 未报告 rows / cost；Doris 不提供可共享的 PostgreSQL cost，且 `avgRowSize` 单位边界未确认；均不进入共享 PostgreSQL 代价信号 |
 
 单节点负自代价（如 `Limit` 截断子节点）时，该节点及其子树不参与归因，祖先仍可归因；
 `src/core/tree.js` 的 `incrementalCostOf` 作为 legacy 路径继续服务 Findings，
@@ -671,13 +702,13 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `nested-loop-large-inner` | `nested_loop` | 外层估算行数 ≥ 10 且内层估算行数 ≥ 10 000 | `warning` |
 | | | 内层估算行数 ≥ 100 000 | `high` |
 
-MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 适用性（cost 语义见上）：
+MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris 适用性（cost 语义见上）：
 
-| rule | MySQL | SQL Server | OceanBase Oracle | Oracle | Dameng | QuestDB |
-| --- | --- | --- | --- | --- | --- | --- |
-| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） | 适用（`TABLE FULL SCAN` 按 `EST.ROWS` 触发，同样不触发代价分支） | 适用（`TABLE ACCESS FULL` 按 `Rows` 触发，同样不触发代价分支） | 适用（`CSCN2` 按 tuple 的 `rows` 触发） | 不触发（QuestDB 未报告 estimated rows） |
-| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） | 不适用（`EST.TIME(us)` / `COST` 不属于 PostgreSQL 代价语义） | 不适用（Oracle `Cost` / `Time` 不属于 PostgreSQL 代价语义） | 不适用（Dameng `cost` 不属于 PostgreSQL 代价语义） | 不适用（QuestDB 未报告 PostgreSQL cost） |
-| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） | 适用（只用 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 `Rows`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 tuple `rows`，`estimateOnly: true`） | 不触发（QuestDB 未报告 estimated rows） |
+| rule | MySQL | SQL Server | OceanBase Oracle | Oracle | Dameng | QuestDB | Doris |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） | 适用（`TABLE FULL SCAN` 按 `EST.ROWS` 触发，同样不触发代价分支） | 适用（`TABLE ACCESS FULL` 按 `Rows` 触发，同样不触发代价分支） | 适用（`CSCN2` 按 tuple 的 `rows` 触发） | 不触发（QuestDB 未报告 estimated rows） | 不触发（Doris scan 映射为中性 `scan`，不假定 sequential scan） |
+| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） | 不适用（`EST.TIME(us)` / `COST` 不属于 PostgreSQL 代价语义） | 不适用（Oracle `Cost` / `Time` 不属于 PostgreSQL 代价语义） | 不适用（Dameng `cost` 不属于 PostgreSQL 代价语义） | 不适用（QuestDB 未报告 PostgreSQL cost） | 不适用（Doris 不映射 PostgreSQL cost） |
+| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） | 适用（只用 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 `Rows`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 tuple `rows`，`estimateOnly: true`） | 不触发（QuestDB 未报告 estimated rows） | 仅当同一 Fragment-local nested-loop 与两个 children 都有可靠 cardinality 时适用；不跨 Fragment 推断输入 |
 
 规则措辞纪律：
 
@@ -728,7 +759,7 @@ Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命�
 ```ts
 HotspotAnalysis {
   cost: {
-    engine: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb",
+    engine: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb" | "doris",
     status: "available" | "withheld" | "not-applicable",
     reason: string | null,
   },
@@ -843,6 +874,14 @@ fixtures/questdb/                    # 仅 estimated；3 个 official docs + 3 �
 │   └── <name>[.synthetic].meta.json
 └── golden/
     └── estimated/<name>[.synthetic].json
+
+fixtures/doris/                      # 仅 estimated；1 个官方文档转录 + 4 个 synthetic EXPLAIN text
+├── README.md
+├── estimated/
+│   ├── <name>[.synthetic].plan.txt  # Doris raw EXPLAIN text（文档 result frame 可移除外围表格框）
+│   └── <name>[.synthetic].meta.json
+└── golden/
+    └── estimated/<name>[.synthetic].json
 ```
 
 - `.plan.json` / `.plan.xml` / `.plan.txt` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
@@ -861,6 +900,8 @@ fixtures/questdb/                    # 仅 estimated；3 个 official docs + 3 �
   保留 DBMS_XPLAN 文本；synthetic 样本覆盖列宽变化、缺失字段、marker、CRLF、未知 operation 子树与尾部 section。
 - Dameng 只有 `estimated/`：Host API 当前只请求 Estimated 原生 `EXPLAIN` 文本，fixture 的 `format` 必须是 `text`；operation id 与 `#` 之间的缩进建树，predicate 按 operation id 关联；不创建 `actual/`，不把 autotrace / runtime 输出写入 fixture。
 - QuestDB 只有 `estimated/`：Host API 返回 `EXPLAIN <source SQL>` 的原生 `text`；官方文档样例必须标明是 transcribed documentation sample 而非本地采集，PageFrame / Row / Frame pipeline 只计一个 relation access；不创建 `actual/`。
+- Doris 只有 `estimated/`：Host API 只接受 Estimated `EXPLAIN` text，截断由 adapter fail-closed；SINK / Fragment wrappers 不是 operator，跨 Fragment Exchange link 仅保留 metadata；不创建 `actual/`。
+- `official` 文档转录并不自动代表真实 database capture。若来源没有实际 SQL / capture，可将 `databaseVersion` / `capturedAt` / `captureCommand` / `sql` 全置 `null`；`source.detail` 必须明确写明未本地 capture / 未执行，`source.reference` 保留公开来源 URL。
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
 当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
@@ -871,7 +912,7 @@ OceanBase Oracle 12 个（1 个 official = OceanBase V4.3.5 Oracle 模式 `EXPLA
 11 个 synthetic；本机无 OceanBase 实例，键名与算子名对照官方文档与引擎 JSON plan writer，
 明细见 `fixtures/oceanbase-oracle/README.md`）；Oracle 5 个，全部为 DBX TYPICAL +PREDICATE synthetic text
 （明细见 `fixtures/oracle/README.md`）；Dameng 7 个（1 个 official 文档示例 + 6 个 synthetic，均为 Estimated native text；
-本机无 Dameng 实例，synthetic 与 official provenance 见 `fixtures/dameng/README.md`）；QuestDB 6 个（3 个 official documentation transcription + 3 个 synthetic；无本地 QuestDB capture，明细见 `fixtures/questdb/README.md`）。
+本机无 Dameng 实例，synthetic 与 official provenance 见 `fixtures/dameng/README.md`）；QuestDB 6 个（3 个 official documentation transcription + 3 个 synthetic；无本地 QuestDB capture，明细见 `fixtures/questdb/README.md`）；Doris 5 个（1 个 official documentation transcription + 4 个 synthetic Estimated text，无 Doris / Windows DBX capture，明细见 `fixtures/doris/README.md`）。
 
 ## 8. Fixture Provenance
 
@@ -879,7 +920,7 @@ OceanBase Oracle 12 个（1 个 official = OceanBase V4.3.5 Oracle 模式 `EXPLA
 
 | kind | 含义 | 额外要求 |
 | --- | --- | --- |
-| `official` | 来自数据库官方公开文档示例 | `source.reference` 必须是公开 URL |
+| `official` | 来自数据库官方公开文档示例 | `source.reference` 必须是公开 URL；若是未执行的文档转录，capture metadata 可全为 `null`，但 `source.detail` 必须明确说明不是实际 capture |
 | `locally-generated` | 从本地测试库真实采集（数据本身可以是合成测试数据） | `databaseVersion`、`capturedAt`、`captureCommand`、`sql` 必填，`detail` 必须包含 "locally generated" |
 | `synthetic` | 人工构造的最小结构，**未**经过任何数据库 | 文件名含 `.synthetic`，上述字段必须为 `null`，`detail` 说明并非真实采集 |
 

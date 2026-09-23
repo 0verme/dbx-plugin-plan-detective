@@ -1,5 +1,5 @@
 import { analyzePostgresCost } from "../cost/postgres-cost.js";
-import { depthOf, flattenNodes } from "../tree.js";
+import { flattenOperatorNodes, operatorDepthOf, isStructuralNode } from "../tree.js";
 
 /**
  * Deterministic plan metrics.
@@ -23,8 +23,8 @@ const SCAN_KINDS = new Set([
   "bitmap_index_scan",
   "tid_scan",
   "sample_scan",
-  // QuestDB Frame / Interval cursor nodes are one physical relation access;
-  // the surrounding PageFrame and Row cursor are execution-pipeline nodes.
+  // QuestDB Frame / Interval cursor nodes and Doris scan operators are kept
+  // neutral when their formats do not justify a sequential/index classification.
   "scan",
 ]);
 const INDEX_SCAN_KINDS = new Set(["index_scan", "index_only_scan"]);
@@ -50,8 +50,8 @@ const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
  * @property {string|null} reason stable reason code, `null` when available
  *
  * @typedef {Object} PlanMetrics
- * @property {number} nodeCount
- * @property {number} maxDepth
+ * @property {number} nodeCount operator nodes, excluding structural containers
+ * @property {number} maxDepth longest operator-only path, excluding structural containers
  * @property {number|null} totalEstimatedCost root Total Cost
  * @property {number|null} rootEstimatedRows rows the root is estimated to produce
  * @property {number} scanCount
@@ -75,8 +75,10 @@ const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
  * @returns {PlanMetrics}
  */
 export function computeMetrics(normalized) {
-  const nodes = flattenNodes(normalized.root);
-  const totalPlanCost = typeof normalized.root.totalCost === "number" ? normalized.root.totalCost : null;
+  const nodes = flattenOperatorNodes(normalized.root);
+  const totalPlanCost = !isStructuralNode(normalized.root) && typeof normalized.root.totalCost === "number"
+    ? normalized.root.totalCost
+    : null;
   const cost = costAttributionOf(normalized, totalPlanCost);
 
   let scanCount = 0;
@@ -116,9 +118,11 @@ export function computeMetrics(normalized) {
 
   return {
     nodeCount: nodes.length,
-    maxDepth: depthOf(normalized.root),
+    maxDepth: operatorDepthOf(normalized.root),
     totalEstimatedCost: totalPlanCost,
-    rootEstimatedRows: typeof normalized.root.estimatedRows === "number" ? normalized.root.estimatedRows : null,
+    rootEstimatedRows: !isStructuralNode(normalized.root) && typeof normalized.root.estimatedRows === "number"
+      ? normalized.root.estimatedRows
+      : null,
     scanCount,
     sequentialScanCount,
     indexScanCount,
@@ -149,10 +153,9 @@ export function computeMetrics(normalized) {
  */
 function costAttributionOf(normalized, totalPlanCost) {
   if (normalized.database !== "postgresql") {
-    // Self cost is a PostgreSQL cumulative-Total-Cost concept. MySQL reports
-    // its costs inside `engineSpecific.mysql`, SQL Server reports cumulative
-    // subtree and per-node costs inside `engineSpecific.sqlServer`, and neither
-    // fills `totalCost`, so no other family may inherit a PostgreSQL
+    // Self cost is a PostgreSQL cumulative-Total-Cost concept. Other engines
+    // keep their native cost fields under `engineSpecific` and do not fill
+    // `totalCost`, so no other family may inherit a PostgreSQL
     // incremental-cost value.
     return {
       summary: { engine: normalized.database, status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },

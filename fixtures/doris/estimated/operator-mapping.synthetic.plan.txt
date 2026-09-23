@@ -1,0 +1,11 @@
+PLAN FRAGMENT 0
+VRESULT SINK
+8:SORT
+order by: amount DESC
+|----7:VAGGREGATE
+group by: customer_id
+|    |----5:SELECT
+conjuncts: amount > 0
+|    |    |----2:VOlapScanNode
+TABLE: sales.orders
+cardinality=1200

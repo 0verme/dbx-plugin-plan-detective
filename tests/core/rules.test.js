@@ -81,6 +81,18 @@ test("large-sequential-scan cannot trigger on cost when the plan reports none", 
   assert.deepEqual(run(largeSequentialScanRule, root), []);
 });
 
+test("rules skip structural containers but continue into operator descendants", () => {
+  const root = normalizedNode({
+    kind: "seq_scan",
+    nodeType: "Fragment container",
+    estimatedRows: 1_000_000,
+    engineSpecific: { structural: true },
+    children: [normalizedNode({ id: "operator", kind: "seq_scan", nodeType: "Seq Scan", estimatedRows: 10_000 })],
+  });
+  const findings = run(largeSequentialScanRule, root);
+  assert.deepEqual(findings.map((finding) => finding.nodeRef), ["operator"]);
+});
+
 test("large-sequential-scan uses incremental cost, not the parent's cost", () => {
   const root = normalizedNode({
     kind: "sort",

@@ -1,0 +1,854 @@
+{
+  "parsed": {
+    "database": "doris",
+    "format": "text",
+    "mode": "estimated",
+    "fragments": [
+      {
+        "id": "0",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": {
+          "type": "VRESULT SINK",
+          "exchangeId": null,
+          "distribution": null,
+          "properties": [],
+          "rawLines": [
+            "VRESULT SINK"
+          ],
+          "extra": {
+            "headerLine": 2
+          }
+        },
+        "root": {
+          "operationId": "90",
+          "operator": "VHASH JOIN(77)",
+          "rawOperator": "VHASH JOIN(77)",
+          "properties": [
+            {
+              "name": "join op",
+              "value": "LEFT OUTER JOIN(BROADCAST)[]",
+              "rawLine": "join op: LEFT OUTER JOIN(BROADCAST)[]",
+              "lineNumber": 4
+            },
+            {
+              "name": "cardinality",
+              "value": "900",
+              "rawLine": "cardinality=900",
+              "lineNumber": 5
+            }
+          ],
+          "children": [
+            {
+              "operationId": "30",
+              "operator": "VFutureOperator(55)",
+              "rawOperator": "VFutureOperator(55)",
+              "properties": [
+                {
+                  "name": "future property",
+                  "value": "preserved",
+                  "rawLine": "future property: preserved",
+                  "lineNumber": 15
+                }
+              ],
+              "children": [],
+              "rawLines": [
+                "|----30:VFutureOperator(55)",
+                "future property: preserved"
+              ],
+              "extra": {
+                "headerColumn": 5,
+                "branchColumn": 0,
+                "branchConnector": true
+              }
+            },
+            {
+              "operationId": "20",
+              "operator": "VAGGREGATE",
+              "rawOperator": "VAGGREGATE",
+              "properties": [
+                {
+                  "name": "group by",
+                  "value": "[customer_id]",
+                  "rawLine": "group by: [customer_id]",
+                  "lineNumber": 7
+                }
+              ],
+              "children": [
+                {
+                  "operationId": "11",
+                  "operator": "VAGGREGATE",
+                  "rawOperator": "VAGGREGATE",
+                  "properties": [
+                    {
+                      "name": "group by",
+                      "value": "[region]",
+                      "rawLine": "group by: [region]",
+                      "lineNumber": 12
+                    }
+                  ],
+                  "children": [],
+                  "rawLines": [
+                    "|    11:VAGGREGATE",
+                    "group by: [region]"
+                  ],
+                  "extra": {
+                    "headerColumn": 5,
+                    "branchColumn": 0,
+                    "branchConnector": false
+                  }
+                },
+                {
+                  "operationId": "12",
+                  "operator": "VEXCHANGE",
+                  "rawOperator": "VEXCHANGE",
+                  "properties": [
+                    {
+                      "name": "offset",
+                      "value": "0",
+                      "rawLine": "offset: 0",
+                      "lineNumber": 9
+                    }
+                  ],
+                  "children": [],
+                  "rawLines": [
+                    "|    |----12:VEXCHANGE",
+                    "offset: 0"
+                  ],
+                  "extra": {
+                    "headerColumn": 10,
+                    "branchColumn": 5,
+                    "branchConnector": true
+                  }
+                }
+              ],
+              "rawLines": [
+                "|----20:VAGGREGATE",
+                "group by: [customer_id]"
+              ],
+              "extra": {
+                "headerColumn": 5,
+                "branchColumn": 0,
+                "branchConnector": true
+              }
+            }
+          ],
+          "rawLines": [
+            "90:VHASH JOIN(77)",
+            "join op: LEFT OUTER JOIN(BROADCAST)[]",
+            "cardinality=900"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 0"
+        ],
+        "extra": {
+          "headerLine": 1
+        }
+      }
+    ],
+    "exchangeEdges": [],
+    "raw": "PLAN FRAGMENT 0\nVRESULT SINK\n90:VHASH JOIN(77)\njoin op: LEFT OUTER JOIN(BROADCAST)[]\ncardinality=900\n|----20:VAGGREGATE\ngroup by: [customer_id]\n|    |----12:VEXCHANGE\noffset: 0\n|    |\n|    11:VAGGREGATE\ngroup by: [region]\n|\n|----30:VFutureOperator(55)\nfuture property: preserved\n",
+    "extraLines": []
+  },
+  "normalized": {
+    "database": "doris",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "Doris Distributed Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "structural",
+          "nodeType": "Fragment 0",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "hash_join",
+              "nodeType": "VHASH JOIN(77)",
+              "relation": null,
+              "estimatedRows": 900,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": "LEFT OUTER JOIN",
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "unknown",
+                  "nodeType": "VFutureOperator(55)",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "0",
+                      "operationId": "30",
+                      "operator": "VFutureOperator(55)",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "future property",
+                          "value": "preserved",
+                          "rawLine": "future property: preserved",
+                          "lineNumber": 15
+                        }
+                      ],
+                      "rawLines": [
+                        "|----30:VFutureOperator(55)",
+                        "future property: preserved"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "0",
+                      "operationId": "30",
+                      "operator": "VFutureOperator(55)",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "future property",
+                          "value": "preserved",
+                          "rawLine": "future property: preserved",
+                          "lineNumber": 15
+                        }
+                      ],
+                      "rawLines": [
+                        "|----30:VFutureOperator(55)",
+                        "future property: preserved"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "0.0.0.1",
+                  "kind": "aggregate",
+                  "nodeType": "VAGGREGATE",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": [
+                    "[customer_id]"
+                  ],
+                  "children": [
+                    {
+                      "id": "0.0.0.1.0",
+                      "kind": "aggregate",
+                      "nodeType": "VAGGREGATE",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": [
+                        "[region]"
+                      ],
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "doris",
+                        "doris": {
+                          "fragmentId": "0",
+                          "operationId": "11",
+                          "operator": "VAGGREGATE",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": null,
+                          "properties": [
+                            {
+                              "name": "group by",
+                              "value": "[region]",
+                              "rawLine": "group by: [region]",
+                              "lineNumber": 12
+                            }
+                          ],
+                          "rawLines": [
+                            "|    11:VAGGREGATE",
+                            "group by: [region]"
+                          ],
+                          "extra": {
+                            "headerColumn": 5,
+                            "branchColumn": 0,
+                            "branchConnector": false
+                          }
+                        },
+                        "extra": {
+                          "fragmentId": "0",
+                          "operationId": "11",
+                          "operator": "VAGGREGATE",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": null,
+                          "properties": [
+                            {
+                              "name": "group by",
+                              "value": "[region]",
+                              "rawLine": "group by: [region]",
+                              "lineNumber": 12
+                            }
+                          ],
+                          "rawLines": [
+                            "|    11:VAGGREGATE",
+                            "group by: [region]"
+                          ],
+                          "extra": {
+                            "headerColumn": 5,
+                            "branchColumn": 0,
+                            "branchConnector": false
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "id": "0.0.0.1.1",
+                      "kind": "exchange",
+                      "nodeType": "VEXCHANGE",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "doris",
+                        "doris": {
+                          "fragmentId": "0",
+                          "operationId": "12",
+                          "operator": "VEXCHANGE",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": "0",
+                          "properties": [
+                            {
+                              "name": "offset",
+                              "value": "0",
+                              "rawLine": "offset: 0",
+                              "lineNumber": 9
+                            }
+                          ],
+                          "rawLines": [
+                            "|    |----12:VEXCHANGE",
+                            "offset: 0"
+                          ],
+                          "extra": {
+                            "headerColumn": 10,
+                            "branchColumn": 5,
+                            "branchConnector": true
+                          }
+                        },
+                        "extra": {
+                          "fragmentId": "0",
+                          "operationId": "12",
+                          "operator": "VEXCHANGE",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": "0",
+                          "properties": [
+                            {
+                              "name": "offset",
+                              "value": "0",
+                              "rawLine": "offset: 0",
+                              "lineNumber": 9
+                            }
+                          ],
+                          "rawLines": [
+                            "|    |----12:VEXCHANGE",
+                            "offset: 0"
+                          ],
+                          "extra": {
+                            "headerColumn": 10,
+                            "branchColumn": 5,
+                            "branchConnector": true
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "0",
+                      "operationId": "20",
+                      "operator": "VAGGREGATE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "group by",
+                          "value": "[customer_id]",
+                          "rawLine": "group by: [customer_id]",
+                          "lineNumber": 7
+                        }
+                      ],
+                      "rawLines": [
+                        "|----20:VAGGREGATE",
+                        "group by: [customer_id]"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "0",
+                      "operationId": "20",
+                      "operator": "VAGGREGATE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "group by",
+                          "value": "[customer_id]",
+                          "rawLine": "group by: [customer_id]",
+                          "lineNumber": 7
+                        }
+                      ],
+                      "rawLines": [
+                        "|----20:VAGGREGATE",
+                        "group by: [customer_id]"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "0",
+                  "operationId": "90",
+                  "operator": "VHASH JOIN(77)",
+                  "cardinality": "900",
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "LEFT OUTER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "LEFT OUTER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: LEFT OUTER JOIN(BROADCAST)[]",
+                      "lineNumber": 4
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "900",
+                      "rawLine": "cardinality=900",
+                      "lineNumber": 5
+                    }
+                  ],
+                  "rawLines": [
+                    "90:VHASH JOIN(77)",
+                    "join op: LEFT OUTER JOIN(BROADCAST)[]",
+                    "cardinality=900"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "0",
+                  "operationId": "90",
+                  "operator": "VHASH JOIN(77)",
+                  "cardinality": "900",
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "LEFT OUTER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "LEFT OUTER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: LEFT OUTER JOIN(BROADCAST)[]",
+                      "lineNumber": 4
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "900",
+                      "rawLine": "cardinality=900",
+                      "lineNumber": 5
+                    }
+                  ],
+                  "rawLines": [
+                    "90:VHASH JOIN(77)",
+                    "join op: LEFT OUTER JOIN(BROADCAST)[]",
+                    "cardinality=900"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "doris",
+        "structural": true,
+        "doris": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        },
+        "extra": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        }
+      }
+    },
+    "unknownNodeTypes": [
+      "VFutureOperator(55)"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 5,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 2,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "hash_join",
+      "nodeType": "VHASH JOIN(77)",
+      "relation": null,
+      "estimatedRows": 900
+    },
+    "costAttribution": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

@@ -1,0 +1,918 @@
+{
+  "parsed": {
+    "database": "doris",
+    "format": "text",
+    "mode": "estimated",
+    "fragments": [
+      {
+        "id": "0",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": {
+          "type": "VRESULT SINK",
+          "exchangeId": null,
+          "distribution": null,
+          "properties": [],
+          "rawLines": [
+            "VRESULT SINK"
+          ],
+          "extra": {
+            "headerLine": 2
+          }
+        },
+        "root": {
+          "operationId": "7",
+          "operator": "VEXCHANGE",
+          "rawOperator": "VEXCHANGE",
+          "properties": [
+            {
+              "name": "offset",
+              "value": "0",
+              "rawLine": "offset: 0",
+              "lineNumber": 4
+            }
+          ],
+          "children": [],
+          "rawLines": [
+            "7:VEXCHANGE",
+            "offset: 0"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 0"
+        ],
+        "extra": {
+          "headerLine": 1
+        }
+      },
+      {
+        "id": "1",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": {
+          "type": "STREAM DATA SINK",
+          "exchangeId": "007",
+          "distribution": "HASH_PARTITIONED",
+          "properties": [
+            {
+              "name": "EXCHANGE ID",
+              "value": "007",
+              "rawLine": "EXCHANGE ID: 007",
+              "lineNumber": 8
+            },
+            {
+              "name": null,
+              "value": "HASH_PARTITIONED",
+              "rawLine": "HASH_PARTITIONED",
+              "lineNumber": 9
+            }
+          ],
+          "rawLines": [
+            "STREAM DATA SINK",
+            "EXCHANGE ID: 007",
+            "HASH_PARTITIONED"
+          ],
+          "extra": {
+            "headerLine": 7
+          }
+        },
+        "root": {
+          "operationId": "6",
+          "operator": "VHASH JOIN(354)",
+          "rawOperator": "VHASH JOIN(354)",
+          "properties": [
+            {
+              "name": "join op",
+              "value": "INNER JOIN(BROADCAST)[]",
+              "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+              "lineNumber": 11
+            }
+          ],
+          "children": [
+            {
+              "operationId": "8",
+              "operator": "VOlapScanNode",
+              "rawOperator": "VOlapScanNode",
+              "properties": [
+                {
+                  "name": "TABLE",
+                  "value": "analytics.orders",
+                  "rawLine": "TABLE: analytics.orders",
+                  "lineNumber": 16
+                },
+                {
+                  "name": "cardinality",
+                  "value": "1500000",
+                  "rawLine": "cardinality=1500000",
+                  "lineNumber": 17
+                }
+              ],
+              "children": [],
+              "rawLines": [
+                "8:VOlapScanNode",
+                "TABLE: analytics.orders",
+                "cardinality=1500000"
+              ],
+              "extra": {
+                "headerColumn": 0,
+                "branchColumn": null,
+                "branchConnector": false
+              }
+            },
+            {
+              "operationId": "9",
+              "operator": "VEXCHANGE",
+              "rawOperator": "VEXCHANGE",
+              "properties": [
+                {
+                  "name": "offset",
+                  "value": "0",
+                  "rawLine": "offset: 0",
+                  "lineNumber": 13
+                }
+              ],
+              "children": [],
+              "rawLines": [
+                "|----9:VEXCHANGE",
+                "offset: 0"
+              ],
+              "extra": {
+                "headerColumn": 5,
+                "branchColumn": 0,
+                "branchConnector": true
+              }
+            }
+          ],
+          "rawLines": [
+            "6:VHASH JOIN(354)",
+            "join op: INNER JOIN(BROADCAST)[]"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 1"
+        ],
+        "extra": {
+          "headerLine": 6
+        }
+      }
+    ],
+    "exchangeEdges": [
+      {
+        "fromFragment": "1",
+        "exchangeId": "007",
+        "distribution": "HASH_PARTITIONED",
+        "sinkType": "STREAM DATA SINK",
+        "targetExchangeNode": {
+          "fragmentId": "0",
+          "operationId": "7"
+        },
+        "resolution": "matched",
+        "candidates": [
+          {
+            "fragmentId": "0",
+            "operationId": "7"
+          }
+        ]
+      }
+    ],
+    "raw": "PLAN FRAGMENT 0\nVRESULT SINK\n7:VEXCHANGE\noffset: 0\n\nPLAN FRAGMENT 1\nSTREAM DATA SINK\nEXCHANGE ID: 007\nHASH_PARTITIONED\n6:VHASH JOIN(354)\njoin op: INNER JOIN(BROADCAST)[]\n|----9:VEXCHANGE\noffset: 0\n|\n8:VOlapScanNode\nTABLE: analytics.orders\ncardinality=1500000\n",
+    "extraLines": []
+  },
+  "normalized": {
+    "database": "doris",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "Doris Distributed Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "structural",
+          "nodeType": "Fragment 0",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "exchange",
+              "nodeType": "VEXCHANGE",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "0",
+                  "operationId": "7",
+                  "operator": "VEXCHANGE",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": "0",
+                  "properties": [
+                    {
+                      "name": "offset",
+                      "value": "0",
+                      "rawLine": "offset: 0",
+                      "lineNumber": 4
+                    }
+                  ],
+                  "rawLines": [
+                    "7:VEXCHANGE",
+                    "offset: 0"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "0",
+                  "operationId": "7",
+                  "operator": "VEXCHANGE",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": "0",
+                  "properties": [
+                    {
+                      "name": "offset",
+                      "value": "0",
+                      "rawLine": "offset: 0",
+                      "lineNumber": 4
+                    }
+                  ],
+                  "rawLines": [
+                    "7:VEXCHANGE",
+                    "offset: 0"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "structural",
+          "nodeType": "Fragment 1",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.1.0",
+              "kind": "hash_join",
+              "nodeType": "VHASH JOIN(354)",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": "INNER JOIN",
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.1.0.0",
+                  "kind": "scan",
+                  "nodeType": "VOlapScanNode",
+                  "relation": {
+                    "name": "analytics.orders",
+                    "alias": null,
+                    "indexName": null
+                  },
+                  "estimatedRows": 1500000,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "1",
+                      "operationId": "8",
+                      "operator": "VOlapScanNode",
+                      "cardinality": "1500000",
+                      "avgRowSize": null,
+                      "table": "analytics.orders",
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "TABLE",
+                          "value": "analytics.orders",
+                          "rawLine": "TABLE: analytics.orders",
+                          "lineNumber": 16
+                        },
+                        {
+                          "name": "cardinality",
+                          "value": "1500000",
+                          "rawLine": "cardinality=1500000",
+                          "lineNumber": 17
+                        }
+                      ],
+                      "rawLines": [
+                        "8:VOlapScanNode",
+                        "TABLE: analytics.orders",
+                        "cardinality=1500000"
+                      ],
+                      "extra": {
+                        "headerColumn": 0,
+                        "branchColumn": null,
+                        "branchConnector": false
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "1",
+                      "operationId": "8",
+                      "operator": "VOlapScanNode",
+                      "cardinality": "1500000",
+                      "avgRowSize": null,
+                      "table": "analytics.orders",
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "TABLE",
+                          "value": "analytics.orders",
+                          "rawLine": "TABLE: analytics.orders",
+                          "lineNumber": 16
+                        },
+                        {
+                          "name": "cardinality",
+                          "value": "1500000",
+                          "rawLine": "cardinality=1500000",
+                          "lineNumber": 17
+                        }
+                      ],
+                      "rawLines": [
+                        "8:VOlapScanNode",
+                        "TABLE: analytics.orders",
+                        "cardinality=1500000"
+                      ],
+                      "extra": {
+                        "headerColumn": 0,
+                        "branchColumn": null,
+                        "branchConnector": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "0.1.0.1",
+                  "kind": "exchange",
+                  "nodeType": "VEXCHANGE",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "1",
+                      "operationId": "9",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 13
+                        }
+                      ],
+                      "rawLines": [
+                        "|----9:VEXCHANGE",
+                        "offset: 0"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "1",
+                      "operationId": "9",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 13
+                        }
+                      ],
+                      "rawLines": [
+                        "|----9:VEXCHANGE",
+                        "offset: 0"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "1",
+                  "operationId": "6",
+                  "operator": "VHASH JOIN(354)",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "INNER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "INNER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+                      "lineNumber": 11
+                    }
+                  ],
+                  "rawLines": [
+                    "6:VHASH JOIN(354)",
+                    "join op: INNER JOIN(BROADCAST)[]"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "1",
+                  "operationId": "6",
+                  "operator": "VHASH JOIN(354)",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "INNER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "INNER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+                      "lineNumber": 11
+                    }
+                  ],
+                  "rawLines": [
+                    "6:VHASH JOIN(354)",
+                    "join op: INNER JOIN(BROADCAST)[]"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "1",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "STREAM DATA SINK",
+              "sinkExchangeId": "007",
+              "sinkDistribution": "HASH_PARTITIONED",
+              "sinkProperties": [
+                {
+                  "name": "EXCHANGE ID",
+                  "value": "007",
+                  "rawLine": "EXCHANGE ID: 007",
+                  "lineNumber": 8
+                },
+                {
+                  "name": null,
+                  "value": "HASH_PARTITIONED",
+                  "rawLine": "HASH_PARTITIONED",
+                  "lineNumber": 9
+                }
+              ],
+              "sinkRawLines": [
+                "STREAM DATA SINK",
+                "EXCHANGE ID: 007",
+                "HASH_PARTITIONED"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 1"
+              ],
+              "extra": {
+                "headerLine": 6
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "1",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "STREAM DATA SINK",
+              "sinkExchangeId": "007",
+              "sinkDistribution": "HASH_PARTITIONED",
+              "sinkProperties": [
+                {
+                  "name": "EXCHANGE ID",
+                  "value": "007",
+                  "rawLine": "EXCHANGE ID: 007",
+                  "lineNumber": 8
+                },
+                {
+                  "name": null,
+                  "value": "HASH_PARTITIONED",
+                  "rawLine": "HASH_PARTITIONED",
+                  "lineNumber": 9
+                }
+              ],
+              "sinkRawLines": [
+                "STREAM DATA SINK",
+                "EXCHANGE ID: 007",
+                "HASH_PARTITIONED"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 1"
+              ],
+              "extra": {
+                "headerLine": 6
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "doris",
+        "structural": true,
+        "doris": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 2,
+          "exchangeEdges": [
+            {
+              "fromFragment": "1",
+              "exchangeId": "007",
+              "distribution": "HASH_PARTITIONED",
+              "sinkType": "STREAM DATA SINK",
+              "targetExchangeNode": {
+                "fragmentId": "0",
+                "operationId": "7"
+              },
+              "resolution": "matched",
+              "candidates": [
+                {
+                  "fragmentId": "0",
+                  "operationId": "7"
+                }
+              ]
+            }
+          ],
+          "extraLines": []
+        },
+        "extra": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 2,
+          "exchangeEdges": [
+            {
+              "fromFragment": "1",
+              "exchangeId": "007",
+              "distribution": "HASH_PARTITIONED",
+              "sinkType": "STREAM DATA SINK",
+              "targetExchangeNode": {
+                "fragmentId": "0",
+                "operationId": "7"
+              },
+              "resolution": "matched",
+              "candidates": [
+                {
+                  "fragmentId": "0",
+                  "operationId": "7"
+                }
+              ]
+            }
+          ],
+          "extraLines": []
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.1.0.0",
+      "kind": "scan",
+      "nodeType": "VOlapScanNode",
+      "relation": "analytics.orders",
+      "estimatedRows": 1500000
+    },
+    "costAttribution": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

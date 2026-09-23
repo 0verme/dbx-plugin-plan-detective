@@ -1,0 +1,26 @@
+{
+  "database": "doris",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Doris EXPLAIN text based on the official documented branch-glyph and multi-child ordering convention; no database was used.",
+    "reference": "https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN/"
+  },
+  "features": [
+    "nested branch rails",
+    "right-to-left display order restored to logical child order",
+    "operation ids are not parent pointers",
+    "unknown operator and property retention"
+  ],
+  "expect": {
+    "rootNodeType": "Doris Distributed Plan",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

@@ -1,0 +1,45 @@
+PLAN FRAGMENT 0
+OUTPUT EXPRS:
+cnt[#10]
+cnt[#11]
+PARTITION: UNPARTITIONED
+HAS_COLO_PLAN_NODE: false
+
+VRESULT SINK
+MYSQL_PROTOCAL
+
+7:VEXCHANGE
+offset: 0
+distribute expr lists:
+
+PLAN FRAGMENT 1
+PARTITION: RANDOM
+HAS_COLO_PLAN_NODE: false
+
+STREAM DATA SINK
+EXCHANGE ID: 07
+UNPARTITIONED
+
+6:VHASH JOIN(354)
+join op: INNER JOIN(BROADCAST)[]
+equal join conjunct: cnt[#7] = cnt[#5]
+cardinality=1
+vec output tuple id: 8
+vIntermediate tuple ids: 7
+hash output slot ids: 5 7
+distribute expr lists:
+distribute expr lists:
+
+|----4:VEXCHANGE
+offset: 0
+distribute expr lists:
+|
+5:VEXCHANGE
+offset: 0
+distribute expr lists:
+
+PLAN FRAGMENT 2
+...
+
+PLAN FRAGMENT 3
+...

@@ -11,6 +11,7 @@ import {
   OCEANBASE_ORACLE_FIXTURES_DIR,
   ORACLE_FIXTURES_DIR,
   DAMENG_FIXTURES_DIR,
+  DORIS_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   QUESTDB_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
@@ -101,6 +102,14 @@ test("fixtures/questdb has estimated text plans and no actual directory", async 
   assert.equal(planSuffixFor("questdb"), ".plan.txt");
 });
 
+test("fixtures/doris has estimated EXPLAIN text plans and no actual directory", async () => {
+  const entries = await readdir(path.join(DORIS_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/doris/estimated must contain .plan.txt files");
+  await assert.rejects(readdir(path.join(DORIS_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.doris, ["estimated"]);
+  assert.equal(planSuffixFor("doris"), ".plan.txt");
+});
+
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
   for (const database of FIXTURE_DATABASES) {
     const root = FIXTURE_DIRS[database];
@@ -145,6 +154,25 @@ test("synthetic fixtures are marked in the file name and never claim a capture",
 test("metadata validation rejects convention violations", () => {
   assert.deepEqual(validateFixtureMeta(validMeta(), { mode: "estimated", name: "ok" }), []);
   assert.deepEqual(validateFixtureMeta(validMeta({ mode: "actual" }), { mode: "actual", name: "ok" }), []);
+
+  const uncapturedOfficial = validMeta({
+    database: "doris",
+    format: "text",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: {
+      kind: "official",
+      detail: "Official documentation transcription; not a local database capture and no SQL was executed.",
+      reference: "https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN/",
+    },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(uncapturedOfficial, { database: "doris", mode: "estimated", name: "docs-example" }),
+    [],
+    "a documentation transcription must not invent server capture metadata",
+  );
 
   assert.match(validateFixtureMeta(validMeta({ mode: "actual" }), { mode: "estimated", name: "x" }).join("\n"), /does not match fixture directory/);
 

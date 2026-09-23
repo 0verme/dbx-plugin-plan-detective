@@ -1,0 +1,1443 @@
+{
+  "parsed": {
+    "database": "doris",
+    "format": "text",
+    "mode": "estimated",
+    "fragments": [
+      {
+        "id": "0",
+        "description": null,
+        "outputExpressions": [
+          "cnt[#10]",
+          "cnt[#11]"
+        ],
+        "partition": "UNPARTITIONED",
+        "hasColoPlanNode": false,
+        "sink": {
+          "type": "VRESULT SINK",
+          "exchangeId": null,
+          "distribution": null,
+          "properties": [
+            {
+              "name": null,
+              "value": "MYSQL_PROTOCAL",
+              "rawLine": "MYSQL_PROTOCAL",
+              "lineNumber": 9
+            }
+          ],
+          "rawLines": [
+            "VRESULT SINK",
+            "MYSQL_PROTOCAL"
+          ],
+          "extra": {
+            "headerLine": 8
+          }
+        },
+        "root": {
+          "operationId": "7",
+          "operator": "VEXCHANGE",
+          "rawOperator": "VEXCHANGE",
+          "properties": [
+            {
+              "name": "offset",
+              "value": "0",
+              "rawLine": "offset: 0",
+              "lineNumber": 12
+            },
+            {
+              "name": "distribute expr lists",
+              "value": "",
+              "rawLine": "distribute expr lists:",
+              "lineNumber": 13
+            }
+          ],
+          "children": [],
+          "rawLines": [
+            "7:VEXCHANGE",
+            "offset: 0",
+            "distribute expr lists:"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [
+          {
+            "name": "OUTPUT EXPRS",
+            "value": "",
+            "rawLine": "OUTPUT EXPRS:",
+            "lineNumber": 2
+          },
+          {
+            "name": "PARTITION",
+            "value": "UNPARTITIONED",
+            "rawLine": "PARTITION: UNPARTITIONED",
+            "lineNumber": 5
+          },
+          {
+            "name": "HAS_COLO_PLAN_NODE",
+            "value": "false",
+            "rawLine": "HAS_COLO_PLAN_NODE: false",
+            "lineNumber": 6
+          }
+        ],
+        "rawLines": [
+          "PLAN FRAGMENT 0",
+          "OUTPUT EXPRS:",
+          "cnt[#10]",
+          "cnt[#11]",
+          "PARTITION: UNPARTITIONED",
+          "HAS_COLO_PLAN_NODE: false"
+        ],
+        "extra": {
+          "headerLine": 1
+        }
+      },
+      {
+        "id": "1",
+        "description": null,
+        "outputExpressions": [],
+        "partition": "RANDOM",
+        "hasColoPlanNode": false,
+        "sink": {
+          "type": "STREAM DATA SINK",
+          "exchangeId": "07",
+          "distribution": "UNPARTITIONED",
+          "properties": [
+            {
+              "name": "EXCHANGE ID",
+              "value": "07",
+              "rawLine": "EXCHANGE ID: 07",
+              "lineNumber": 20
+            },
+            {
+              "name": null,
+              "value": "UNPARTITIONED",
+              "rawLine": "UNPARTITIONED",
+              "lineNumber": 21
+            }
+          ],
+          "rawLines": [
+            "STREAM DATA SINK",
+            "EXCHANGE ID: 07",
+            "UNPARTITIONED"
+          ],
+          "extra": {
+            "headerLine": 19
+          }
+        },
+        "root": {
+          "operationId": "6",
+          "operator": "VHASH JOIN(354)",
+          "rawOperator": "VHASH JOIN(354)",
+          "properties": [
+            {
+              "name": "join op",
+              "value": "INNER JOIN(BROADCAST)[]",
+              "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+              "lineNumber": 24
+            },
+            {
+              "name": "equal join conjunct",
+              "value": "cnt[#7] = cnt[#5]",
+              "rawLine": "equal join conjunct: cnt[#7] = cnt[#5]",
+              "lineNumber": 25
+            },
+            {
+              "name": "cardinality",
+              "value": "1",
+              "rawLine": "cardinality=1",
+              "lineNumber": 26
+            },
+            {
+              "name": "vec output tuple id",
+              "value": "8",
+              "rawLine": "vec output tuple id: 8",
+              "lineNumber": 27
+            },
+            {
+              "name": "vIntermediate tuple ids",
+              "value": "7",
+              "rawLine": "vIntermediate tuple ids: 7",
+              "lineNumber": 28
+            },
+            {
+              "name": "hash output slot ids",
+              "value": "5 7",
+              "rawLine": "hash output slot ids: 5 7",
+              "lineNumber": 29
+            },
+            {
+              "name": "distribute expr lists",
+              "value": "",
+              "rawLine": "distribute expr lists:",
+              "lineNumber": 30
+            },
+            {
+              "name": "distribute expr lists",
+              "value": "",
+              "rawLine": "distribute expr lists:",
+              "lineNumber": 31
+            }
+          ],
+          "children": [
+            {
+              "operationId": "5",
+              "operator": "VEXCHANGE",
+              "rawOperator": "VEXCHANGE",
+              "properties": [
+                {
+                  "name": "offset",
+                  "value": "0",
+                  "rawLine": "offset: 0",
+                  "lineNumber": 38
+                },
+                {
+                  "name": "distribute expr lists",
+                  "value": "",
+                  "rawLine": "distribute expr lists:",
+                  "lineNumber": 39
+                }
+              ],
+              "children": [],
+              "rawLines": [
+                "5:VEXCHANGE",
+                "offset: 0",
+                "distribute expr lists:"
+              ],
+              "extra": {
+                "headerColumn": 0,
+                "branchColumn": null,
+                "branchConnector": false
+              }
+            },
+            {
+              "operationId": "4",
+              "operator": "VEXCHANGE",
+              "rawOperator": "VEXCHANGE",
+              "properties": [
+                {
+                  "name": "offset",
+                  "value": "0",
+                  "rawLine": "offset: 0",
+                  "lineNumber": 34
+                },
+                {
+                  "name": "distribute expr lists",
+                  "value": "",
+                  "rawLine": "distribute expr lists:",
+                  "lineNumber": 35
+                }
+              ],
+              "children": [],
+              "rawLines": [
+                "|----4:VEXCHANGE",
+                "offset: 0",
+                "distribute expr lists:"
+              ],
+              "extra": {
+                "headerColumn": 5,
+                "branchColumn": 0,
+                "branchConnector": true
+              }
+            }
+          ],
+          "rawLines": [
+            "6:VHASH JOIN(354)",
+            "join op: INNER JOIN(BROADCAST)[]",
+            "equal join conjunct: cnt[#7] = cnt[#5]",
+            "cardinality=1",
+            "vec output tuple id: 8",
+            "vIntermediate tuple ids: 7",
+            "hash output slot ids: 5 7",
+            "distribute expr lists:",
+            "distribute expr lists:"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [
+          {
+            "name": "PARTITION",
+            "value": "RANDOM",
+            "rawLine": "PARTITION: RANDOM",
+            "lineNumber": 16
+          },
+          {
+            "name": "HAS_COLO_PLAN_NODE",
+            "value": "false",
+            "rawLine": "HAS_COLO_PLAN_NODE: false",
+            "lineNumber": 17
+          }
+        ],
+        "rawLines": [
+          "PLAN FRAGMENT 1",
+          "PARTITION: RANDOM",
+          "HAS_COLO_PLAN_NODE: false"
+        ],
+        "extra": {
+          "headerLine": 15
+        }
+      },
+      {
+        "id": "2",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": null,
+        "root": null,
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 2",
+          "..."
+        ],
+        "extra": {
+          "headerLine": 41,
+          "rawLines": [
+            "..."
+          ]
+        }
+      },
+      {
+        "id": "3",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": null,
+        "root": null,
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 3",
+          "..."
+        ],
+        "extra": {
+          "headerLine": 44,
+          "rawLines": [
+            "..."
+          ]
+        }
+      }
+    ],
+    "exchangeEdges": [
+      {
+        "fromFragment": "1",
+        "exchangeId": "07",
+        "distribution": "UNPARTITIONED",
+        "sinkType": "STREAM DATA SINK",
+        "targetExchangeNode": {
+          "fragmentId": "0",
+          "operationId": "7"
+        },
+        "resolution": "matched",
+        "candidates": [
+          {
+            "fragmentId": "0",
+            "operationId": "7"
+          }
+        ]
+      }
+    ],
+    "raw": "PLAN FRAGMENT 0\nOUTPUT EXPRS:\ncnt[#10]\ncnt[#11]\nPARTITION: UNPARTITIONED\nHAS_COLO_PLAN_NODE: false\n\nVRESULT SINK\nMYSQL_PROTOCAL\n\n7:VEXCHANGE\noffset: 0\ndistribute expr lists:\n\nPLAN FRAGMENT 1\nPARTITION: RANDOM\nHAS_COLO_PLAN_NODE: false\n\nSTREAM DATA SINK\nEXCHANGE ID: 07\nUNPARTITIONED\n\n6:VHASH JOIN(354)\njoin op: INNER JOIN(BROADCAST)[]\nequal join conjunct: cnt[#7] = cnt[#5]\ncardinality=1\nvec output tuple id: 8\nvIntermediate tuple ids: 7\nhash output slot ids: 5 7\ndistribute expr lists:\ndistribute expr lists:\n\n|----4:VEXCHANGE\noffset: 0\ndistribute expr lists:\n|\n5:VEXCHANGE\noffset: 0\ndistribute expr lists:\n\nPLAN FRAGMENT 2\n...\n\nPLAN FRAGMENT 3\n...\n",
+    "extraLines": []
+  },
+  "normalized": {
+    "database": "doris",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "Doris Distributed Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "structural",
+          "nodeType": "Fragment 0",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "exchange",
+              "nodeType": "VEXCHANGE",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "0",
+                  "operationId": "7",
+                  "operator": "VEXCHANGE",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": "0",
+                  "properties": [
+                    {
+                      "name": "offset",
+                      "value": "0",
+                      "rawLine": "offset: 0",
+                      "lineNumber": 12
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 13
+                    }
+                  ],
+                  "rawLines": [
+                    "7:VEXCHANGE",
+                    "offset: 0",
+                    "distribute expr lists:"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "0",
+                  "operationId": "7",
+                  "operator": "VEXCHANGE",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": "0",
+                  "properties": [
+                    {
+                      "name": "offset",
+                      "value": "0",
+                      "rawLine": "offset: 0",
+                      "lineNumber": 12
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 13
+                    }
+                  ],
+                  "rawLines": [
+                    "7:VEXCHANGE",
+                    "offset: 0",
+                    "distribute expr lists:"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": "UNPARTITIONED",
+              "outputExpressions": [
+                "cnt[#10]",
+                "cnt[#11]"
+              ],
+              "hasColoPlanNode": false,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [
+                {
+                  "name": null,
+                  "value": "MYSQL_PROTOCAL",
+                  "rawLine": "MYSQL_PROTOCAL",
+                  "lineNumber": 9
+                }
+              ],
+              "sinkRawLines": [
+                "VRESULT SINK",
+                "MYSQL_PROTOCAL"
+              ],
+              "properties": [
+                {
+                  "name": "OUTPUT EXPRS",
+                  "value": "",
+                  "rawLine": "OUTPUT EXPRS:",
+                  "lineNumber": 2
+                },
+                {
+                  "name": "PARTITION",
+                  "value": "UNPARTITIONED",
+                  "rawLine": "PARTITION: UNPARTITIONED",
+                  "lineNumber": 5
+                },
+                {
+                  "name": "HAS_COLO_PLAN_NODE",
+                  "value": "false",
+                  "rawLine": "HAS_COLO_PLAN_NODE: false",
+                  "lineNumber": 6
+                }
+              ],
+              "rawLines": [
+                "PLAN FRAGMENT 0",
+                "OUTPUT EXPRS:",
+                "cnt[#10]",
+                "cnt[#11]",
+                "PARTITION: UNPARTITIONED",
+                "HAS_COLO_PLAN_NODE: false"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": "UNPARTITIONED",
+              "outputExpressions": [
+                "cnt[#10]",
+                "cnt[#11]"
+              ],
+              "hasColoPlanNode": false,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [
+                {
+                  "name": null,
+                  "value": "MYSQL_PROTOCAL",
+                  "rawLine": "MYSQL_PROTOCAL",
+                  "lineNumber": 9
+                }
+              ],
+              "sinkRawLines": [
+                "VRESULT SINK",
+                "MYSQL_PROTOCAL"
+              ],
+              "properties": [
+                {
+                  "name": "OUTPUT EXPRS",
+                  "value": "",
+                  "rawLine": "OUTPUT EXPRS:",
+                  "lineNumber": 2
+                },
+                {
+                  "name": "PARTITION",
+                  "value": "UNPARTITIONED",
+                  "rawLine": "PARTITION: UNPARTITIONED",
+                  "lineNumber": 5
+                },
+                {
+                  "name": "HAS_COLO_PLAN_NODE",
+                  "value": "false",
+                  "rawLine": "HAS_COLO_PLAN_NODE: false",
+                  "lineNumber": 6
+                }
+              ],
+              "rawLines": [
+                "PLAN FRAGMENT 0",
+                "OUTPUT EXPRS:",
+                "cnt[#10]",
+                "cnt[#11]",
+                "PARTITION: UNPARTITIONED",
+                "HAS_COLO_PLAN_NODE: false"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "structural",
+          "nodeType": "Fragment 1",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.1.0",
+              "kind": "hash_join",
+              "nodeType": "VHASH JOIN(354)",
+              "relation": null,
+              "estimatedRows": 1,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": "INNER JOIN",
+              "joinCondition": "cnt[#7] = cnt[#5]",
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.1.0.0",
+                  "kind": "exchange",
+                  "nodeType": "VEXCHANGE",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "1",
+                      "operationId": "5",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 38
+                        },
+                        {
+                          "name": "distribute expr lists",
+                          "value": "",
+                          "rawLine": "distribute expr lists:",
+                          "lineNumber": 39
+                        }
+                      ],
+                      "rawLines": [
+                        "5:VEXCHANGE",
+                        "offset: 0",
+                        "distribute expr lists:"
+                      ],
+                      "extra": {
+                        "headerColumn": 0,
+                        "branchColumn": null,
+                        "branchConnector": false
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "1",
+                      "operationId": "5",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 38
+                        },
+                        {
+                          "name": "distribute expr lists",
+                          "value": "",
+                          "rawLine": "distribute expr lists:",
+                          "lineNumber": 39
+                        }
+                      ],
+                      "rawLines": [
+                        "5:VEXCHANGE",
+                        "offset: 0",
+                        "distribute expr lists:"
+                      ],
+                      "extra": {
+                        "headerColumn": 0,
+                        "branchColumn": null,
+                        "branchConnector": false
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "0.1.0.1",
+                  "kind": "exchange",
+                  "nodeType": "VEXCHANGE",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "1",
+                      "operationId": "4",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 34
+                        },
+                        {
+                          "name": "distribute expr lists",
+                          "value": "",
+                          "rawLine": "distribute expr lists:",
+                          "lineNumber": 35
+                        }
+                      ],
+                      "rawLines": [
+                        "|----4:VEXCHANGE",
+                        "offset: 0",
+                        "distribute expr lists:"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "1",
+                      "operationId": "4",
+                      "operator": "VEXCHANGE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": "0",
+                      "properties": [
+                        {
+                          "name": "offset",
+                          "value": "0",
+                          "rawLine": "offset: 0",
+                          "lineNumber": 34
+                        },
+                        {
+                          "name": "distribute expr lists",
+                          "value": "",
+                          "rawLine": "distribute expr lists:",
+                          "lineNumber": 35
+                        }
+                      ],
+                      "rawLines": [
+                        "|----4:VEXCHANGE",
+                        "offset: 0",
+                        "distribute expr lists:"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "1",
+                  "operationId": "6",
+                  "operator": "VHASH JOIN(354)",
+                  "cardinality": "1",
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "INNER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [
+                    "cnt[#7] = cnt[#5]"
+                  ],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "INNER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+                      "lineNumber": 24
+                    },
+                    {
+                      "name": "equal join conjunct",
+                      "value": "cnt[#7] = cnt[#5]",
+                      "rawLine": "equal join conjunct: cnt[#7] = cnt[#5]",
+                      "lineNumber": 25
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "1",
+                      "rawLine": "cardinality=1",
+                      "lineNumber": 26
+                    },
+                    {
+                      "name": "vec output tuple id",
+                      "value": "8",
+                      "rawLine": "vec output tuple id: 8",
+                      "lineNumber": 27
+                    },
+                    {
+                      "name": "vIntermediate tuple ids",
+                      "value": "7",
+                      "rawLine": "vIntermediate tuple ids: 7",
+                      "lineNumber": 28
+                    },
+                    {
+                      "name": "hash output slot ids",
+                      "value": "5 7",
+                      "rawLine": "hash output slot ids: 5 7",
+                      "lineNumber": 29
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 30
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 31
+                    }
+                  ],
+                  "rawLines": [
+                    "6:VHASH JOIN(354)",
+                    "join op: INNER JOIN(BROADCAST)[]",
+                    "equal join conjunct: cnt[#7] = cnt[#5]",
+                    "cardinality=1",
+                    "vec output tuple id: 8",
+                    "vIntermediate tuple ids: 7",
+                    "hash output slot ids: 5 7",
+                    "distribute expr lists:",
+                    "distribute expr lists:"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "1",
+                  "operationId": "6",
+                  "operator": "VHASH JOIN(354)",
+                  "cardinality": "1",
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": "INNER JOIN(BROADCAST)[]",
+                  "joinStrategy": "BROADCAST",
+                  "distributionMode": "BROADCAST",
+                  "equalJoinConjuncts": [
+                    "cnt[#7] = cnt[#5]"
+                  ],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "join op",
+                      "value": "INNER JOIN(BROADCAST)[]",
+                      "rawLine": "join op: INNER JOIN(BROADCAST)[]",
+                      "lineNumber": 24
+                    },
+                    {
+                      "name": "equal join conjunct",
+                      "value": "cnt[#7] = cnt[#5]",
+                      "rawLine": "equal join conjunct: cnt[#7] = cnt[#5]",
+                      "lineNumber": 25
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "1",
+                      "rawLine": "cardinality=1",
+                      "lineNumber": 26
+                    },
+                    {
+                      "name": "vec output tuple id",
+                      "value": "8",
+                      "rawLine": "vec output tuple id: 8",
+                      "lineNumber": 27
+                    },
+                    {
+                      "name": "vIntermediate tuple ids",
+                      "value": "7",
+                      "rawLine": "vIntermediate tuple ids: 7",
+                      "lineNumber": 28
+                    },
+                    {
+                      "name": "hash output slot ids",
+                      "value": "5 7",
+                      "rawLine": "hash output slot ids: 5 7",
+                      "lineNumber": 29
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 30
+                    },
+                    {
+                      "name": "distribute expr lists",
+                      "value": "",
+                      "rawLine": "distribute expr lists:",
+                      "lineNumber": 31
+                    }
+                  ],
+                  "rawLines": [
+                    "6:VHASH JOIN(354)",
+                    "join op: INNER JOIN(BROADCAST)[]",
+                    "equal join conjunct: cnt[#7] = cnt[#5]",
+                    "cardinality=1",
+                    "vec output tuple id: 8",
+                    "vIntermediate tuple ids: 7",
+                    "hash output slot ids: 5 7",
+                    "distribute expr lists:",
+                    "distribute expr lists:"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "1",
+              "description": null,
+              "partition": "RANDOM",
+              "outputExpressions": [],
+              "hasColoPlanNode": false,
+              "sinkType": "STREAM DATA SINK",
+              "sinkExchangeId": "07",
+              "sinkDistribution": "UNPARTITIONED",
+              "sinkProperties": [
+                {
+                  "name": "EXCHANGE ID",
+                  "value": "07",
+                  "rawLine": "EXCHANGE ID: 07",
+                  "lineNumber": 20
+                },
+                {
+                  "name": null,
+                  "value": "UNPARTITIONED",
+                  "rawLine": "UNPARTITIONED",
+                  "lineNumber": 21
+                }
+              ],
+              "sinkRawLines": [
+                "STREAM DATA SINK",
+                "EXCHANGE ID: 07",
+                "UNPARTITIONED"
+              ],
+              "properties": [
+                {
+                  "name": "PARTITION",
+                  "value": "RANDOM",
+                  "rawLine": "PARTITION: RANDOM",
+                  "lineNumber": 16
+                },
+                {
+                  "name": "HAS_COLO_PLAN_NODE",
+                  "value": "false",
+                  "rawLine": "HAS_COLO_PLAN_NODE: false",
+                  "lineNumber": 17
+                }
+              ],
+              "rawLines": [
+                "PLAN FRAGMENT 1",
+                "PARTITION: RANDOM",
+                "HAS_COLO_PLAN_NODE: false"
+              ],
+              "extra": {
+                "headerLine": 15
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "1",
+              "description": null,
+              "partition": "RANDOM",
+              "outputExpressions": [],
+              "hasColoPlanNode": false,
+              "sinkType": "STREAM DATA SINK",
+              "sinkExchangeId": "07",
+              "sinkDistribution": "UNPARTITIONED",
+              "sinkProperties": [
+                {
+                  "name": "EXCHANGE ID",
+                  "value": "07",
+                  "rawLine": "EXCHANGE ID: 07",
+                  "lineNumber": 20
+                },
+                {
+                  "name": null,
+                  "value": "UNPARTITIONED",
+                  "rawLine": "UNPARTITIONED",
+                  "lineNumber": 21
+                }
+              ],
+              "sinkRawLines": [
+                "STREAM DATA SINK",
+                "EXCHANGE ID: 07",
+                "UNPARTITIONED"
+              ],
+              "properties": [
+                {
+                  "name": "PARTITION",
+                  "value": "RANDOM",
+                  "rawLine": "PARTITION: RANDOM",
+                  "lineNumber": 16
+                },
+                {
+                  "name": "HAS_COLO_PLAN_NODE",
+                  "value": "false",
+                  "rawLine": "HAS_COLO_PLAN_NODE: false",
+                  "lineNumber": 17
+                }
+              ],
+              "rawLines": [
+                "PLAN FRAGMENT 1",
+                "PARTITION: RANDOM",
+                "HAS_COLO_PLAN_NODE: false"
+              ],
+              "extra": {
+                "headerLine": 15
+              }
+            }
+          }
+        },
+        {
+          "id": "0.2",
+          "kind": "structural",
+          "nodeType": "Fragment 2",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "2",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": null,
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 2",
+                "..."
+              ],
+              "extra": {
+                "headerLine": 41,
+                "rawLines": [
+                  "..."
+                ]
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "2",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": null,
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 2",
+                "..."
+              ],
+              "extra": {
+                "headerLine": 41,
+                "rawLines": [
+                  "..."
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "0.3",
+          "kind": "structural",
+          "nodeType": "Fragment 3",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "3",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": null,
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 3",
+                "..."
+              ],
+              "extra": {
+                "headerLine": 44,
+                "rawLines": [
+                  "..."
+                ]
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "3",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": null,
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 3",
+                "..."
+              ],
+              "extra": {
+                "headerLine": 44,
+                "rawLines": [
+                  "..."
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "doris",
+        "structural": true,
+        "doris": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 4,
+          "exchangeEdges": [
+            {
+              "fromFragment": "1",
+              "exchangeId": "07",
+              "distribution": "UNPARTITIONED",
+              "sinkType": "STREAM DATA SINK",
+              "targetExchangeNode": {
+                "fragmentId": "0",
+                "operationId": "7"
+              },
+              "resolution": "matched",
+              "candidates": [
+                {
+                  "fragmentId": "0",
+                  "operationId": "7"
+                }
+              ]
+            }
+          ],
+          "extraLines": []
+        },
+        "extra": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 4,
+          "exchangeEdges": [
+            {
+              "fromFragment": "1",
+              "exchangeId": "07",
+              "distribution": "UNPARTITIONED",
+              "sinkType": "STREAM DATA SINK",
+              "targetExchangeNode": {
+                "fragmentId": "0",
+                "operationId": "7"
+              },
+              "resolution": "matched",
+              "candidates": [
+                {
+                  "fragmentId": "0",
+                  "operationId": "7"
+                }
+              ]
+            }
+          ],
+          "extraLines": []
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.1.0",
+      "kind": "hash_join",
+      "nodeType": "VHASH JOIN(354)",
+      "relation": null,
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

@@ -1,0 +1,15 @@
+PLAN FRAGMENT 0
+VRESULT SINK
+90:VHASH JOIN(77)
+join op: LEFT OUTER JOIN(BROADCAST)[]
+cardinality=900
+|----20:VAGGREGATE
+group by: [customer_id]
+|    |----12:VEXCHANGE
+offset: 0
+|    |
+|    11:VAGGREGATE
+group by: [region]
+|
+|----30:VFutureOperator(55)
+future property: preserved

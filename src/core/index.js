@@ -31,10 +31,21 @@ export { parseDamengTextPlan } from "./dameng/parse-text-plan.js";
 export { normalizeDamengPlan } from "./normalize/normalize-dameng.js";
 export { parseQuestDbTextPlan, tokenizeQuestDbPlan } from "./questdb/parse-text-plan.js";
 export { normalizeQuestDbPlan } from "./normalize/normalize-questdb.js";
+export { parseDorisTextPlan, tokenizeDorisPlan } from "./doris/parse-text-plan.js";
+export { normalizeDorisPlan } from "./normalize/normalize-doris.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";
 export { runRules, RULES } from "./rules/index.js";
 export { LARGE_SEQUENTIAL_SCAN, EXPENSIVE_SORT, NESTED_LOOP_LARGE_INNER } from "./rules/thresholds.js";
 export { createFinding, nodeEvidence, SEVERITIES } from "./findings/finding.js";
-export { walkNodes, flattenNodes, depthOf, incrementalCostOf } from "./tree.js";
+export {
+  walkNodes,
+  flattenNodes,
+  walkOperatorNodes,
+  flattenOperatorNodes,
+  isStructuralNode,
+  depthOf,
+  operatorDepthOf,
+  incrementalCostOf,
+} from "./tree.js";

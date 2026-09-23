@@ -17,6 +17,7 @@ const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", n
 const mysqlV2Fixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-inputs-v2.synthetic" });
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 const questDbFixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
+const dorisFixture = await loadFixture({ database: "doris", mode: "estimated", name: "distributed-hash-join" });
 
 function capabilities(overrides = {}) {
   return {
@@ -209,18 +210,22 @@ test("the session waits for init instead of probing a pre-init bridge", async ()
   assert.equal(called, 2, "after init the session reads capabilities then the plan");
 });
 
-test("runHostAnalysis keeps the raw host result for a raw-only dialect", async () => {
+test("runHostAnalysis parses Doris estimated text from the Host response and retains raw payload", async () => {
   const bridge = fakeBridge({
     getPlanCapabilities: async () => capabilities({ dbType: "doris" }),
-    explainPlan: async () => planResult({ dbType: "doris", format: "text", rawPlan: "| 0 | SELECT STATEMENT |" }),
+    explainPlan: async () => planResult({ dbType: "doris", dbVersion: "4.x", format: "text", rawPlan: dorisFixture.input.plan }),
   });
 
   const session = await runHostAnalysis({ ...REQUEST, bridge });
-  assert.equal(session.status, "raw-only");
+  assert.equal(session.status, "structured");
   assert.equal(session.rawInput.database, "doris");
-  assert.equal(session.analysis.reasonCode, "PARSER_NOT_IMPLEMENTED");
+  assert.equal(session.rawInput.format, "text");
+  assert.equal(session.analysis.parser, "doris");
+  assert.equal(session.analysis.normalized.root.kind, "structural");
+  assert.equal(session.analysis.normalized.root.engineSpecific.structural, true);
+  assert.equal(session.analysis.metrics.costAttribution.status, "not-applicable");
   assert.deepEqual(session.analysis.findings, []);
-  assert.equal(session.hostResult.rawPlan, "| 0 | SELECT STATEMENT |");
+  assert.equal(session.hostResult.rawPlan, dorisFixture.input.plan);
 });
 
 test("runHostAnalysis runs the structured pipeline for a SQL Server ShowPlanXML host response", async () => {

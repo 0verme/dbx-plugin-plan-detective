@@ -25,8 +25,8 @@ import { formatNumber, formatPercent, formatRawValue } from "./format.js";
 const SUMMARY_ROWS = Object.freeze([
   { key: "totalEstimatedCost", label: "Total Estimated Cost", hint: "根节点 total cost（planner 估算，非运行时耗时）" },
   { key: "rootEstimatedRows", label: "Root Estimated Rows", hint: "根节点估算行数" },
-  { key: "nodeCount", label: "Node Count", hint: "计划树节点总数" },
-  { key: "maxDepth", label: "Max Depth", hint: "最长 root-to-leaf 路径（单节点 = 1）" },
+  { key: "nodeCount", label: "Node Count", hint: "operator 节点数；不计 structural 容器" },
+  { key: "maxDepth", label: "Max Depth", hint: "最长 operator root-to-leaf 路径（不计 structural 容器；单节点 = 1）" },
   { key: "scanCount", label: "Scan Count", hint: "全部 scan 类节点" },
   { key: "sequentialScanCount", label: "Sequential Scan Count", hint: "Seq Scan 节点" },
   { key: "indexScanCount", label: "Index Scan Count", hint: "Index Scan + Index Only Scan" },
@@ -577,9 +577,9 @@ export function buildNodeInspector(node) {
 
 /**
  * Engine-specific fields. PostgreSQL, MySQL, SQL Server, OceanBase Oracle,
- * Oracle, Dameng and QuestDB keep their own vocabularies: the panel renders whatever
- * the node's normalizer actually reported and never renames one engine's fields
- * into another's.
+ * Oracle, Dameng and QuestDB keep their own vocabularies; Doris native metadata
+ * is rendered through the generic extra-fields group. The panel renders what
+ * each node's normalizer reported and never renames one engine's fields into another's.
  *
  * @param {Record<string, any>} engine
  * @returns {Array<{ label: string, value: string }|null>}

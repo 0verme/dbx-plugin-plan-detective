@@ -1,0 +1,26 @@
+{
+  "database": "doris",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Doris EXPLAIN operators selected from the documented SORT, AGGREGATE, SELECT and OlapScanNode operator catalog; no database was used.",
+    "reference": "https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN/"
+  },
+  "features": [
+    "common operator kind mappings",
+    "sort keys and aggregate group keys",
+    "filter property mapping",
+    "cardinality estimate and relation name mapping"
+  ],
+  "expect": {
+    "rootNodeType": "Doris Distributed Plan",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": []
+  }
+}

@@ -1,0 +1,451 @@
+{
+  "parsed": {
+    "database": "doris",
+    "format": "text",
+    "mode": "estimated",
+    "fragments": [
+      {
+        "id": "0",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": {
+          "type": "VRESULT SINK",
+          "exchangeId": null,
+          "distribution": null,
+          "properties": [],
+          "rawLines": [
+            "VRESULT SINK"
+          ],
+          "extra": {
+            "headerLine": 2
+          }
+        },
+        "root": {
+          "operationId": "1",
+          "operator": "VOlapScanNode",
+          "rawOperator": "VOlapScanNode",
+          "properties": [
+            {
+              "name": "TABLE",
+              "value": "catalog.db.orders",
+              "rawLine": "TABLE: catalog.db.orders",
+              "lineNumber": 4
+            },
+            {
+              "name": "cardinality",
+              "value": "unknown",
+              "rawLine": "cardinality: unknown",
+              "lineNumber": 5
+            },
+            {
+              "name": "avgRowSize",
+              "value": "40.5",
+              "rawLine": "avgRowSize: 40.5",
+              "lineNumber": 6
+            },
+            {
+              "name": "numNodes",
+              "value": "3",
+              "rawLine": "numNodes: 3",
+              "lineNumber": 7
+            },
+            {
+              "name": "partitions",
+              "value": "2/6 [p1, p2]",
+              "rawLine": "partitions: 2/6 [p1, p2]",
+              "lineNumber": 8
+            },
+            {
+              "name": "tablets",
+              "value": "14/96",
+              "rawLine": "tablets: 14/96",
+              "lineNumber": 9
+            },
+            {
+              "name": "future optimizer flag",
+              "value": "enabled",
+              "rawLine": "future optimizer flag: enabled",
+              "lineNumber": 10
+            }
+          ],
+          "children": [],
+          "rawLines": [
+            "1:VOlapScanNode",
+            "TABLE: catalog.db.orders",
+            "cardinality: unknown",
+            "avgRowSize: 40.5",
+            "numNodes: 3",
+            "partitions: 2/6 [p1, p2]",
+            "tablets: 14/96",
+            "future optimizer flag: enabled",
+            "unclassified detail from a later Doris version"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false,
+            "unclassifiedLines": [
+              "unclassified detail from a later Doris version"
+            ]
+          }
+        },
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 0"
+        ],
+        "extra": {
+          "headerLine": 1
+        }
+      }
+    ],
+    "exchangeEdges": [],
+    "raw": "PLAN FRAGMENT 0\nVRESULT SINK\n1:VOlapScanNode\nTABLE: catalog.db.orders\ncardinality: unknown\navgRowSize: 40.5\nnumNodes: 3\npartitions: 2/6 [p1, p2]\ntablets: 14/96\nfuture optimizer flag: enabled\nunclassified detail from a later Doris version\n",
+    "extraLines": []
+  },
+  "normalized": {
+    "database": "doris",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "Doris Distributed Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "structural",
+          "nodeType": "Fragment 0",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "scan",
+              "nodeType": "VOlapScanNode",
+              "relation": {
+                "name": "catalog.db.orders",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "0",
+                  "operationId": "1",
+                  "operator": "VOlapScanNode",
+                  "cardinality": "unknown",
+                  "avgRowSize": "40.5",
+                  "table": "catalog.db.orders",
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": "2/6 [p1, p2]",
+                  "tablets": "14/96",
+                  "tabletList": null,
+                  "numNodes": 3,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "TABLE",
+                      "value": "catalog.db.orders",
+                      "rawLine": "TABLE: catalog.db.orders",
+                      "lineNumber": 4
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "unknown",
+                      "rawLine": "cardinality: unknown",
+                      "lineNumber": 5
+                    },
+                    {
+                      "name": "avgRowSize",
+                      "value": "40.5",
+                      "rawLine": "avgRowSize: 40.5",
+                      "lineNumber": 6
+                    },
+                    {
+                      "name": "numNodes",
+                      "value": "3",
+                      "rawLine": "numNodes: 3",
+                      "lineNumber": 7
+                    },
+                    {
+                      "name": "partitions",
+                      "value": "2/6 [p1, p2]",
+                      "rawLine": "partitions: 2/6 [p1, p2]",
+                      "lineNumber": 8
+                    },
+                    {
+                      "name": "tablets",
+                      "value": "14/96",
+                      "rawLine": "tablets: 14/96",
+                      "lineNumber": 9
+                    },
+                    {
+                      "name": "future optimizer flag",
+                      "value": "enabled",
+                      "rawLine": "future optimizer flag: enabled",
+                      "lineNumber": 10
+                    }
+                  ],
+                  "rawLines": [
+                    "1:VOlapScanNode",
+                    "TABLE: catalog.db.orders",
+                    "cardinality: unknown",
+                    "avgRowSize: 40.5",
+                    "numNodes: 3",
+                    "partitions: 2/6 [p1, p2]",
+                    "tablets: 14/96",
+                    "future optimizer flag: enabled",
+                    "unclassified detail from a later Doris version"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false,
+                    "unclassifiedLines": [
+                      "unclassified detail from a later Doris version"
+                    ]
+                  }
+                },
+                "extra": {
+                  "fragmentId": "0",
+                  "operationId": "1",
+                  "operator": "VOlapScanNode",
+                  "cardinality": "unknown",
+                  "avgRowSize": "40.5",
+                  "table": "catalog.db.orders",
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": "2/6 [p1, p2]",
+                  "tablets": "14/96",
+                  "tabletList": null,
+                  "numNodes": 3,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "TABLE",
+                      "value": "catalog.db.orders",
+                      "rawLine": "TABLE: catalog.db.orders",
+                      "lineNumber": 4
+                    },
+                    {
+                      "name": "cardinality",
+                      "value": "unknown",
+                      "rawLine": "cardinality: unknown",
+                      "lineNumber": 5
+                    },
+                    {
+                      "name": "avgRowSize",
+                      "value": "40.5",
+                      "rawLine": "avgRowSize: 40.5",
+                      "lineNumber": 6
+                    },
+                    {
+                      "name": "numNodes",
+                      "value": "3",
+                      "rawLine": "numNodes: 3",
+                      "lineNumber": 7
+                    },
+                    {
+                      "name": "partitions",
+                      "value": "2/6 [p1, p2]",
+                      "rawLine": "partitions: 2/6 [p1, p2]",
+                      "lineNumber": 8
+                    },
+                    {
+                      "name": "tablets",
+                      "value": "14/96",
+                      "rawLine": "tablets: 14/96",
+                      "lineNumber": 9
+                    },
+                    {
+                      "name": "future optimizer flag",
+                      "value": "enabled",
+                      "rawLine": "future optimizer flag: enabled",
+                      "lineNumber": 10
+                    }
+                  ],
+                  "rawLines": [
+                    "1:VOlapScanNode",
+                    "TABLE: catalog.db.orders",
+                    "cardinality: unknown",
+                    "avgRowSize: 40.5",
+                    "numNodes: 3",
+                    "partitions: 2/6 [p1, p2]",
+                    "tablets: 14/96",
+                    "future optimizer flag: enabled",
+                    "unclassified detail from a later Doris version"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false,
+                    "unclassifiedLines": [
+                      "unclassified detail from a later Doris version"
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "doris",
+        "structural": true,
+        "doris": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        },
+        "extra": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}
