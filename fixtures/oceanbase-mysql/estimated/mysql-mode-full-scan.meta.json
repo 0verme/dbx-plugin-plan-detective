@@ -1,0 +1,31 @@
+{
+  "database": "oceanbase-mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "5.7.25-OceanBase-v4.2.5.7",
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "real",
+    "detail": "真实 OceanBase 4.2.5.7 MySQL compatibility-mode 环境的问题报告提供的脱敏执行计划样本；业务表名使用 t_field_error_log，未提供原始 SQL / 采集时间，且本环境未连接数据库独立复现。",
+    "reference": null
+  },
+  "features": [
+    "real user-reported OceanBase MySQL JSON plan",
+    "TABLE FULL SCAN",
+    "EST.ROWS and EST.TIME(us) preservation",
+    "sanitized business identifiers"
+  ],
+  "expect": {
+    "rootNodeType": "TABLE FULL SCAN",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [
+      "large-sequential-scan"
+    ],
+    "hotspotNodeRefs": [
+      "0"
+    ]
+  }
+}

@@ -18,6 +18,7 @@ import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
 import { mysqlParser } from "./mysql.js";
+import { oceanBaseMysqlParser } from "./oceanbase-mysql.js";
 import { oceanBaseOracleParser } from "./oceanbase-oracle.js";
 import { oracleParser } from "./oracle.js";
 import { postgresParser } from "./postgres.js";
@@ -34,6 +35,7 @@ const PARSERS = new Map([
   [mysqlParser.database, mysqlParser],
   [sqlserverParser.database, sqlserverParser],
   [oceanBaseOracleParser.database, oceanBaseOracleParser],
+  [oceanBaseMysqlParser.database, oceanBaseMysqlParser],
   [oracleParser.database, oracleParser],
   [damengParser.database, damengParser],
   [questDbParser.database, questDbParser],

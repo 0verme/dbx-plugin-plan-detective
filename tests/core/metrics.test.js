@@ -362,6 +362,31 @@ test("OceanBase Oracle keeps the PostgreSQL incremental-cost metric not-applicab
   assert.equal(metrics.highestIncrementalCost, null);
 });
 
+test("OceanBase MySQL keeps the PostgreSQL incremental-cost metric not-applicable", () => {
+  const plan = normalizedPlan({
+    database: "oceanbase-mysql",
+    root: normalizedNode({
+      kind: "seq_scan",
+      nodeType: "TABLE FULL SCAN",
+      totalCost: null,
+      engineSpecific: {
+        database: "oceanbase-mysql",
+        oceanBase: { id: 0, operator: "TABLE FULL SCAN", name: "T_ORDERS", estimatedRows: 47_383, estimatedTimeUs: 312_576, cost: null, output: null },
+        extra: {},
+      },
+    }),
+  });
+
+  const metrics = computeMetrics(plan);
+  assert.deepEqual(metrics.costAttribution, {
+    engine: "oceanbase-mysql",
+    status: "not-applicable",
+    reason: "NOT_POSTGRES_COST_MODEL",
+  });
+  assert.equal(metrics.totalEstimatedCost, null);
+  assert.equal(metrics.highestIncrementalCost, null);
+});
+
 test("computeMetrics reports unknown node types from the normalized plan", () => {  const plan = normalizedPlan({ unknownNodeTypes: ["Future Shuffle Node", "Another Future Node"] });
   assert.equal(computeMetrics(plan).unknownNodeTypeCount, 2);
 });

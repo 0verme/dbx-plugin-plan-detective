@@ -1,5 +1,5 @@
 /**
- * OceanBase Oracle `EXPLAIN FORMAT=JSON` parser (JSON -> ParsedPlan).
+ * OceanBase `EXPLAIN FORMAT=JSON` parser (JSON -> ParsedPlan).
  *
  * Pipeline position:
  *
@@ -10,8 +10,9 @@
  * other key verbatim, because OceanBase's JSON explain carries the whole
  * "Outputs & filters" (extended / partition) block as additional members.
  *
- * Shape (verified against OceanBase's Oracle-mode `EXPLAIN` reference and
- * the engine's own JSON plan writer, not against a locally captured sample):
+ * Shape is shared by OceanBase Oracle and MySQL compatibility modes. The
+ * Oracle-mode reference and engine JSON plan writer establish the common
+ * fields; real MySQL-mode evidence is pinned by its sanitized fixture.
  *
  * ```json
  * {
@@ -54,6 +55,9 @@
 import { PlanInputError, PlanParseError } from "../errors.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 
+/** OceanBase compatibility-mode families handled by the shared JSON plan pipeline. */
+const OCEANBASE_DATABASES = new Set(["oceanbase-oracle", "oceanbase-mysql"]);
+
 /** Child member name. `<n>` is the child's plan position, not a tree index. */
 const CHILD_KEY = /^CHILD_(\d+)$/;
 
@@ -78,14 +82,14 @@ const PLACEHOLDER_OPERATOR = "Plan";
  * @property {Record<string, unknown>} extra every unmapped member, verbatim
  *
  * @typedef {Object} ParsedPlan
- * @property {"oceanbase-oracle"} database
+ * @property {"oceanbase-oracle"|"oceanbase-mysql"} database
  * @property {"json"} format
  * @property {"estimated"} mode
  * @property {ParsedOceanBaseNode} root
  */
 
 /**
- * Parse an OceanBase Oracle JSON estimated plan.
+ * Parse an OceanBase JSON estimated plan while preserving its compatibility-mode family.
  *
  * @param {unknown} input a RawPlanInput
  * @returns {ParsedPlan}
@@ -99,13 +103,20 @@ export function parseOceanBaseJsonPlan(input) {
     throw new PlanInputError("INVALID_RAW_PLAN_INPUT", `Invalid RawPlanInput: ${problems.join(" ")}`);
   }
 
-  // Contract validation guarantees database "oceanbase-oracle" and format "json".
-  const { mode, plan } = /** @type {import("../raw-plan-input.js").RawPlanInput} */ (input);
+  const rawInput = /** @type {import("../raw-plan-input.js").RawPlanInput} */ (input);
+  if (!OCEANBASE_DATABASES.has(rawInput.database) || rawInput.format !== "json") {
+    throw new PlanInputError(
+      "INVALID_RAW_PLAN_INPUT",
+      'OceanBase JSON parser requires database "oceanbase-oracle" or "oceanbase-mysql" and format "json".',
+    );
+  }
+  const { database, mode, plan } = rawInput;
+  const databaseLabel = database === "oceanbase-oracle" ? "OceanBase Oracle" : "OceanBase MySQL";
 
   if (mode !== "estimated") {
     throw new PlanParseError(
       "MODE_MISMATCH",
-      'OceanBase Oracle plans are parsed in mode "estimated" only; the host never returns runtime counters for them.',
+      `${databaseLabel} plans are parsed in mode "estimated" only; the host never returns runtime counters for them.`,
     );
   }
 
@@ -113,19 +124,19 @@ export function parseOceanBaseJsonPlan(input) {
   if (root === null) {
     throw new PlanParseError(
       "MALFORMED_PLAN",
-      `OceanBase Oracle plan payload must be the JSON plan object the host returned; got ${describeValue(plan)}.`,
+      `${databaseLabel} plan payload must be the JSON plan object the host returned; got ${describeValue(plan)}.`,
     );
   }
 
   if (!looksLikePlanNode(root)) {
     throw new PlanParseError(
       "MALFORMED_PLAN",
-      "OceanBase Oracle plan payload is an object but carries none of the plan members " +
+      `${databaseLabel} plan payload is an object but carries none of the plan members ` +
         `(${MAPPED_KEYS.join(", ")}) or a CHILD_<n> member; it is not a plan node.`,
     );
   }
 
-  return { database: "oceanbase-oracle", format: "json", mode, root: parseNode(root) };
+  return { database, format: "json", mode, root: parseNode(root) };
 }
 
 /**

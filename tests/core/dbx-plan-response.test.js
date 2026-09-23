@@ -77,6 +77,31 @@ test("adapter output exposes exactly the RawPlanInput contract", () => {
   assert.deepEqual(Object.keys(input).sort(), ["database", "databaseVersion", "format", "mode", "plan"]);
 });
 
+test("maps Native MySQL and OceanBase MySQL conservatively from dbType plus dbVersion", () => {
+  for (const dbVersion of ["8.0.36", "5.7.44"]) {
+    assert.equal(adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "mysql", dbVersion })).database, "mysql");
+  }
+
+  const oceanBaseVersion = "5.7.25-OceanBase-v4.2.5.7";
+  const oceanBase = adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "mysql", dbVersion: oceanBaseVersion }));
+  assert.equal(oceanBase.database, "oceanbase-mysql");
+  assert.equal(oceanBase.databaseVersion, oceanBaseVersion);
+
+  const mixedCase = adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "mysql", dbVersion: "5.7.25-oCeAnBaSe-v4.2.5.7" }));
+  assert.equal(mixedCase.database, "oceanbase-mysql", "OceanBase version evidence is case-insensitive");
+});
+
+test("does not infer OceanBase from Raw Plan shape when dbVersion has no OceanBase evidence", () => {
+  const input = adaptDbxEstimatedPlanResponse(
+    dbxResponse({
+      dbType: "mysql",
+      dbVersion: undefined,
+      rawPlan: { ID: 0, OPERATOR: "TABLE FULL SCAN", "EST.ROWS": 47_383 },
+    }),
+  );
+  assert.equal(input.database, "mysql");
+});
+
 test("maps every dbType the merged host contract can return", () => {
   const cases = [
     ["postgres", "postgresql"],

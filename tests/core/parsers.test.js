@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyzePlan } from "../../src/core/analyze.js";
+import { adaptDbxEstimatedPlanResponse } from "../../src/core/adapter/dbx-plan-response.js";
 import { PlanParseError } from "../../src/core/errors.js";
 import { analyzeRawPlan, describeParserSupport, getParser } from "../../src/core/parsers/index.js";
 import { STRUCTURED_DATABASES, createRawPlanInput } from "../../src/core/raw-plan-input.js";
@@ -17,6 +18,7 @@ const postgresFixture = await loadFixture({ mode: "estimated", name: "large-seq-
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "table-scan.synthetic" });
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 const oceanBaseFixture = await loadFixture({ database: "oceanbase-oracle", mode: "estimated", name: "hash-join" });
+const oceanBaseMysqlFixture = await loadFixture({ database: "oceanbase-mysql", mode: "estimated", name: "mysql-mode-full-scan" });
 const oracleFixture = await loadFixture({ database: "oracle", mode: "estimated", name: "table-scan.synthetic" });
 const damengFixture = await loadFixture({ database: "dameng", mode: "estimated", name: "official-nested-loop-index-join" });
 const questDbFixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
@@ -37,6 +39,12 @@ test("getParser returns a parser only for an implemented family", () => {
   const oceanBaseOracle = getParser("oceanbase-oracle");
   assert.equal(oceanBaseOracle?.id, "oceanbase-oracle");
   assert.deepEqual(oceanBaseOracle?.formats, ["json"]);
+
+  const oceanBaseMysql = getParser("oceanbase-mysql");
+  assert.equal(oceanBaseMysql?.id, "oceanbase-mysql");
+  assert.deepEqual(oceanBaseMysql?.formats, ["json"]);
+  assert.equal(oceanBaseMysql?.parse, oceanBaseOracle?.parse, "both OceanBase modes share the same parser function");
+  assert.equal(oceanBaseMysql?.normalize, oceanBaseOracle?.normalize, "both OceanBase modes share the same normalizer function");
 
   const oracle = getParser("oracle");
   assert.equal(oracle?.id, "oracle");
@@ -60,7 +68,7 @@ test("getParser returns a parser only for an implemented family", () => {
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb", "doris"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
 });
 
 test("describeParserSupport separates structured, unsupported-format and unknown families", () => {
@@ -93,6 +101,16 @@ test("describeParserSupport separates structured, unsupported-format and unknown
   assert.deepEqual(describeParserSupport("oceanbase-oracle", "text"), {
     structured: false,
     parser: "oceanbase-oracle",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+  assert.deepEqual(describeParserSupport("oceanbase-mysql", "json"), {
+    structured: true,
+    parser: "oceanbase-mysql",
+    reasonCode: null,
+  });
+  assert.deepEqual(describeParserSupport("oceanbase-mysql", "text"), {
+    structured: false,
+    parser: "oceanbase-mysql",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
@@ -151,6 +169,35 @@ test("analyzeRawPlan runs the full structured pipeline for PostgreSQL", () => {
   assert.deepEqual(result.findings, strict.findings);
 });
 
+test("Native MySQL dbVersion continues to route query_block plans to the MySQL parser", () => {
+  const input = adaptDbxEstimatedPlanResponse({
+    dbType: "mysql",
+    dbVersion: "8.0.36",
+    format: "json",
+    rawPlan: mysqlFixture.plan,
+    truncated: false,
+    warnings: [],
+  });
+  assert.equal(input.database, "mysql");
+  const result = analyzeRawPlan(input);
+  assert.equal(result.parser, "mysql");
+  assert.equal(result.parsed.database, "mysql");
+  assert.equal(result.normalized.database, "mysql");
+});
+
+test("Native MySQL still rejects an OceanBase operator tree without query_block", () => {
+  const input = createRawPlanInput({
+    database: "mysql",
+    mode: "estimated",
+    format: "json",
+    plan: { ID: 0, OPERATOR: "TABLE FULL SCAN", "EST.ROWS": 47_383 },
+  });
+  assert.throws(
+    () => analyzeRawPlan(input),
+    (error) => error instanceof PlanParseError && error.code === "MALFORMED_PLAN",
+  );
+});
+
 test("analyzeRawPlan runs the full structured pipeline for MySQL", () => {
   const result = analyzeRawPlan(mysqlFixture.input);
 
@@ -186,6 +233,21 @@ test("analyzeRawPlan runs the full structured pipeline for SQL Server ShowPlanXM
   assert.deepEqual(result.parsed, strict.parsed);
   assert.deepEqual(result.normalized, strict.normalized);
   assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+});
+
+test("analyzeRawPlan runs the full structured pipeline for OceanBase MySQL JSON", () => {
+  const result = analyzeRawPlan(oceanBaseMysqlFixture.input);
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "oceanbase-mysql");
+  assert.equal(result.parsed.database, "oceanbase-mysql");
+  assert.equal(result.normalized.database, "oceanbase-mysql");
+  assert.equal(result.normalized.root.kind, "seq_scan");
+  assert.equal(result.normalized.root.estimatedRows, 47_383);
+  assert.equal(result.normalized.root.engineSpecific.oceanBase.estimatedTimeUs, 312_576);
+
+  const strict = analyzePlan(oceanBaseMysqlFixture.input);
+  assert.deepEqual(result.normalized, strict.normalized);
   assert.deepEqual(result.findings, strict.findings);
 });
 
