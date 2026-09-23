@@ -1,0 +1,5 @@
+QuestDB Future Operator
+ future_operator_property: preserve this text
+    PageFrame futureFrameFlag: unknown-value
+       Row backward scan
+             Frame backward scan on: quotes

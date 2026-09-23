@@ -13,6 +13,7 @@ DBX 的 SQL 执行计划分析插件。
 [![OceanBase Oracle](https://img.shields.io/badge/OceanBase%20Oracle-structured-0b5fff)](https://www.oceanbase.com/)
 [![Oracle](https://img.shields.io/badge/Oracle-structured-f80000)](https://www.oracle.com/database/)
 [![Dameng](https://img.shields.io/badge/Dameng-structured-0b6e99)](https://www.dameng.com/)
+[![QuestDB](https://img.shields.io/badge/QuestDB-structured-5f43e9)](https://questdb.com/)
 
 ## 插件简介
 
@@ -27,7 +28,7 @@ DBX 当前连接
     → Hotspots / Findings
 ```
 
-PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle 和 Dameng 会进入结构化分析；Doris 与 QuestDB 仍可查看 Host 返回的 Raw Plan。
+PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng 和 QuestDB 会进入结构化分析；Doris 仍可查看 Host 返回的 Raw Plan。
 
 ## 主界面
 
@@ -44,6 +45,7 @@ PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle 和 Dameng 会进入
 - **OceanBase Oracle JSON 结构化解析**：支持 DBX Host 返回的 `format: "json"` Estimated Plan（`EXPLAIN FORMAT=JSON`），按 `CHILD_<n>` 递归构建计划树，保留 `EST.TIME(us)` / `COST` 等 OceanBase 专有估算信息。
 - **Oracle DBMS_XPLAN 文本结构化解析**：支持 DBX Host 当前生成的 `DBMS_XPLAN.DISPLAY(..., 'TYPICAL +PREDICATE')` Estimated Plan，按 Operation 缩进恢复树结构，保留 `Rows`、predicate marker / text 与 Oracle 原生估算字段。
 - **Dameng Estimated Plan 文本结构化解析**：支持 DBX Host 返回的 Dameng 原生 `EXPLAIN` 文本，按缩进恢复树结构、按 operation id 关联 predicate，保留 `[cost, rows, bytes-per-row]` 与未知算子原文；仅支持 Estimated Plan。
+- **QuestDB Estimated EXPLAIN 文本结构化解析**：按相对缩进恢复 operator tree，保留原始行、inline / standalone properties 与未知 operator；PageFrame / Row / Frame pipeline 只将 relation-access Frame / Interval 节点计作一次扫描。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
@@ -120,10 +122,10 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 | OceanBase Oracle | Structured |
 | Oracle | Structured |
 | Dameng | Structured (Estimated only) |
+| QuestDB | Structured (Estimated only) |
 | Doris | Raw Plan |
-| QuestDB | Raw Plan |
 
-`Structured` 表示 Plan Detective 会进一步解析为统一执行计划结构并进行 Metrics / Hotspot / Finding 分析；`Raw Plan` 表示当前仍可查看 Host 返回的原始执行计划，但尚未实现对应 structured parser。Oracle 仅声明支持 DBX 当前的 `TYPICAL +PREDICATE` 文本输出，不泛化到其他 DBMS_XPLAN display 格式；Dameng 仅支持 DBX 当前的 Estimated 原生文本，不支持 Actual / autotrace。
+`Structured` 表示 Plan Detective 会进一步解析为统一执行计划结构并进行 Metrics / Hotspot / Finding 分析；`Raw Plan` 表示当前仍可查看 Host 返回的原始执行计划，但尚未实现对应 structured parser。Oracle 仅声明支持 DBX 当前的 `TYPICAL +PREDICATE` 文本输出，不泛化到其他 DBMS_XPLAN display 格式；Dameng 与 QuestDB 仅支持 Estimated 原生文本，不支持 Actual / autotrace。
 
 ## 安全边界
 
@@ -142,10 +144,11 @@ DBX 负责 Connection、Credential、Driver 和 Plan Execution；Plan Detective 
 ## 当前限制
 
 - 当前只支持 Estimated Plan，不支持 Actual Plan 或 `EXPLAIN ANALYZE`。
-- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle 和 Dameng 提供 structured parser；Doris 与 QuestDB 为 Raw Plan 展示，不生成对应的结构化 Metrics / Hotspots / Findings。
+- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng 和 QuestDB 提供 structured parser；Doris 为 Raw Plan 展示，不生成对应的结构化 Metrics / Hotspots / Findings。
 - OceanBase Oracle 的 `EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，不会映射成 PostgreSQL 语义的代价，也不参与代价类 Hotspot / Finding；OceanBase Oracle 的 `format: "text"` 降级计划仍只展示 Raw Plan。
 - Oracle parser 只接受 Estimated `DBMS_XPLAN.DISPLAY(..., 'TYPICAL +PREDICATE')`；Oracle `Cost` 只保留在 `engineSpecific.oracle`，不映射为共享 `startupCost` / `totalCost`，也不产生 PostgreSQL cost hotspot。
 - Dameng parser 只接受 Estimated 原生文本；`[cost, rows, bytes-per-row]` 的 `cost` 只保留在 `engineSpecific.dameng`，不伪装为 PostgreSQL `startupCost` / `totalCost`，热点与规则只使用可靠的行数信号。
+- QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。
 - 尚未实现 Plan Diff、Plan History、AI SQL Rewrite 或自动调优。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 

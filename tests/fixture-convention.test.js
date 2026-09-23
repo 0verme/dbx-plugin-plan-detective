@@ -12,6 +12,7 @@ import {
   ORACLE_FIXTURES_DIR,
   DAMENG_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
+  QUESTDB_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
   listFixtures,
   loadAllFixtures,
@@ -90,6 +91,14 @@ test("fixtures/dameng has an estimated directory of plan.txt files and no actual
   await assert.rejects(readdir(path.join(DAMENG_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
   assert.deepEqual(MODES_BY_DATABASE.dameng, ["estimated"]);
   assert.equal(planSuffixFor("dameng"), ".plan.txt");
+});
+
+test("fixtures/questdb has estimated text plans and no actual directory", async () => {
+  const entries = await readdir(path.join(QUESTDB_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/questdb/estimated must contain .plan.txt files");
+  await assert.rejects(readdir(path.join(QUESTDB_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.questdb, ["estimated"]);
+  assert.equal(planSuffixFor("questdb"), ".plan.txt");
 });
 
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
@@ -251,6 +260,29 @@ test("metadata validation rejects convention violations", () => {
   assert.match(
     validateFixtureMeta({ ...damengMeta, mode: "actual" }, { database: "dameng", mode: "actual", name: "x.synthetic" }).join("\n"),
     /dameng fixtures only support mode "estimated"/,
+  );
+
+  const questDbMeta = validMeta({
+    database: "questdb",
+    format: "text",
+    databaseVersion: null,
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "synthetic", detail: "synthetic QuestDB fixture: hand-written.", reference: null },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(questDbMeta, { database: "questdb", mode: "estimated", name: "x.synthetic" }),
+    [],
+    "a synthetic QuestDB fixture must validate with text format and estimated-only mode",
+  );
+  assert.match(
+    validateFixtureMeta({ ...questDbMeta, format: "json" }, { database: "questdb", mode: "estimated", name: "x.synthetic" }).join("\n"),
+    /format must be "text" for questdb/,
+  );
+  assert.match(
+    validateFixtureMeta({ ...questDbMeta, mode: "actual" }, { database: "questdb", mode: "actual", name: "x.synthetic" }).join("\n"),
+    /questdb fixtures only support mode "estimated"/,
   );
 
   const synthetic = validMeta({

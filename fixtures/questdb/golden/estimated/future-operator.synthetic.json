@@ -1,0 +1,304 @@
+{
+  "parsed": {
+    "database": "questdb",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "QuestDB Future Operator",
+      "rawNodeType": "QuestDB Future Operator",
+      "rawLine": "QuestDB Future Operator",
+      "indent": 0,
+      "relation": null,
+      "scanDirection": null,
+      "properties": [
+        {
+          "name": "future_operator_property",
+          "value": "preserve this text",
+          "rawLine": " future_operator_property: preserve this text",
+          "indent": 1
+        }
+      ],
+      "inlineProperties": [],
+      "filter": null,
+      "condition": null,
+      "workers": null,
+      "vectorized": null,
+      "children": [
+        {
+          "nodeType": "PageFrame",
+          "rawNodeType": "PageFrame",
+          "rawLine": "    PageFrame futureFrameFlag: unknown-value",
+          "indent": 4,
+          "relation": null,
+          "scanDirection": null,
+          "properties": [],
+          "inlineProperties": [
+            {
+              "name": "futureFrameFlag",
+              "value": "unknown-value",
+              "rawLine": "    PageFrame futureFrameFlag: unknown-value",
+              "indent": 4
+            }
+          ],
+          "filter": null,
+          "condition": null,
+          "workers": null,
+          "vectorized": null,
+          "children": [
+            {
+              "nodeType": "Row backward scan",
+              "rawNodeType": "Row backward scan",
+              "rawLine": "       Row backward scan",
+              "indent": 7,
+              "relation": null,
+              "scanDirection": "backward",
+              "properties": [],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": null,
+              "workers": null,
+              "vectorized": null,
+              "children": [
+                {
+                  "nodeType": "Frame backward scan",
+                  "rawNodeType": "Frame backward scan",
+                  "rawLine": "             Frame backward scan on: quotes",
+                  "indent": 13,
+                  "relation": "quotes",
+                  "scanDirection": "backward",
+                  "properties": [],
+                  "inlineProperties": [],
+                  "filter": null,
+                  "condition": null,
+                  "workers": null,
+                  "vectorized": null,
+                  "children": [],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "orphanProperties": []
+  },
+  "normalized": {
+    "database": "questdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "unknown",
+      "nodeType": "QuestDB Future Operator",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "pipeline",
+          "nodeType": "PageFrame",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "pipeline",
+              "nodeType": "Row backward scan",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "scan",
+                  "nodeType": "Frame backward scan",
+                  "relation": {
+                    "name": "quotes",
+                    "alias": null,
+                    "indexName": null
+                  },
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "questdb",
+                    "questdb": {
+                      "nodeType": "Frame backward scan",
+                      "rawNodeType": "Frame backward scan",
+                      "rawLine": "             Frame backward scan on: quotes",
+                      "indent": 13,
+                      "relation": "quotes",
+                      "scanDirection": "backward",
+                      "workers": null,
+                      "filter": null,
+                      "condition": null,
+                      "vectorized": null,
+                      "properties": [],
+                      "inlineProperties": []
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "Row backward scan",
+                  "rawNodeType": "Row backward scan",
+                  "rawLine": "       Row backward scan",
+                  "indent": 7,
+                  "relation": null,
+                  "scanDirection": "backward",
+                  "workers": null,
+                  "filter": null,
+                  "condition": null,
+                  "vectorized": null,
+                  "properties": [],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "questdb",
+            "questdb": {
+              "nodeType": "PageFrame",
+              "rawNodeType": "PageFrame",
+              "rawLine": "    PageFrame futureFrameFlag: unknown-value",
+              "indent": 4,
+              "relation": null,
+              "scanDirection": null,
+              "workers": null,
+              "filter": null,
+              "condition": null,
+              "vectorized": null,
+              "properties": [],
+              "inlineProperties": [
+                {
+                  "name": "futureFrameFlag",
+                  "value": "unknown-value",
+                  "rawLine": "    PageFrame futureFrameFlag: unknown-value",
+                  "indent": 4
+                }
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "questdb",
+        "questdb": {
+          "nodeType": "QuestDB Future Operator",
+          "rawNodeType": "QuestDB Future Operator",
+          "rawLine": "QuestDB Future Operator",
+          "indent": 0,
+          "relation": null,
+          "scanDirection": null,
+          "workers": null,
+          "filter": null,
+          "condition": null,
+          "vectorized": null,
+          "properties": [
+            {
+              "name": "future_operator_property",
+              "value": "preserve this text",
+              "rawLine": " future_operator_property: preserve this text",
+              "indent": 1
+            }
+          ],
+          "inlineProperties": []
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": [
+      "QuestDB Future Operator"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 4,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

@@ -19,6 +19,7 @@ const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estim
 const oceanBaseFixture = await loadFixture({ database: "oceanbase-oracle", mode: "estimated", name: "hash-join" });
 const oracleFixture = await loadFixture({ database: "oracle", mode: "estimated", name: "table-scan.synthetic" });
 const damengFixture = await loadFixture({ database: "dameng", mode: "estimated", name: "official-nested-loop-index-join" });
+const questDbFixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
 
 function pendingDialectInput() {
   return createRawPlanInput({
@@ -54,13 +55,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(dameng?.id, "dameng");
   assert.deepEqual(dameng?.formats, ["text"]);
 
-  for (const database of ["doris", "questdb", "unknown-database"]) {
+  const questdb = getParser("questdb");
+  assert.equal(questdb?.id, "questdb");
+  assert.deepEqual(questdb?.formats, ["text"]);
+
+  for (const database of ["doris", "unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb"]);
 });
 
 test("describeParserSupport separates structured, pending and unknown families", () => {
@@ -110,7 +115,14 @@ test("describeParserSupport separates structured, pending and unknown families",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 
-  for (const database of ["doris", "questdb"]) {
+  assert.deepEqual(describeParserSupport("questdb", "text"), { structured: true, parser: "questdb", reasonCode: null });
+  assert.deepEqual(describeParserSupport("questdb", "json"), {
+    structured: false,
+    parser: "questdb",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  for (const database of ["doris"]) {
     assert.deepEqual(
       describeParserSupport(database, "text"),
       { structured: false, parser: "none", reasonCode: "PARSER_NOT_IMPLEMENTED" },
@@ -255,8 +267,27 @@ test("analyzeRawPlan returns a raw-only result for a pending dialect", () => {
   assert.deepEqual(result.findings, []);
 });
 
-test("analyzeRawPlan returns a raw-only result for an unknown family", () => {
-  const input = createRawPlanInput({ database: "questdb", mode: "estimated", format: "text", plan: "Async Group By" });
+test("analyzeRawPlan runs the full structured pipeline for QuestDB text", () => {
+  const result = analyzeRawPlan(questDbFixture.input);
+  assert.equal(result.status, "structured");
+  assert.equal(result.parser, "questdb");
+  assert.equal(result.parsed.database, "questdb");
+  assert.equal(result.parsed.format, "text");
+  assert.equal(result.normalized.database, "questdb");
+  assert.equal(result.metrics.costAttribution.status, "not-applicable");
+  assert.deepEqual(result.findings, []);
+  assert.deepEqual(result.hotspots.items, []);
+
+  const strict = analyzePlan(questDbFixture.input);
+  assert.deepEqual(result.parsed, strict.parsed);
+  assert.deepEqual(result.normalized, strict.normalized);
+  assert.deepEqual(result.metrics, strict.metrics);
+  assert.deepEqual(result.findings, strict.findings);
+  assert.deepEqual(result.hotspots, strict.hotspots);
+});
+
+test("analyzeRawPlan returns raw-only for the remaining Doris family", () => {
+  const input = createRawPlanInput({ database: "doris", mode: "estimated", format: "text", plan: "Physical Plan" });
   const result = analyzeRawPlan(input);
 
   assert.equal(result.status, "raw-only");

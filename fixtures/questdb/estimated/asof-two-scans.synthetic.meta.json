@@ -1,0 +1,27 @@
+{
+  "database": "questdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic tree based on the requested QuestDB AsOf Join Fast example shape; hand-written and not executed against QuestDB.",
+    "reference": null
+  },
+  "features": [
+    "AsOf Join Fast",
+    "condition property",
+    "two relation scan branches",
+    "PageFrame scan pipeline counted once per relation"
+  ],
+  "expect": {
+    "rootNodeType": "SelectedRecord",
+    "hasActualFields": false,
+    "minDepth": 5,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

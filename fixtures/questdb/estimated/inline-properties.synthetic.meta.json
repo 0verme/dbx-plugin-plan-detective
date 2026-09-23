@@ -1,0 +1,28 @@
+{
+  "database": "questdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic QuestDB node/property fixture; hand-written to cover inline properties, unknown keys, and nonuniform indentation; not executed.",
+    "reference": null
+  },
+  "features": [
+    "Limit inline lo property",
+    "GroupByRecord vectorized inline property",
+    "workers property",
+    "unknown property retention",
+    "irregular indentation"
+  ],
+  "expect": {
+    "rootNodeType": "Limit",
+    "hasActualFields": false,
+    "minDepth": 5,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

@@ -1,0 +1,385 @@
+{
+  "parsed": {
+    "database": "questdb",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Limit",
+      "rawNodeType": "Limit",
+      "rawLine": "Limit lo: 10",
+      "indent": 0,
+      "relation": null,
+      "scanDirection": null,
+      "properties": [],
+      "inlineProperties": [
+        {
+          "name": "lo",
+          "value": "10",
+          "rawLine": "Limit lo: 10",
+          "indent": 0
+        }
+      ],
+      "filter": null,
+      "condition": null,
+      "workers": null,
+      "vectorized": null,
+      "children": [
+        {
+          "nodeType": "GroupByRecord",
+          "rawNodeType": "GroupByRecord",
+          "rawLine": "   GroupByRecord vectorized: true",
+          "indent": 3,
+          "relation": null,
+          "scanDirection": null,
+          "properties": [
+            {
+              "name": "workers",
+              "value": "2",
+              "rawLine": "       workers: 2",
+              "indent": 7
+            },
+            {
+              "name": "future_group_option",
+              "value": "preserved",
+              "rawLine": "       future_group_option: preserved",
+              "indent": 7
+            }
+          ],
+          "inlineProperties": [
+            {
+              "name": "vectorized",
+              "value": "true",
+              "rawLine": "   GroupByRecord vectorized: true",
+              "indent": 3
+            }
+          ],
+          "filter": null,
+          "condition": null,
+          "workers": 2,
+          "vectorized": "true",
+          "children": [
+            {
+              "nodeType": "PageFrame",
+              "rawNodeType": "PageFrame",
+              "rawLine": "       PageFrame",
+              "indent": 7,
+              "relation": null,
+              "scanDirection": null,
+              "properties": [],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": null,
+              "workers": null,
+              "vectorized": null,
+              "children": [
+                {
+                  "nodeType": "Row forward scan",
+                  "rawNodeType": "Row forward scan",
+                  "rawLine": "           Row forward scan",
+                  "indent": 11,
+                  "relation": null,
+                  "scanDirection": "forward",
+                  "properties": [],
+                  "inlineProperties": [],
+                  "filter": null,
+                  "condition": null,
+                  "workers": null,
+                  "vectorized": null,
+                  "children": [
+                    {
+                      "nodeType": "Frame forward scan",
+                      "rawNodeType": "Frame forward scan",
+                      "rawLine": "               Frame forward scan on: trades",
+                      "indent": 15,
+                      "relation": "trades",
+                      "scanDirection": "forward",
+                      "properties": [],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "orphanProperties": []
+  },
+  "normalized": {
+    "database": "questdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "limit",
+      "nodeType": "Limit",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "aggregate",
+          "nodeType": "GroupByRecord",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "pipeline",
+              "nodeType": "PageFrame",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "pipeline",
+                  "nodeType": "Row forward scan",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "scan",
+                      "nodeType": "Frame forward scan",
+                      "relation": {
+                        "name": "trades",
+                        "alias": null,
+                        "indexName": null
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Frame forward scan",
+                          "rawNodeType": "Frame forward scan",
+                          "rawLine": "               Frame forward scan on: trades",
+                          "indent": 15,
+                          "relation": "trades",
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "questdb",
+                    "questdb": {
+                      "nodeType": "Row forward scan",
+                      "rawNodeType": "Row forward scan",
+                      "rawLine": "           Row forward scan",
+                      "indent": 11,
+                      "relation": null,
+                      "scanDirection": "forward",
+                      "workers": null,
+                      "filter": null,
+                      "condition": null,
+                      "vectorized": null,
+                      "properties": [],
+                      "inlineProperties": []
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "PageFrame",
+                  "rawNodeType": "PageFrame",
+                  "rawLine": "       PageFrame",
+                  "indent": 7,
+                  "relation": null,
+                  "scanDirection": null,
+                  "workers": null,
+                  "filter": null,
+                  "condition": null,
+                  "vectorized": null,
+                  "properties": [],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "questdb",
+            "questdb": {
+              "nodeType": "GroupByRecord",
+              "rawNodeType": "GroupByRecord",
+              "rawLine": "   GroupByRecord vectorized: true",
+              "indent": 3,
+              "relation": null,
+              "scanDirection": null,
+              "workers": 2,
+              "filter": null,
+              "condition": null,
+              "vectorized": "true",
+              "properties": [
+                {
+                  "name": "workers",
+                  "value": "2",
+                  "rawLine": "       workers: 2",
+                  "indent": 7
+                },
+                {
+                  "name": "future_group_option",
+                  "value": "preserved",
+                  "rawLine": "       future_group_option: preserved",
+                  "indent": 7
+                }
+              ],
+              "inlineProperties": [
+                {
+                  "name": "vectorized",
+                  "value": "true",
+                  "rawLine": "   GroupByRecord vectorized: true",
+                  "indent": 3
+                }
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "questdb",
+        "questdb": {
+          "nodeType": "Limit",
+          "rawNodeType": "Limit",
+          "rawLine": "Limit lo: 10",
+          "indent": 0,
+          "relation": null,
+          "scanDirection": null,
+          "workers": null,
+          "filter": null,
+          "condition": null,
+          "vectorized": null,
+          "properties": [],
+          "inlineProperties": [
+            {
+              "name": "lo",
+              "value": "10",
+              "rawLine": "Limit lo: 10",
+              "indent": 0
+            }
+          ]
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 5,
+    "maxDepth": 5,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

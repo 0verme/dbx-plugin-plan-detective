@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-22）：Phase 0 已完成；上游 Estimated Plan Host API 需求（[t8y2/dbx#9675](https://github.com/t8y2/dbx/issues/9675)）已由实现 PR [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并进 `t8y2/dbx/main`。当前处于 `Offline Core implemented · Host MVP implemented（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng structured；Doris / QuestDB raw-only）· Plan Diff / Actual Plan / AI are Future`。一期只做 Estimated Plan；Actual Plan 属于 Future。
+> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已提交 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56)，尚未合并；PR 合并前不准备或发布 v0.6.5。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
 
 ## 1. 已确认决策
 
@@ -179,7 +179,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 ```text
 DBX Host Adapter          ← 已接入（Host API 1.2，权限 host.plans:read）
 → Estimated Raw Plan（EXPLAIN ...，宿主构造）
-→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng structured；Doris / QuestDB raw-only）
+→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only）
 → Normalization
 → Metrics
 → Rules
@@ -215,8 +215,9 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 3.2 | OceanBase Oracle JSON Estimated Plan 结构化（`EXPLAIN FORMAT=JSON` → 现有 IR / metrics / hotspots） | ✅ 已实现（2026-09-22）；12 个 fixture（1 official + 11 synthetic）+ golden；`EST.TIME(us)` / `COST` 不映射到 PostgreSQL 语义，不新增专属 hotspot 规则 |
 | Phase 3.3 | Oracle DBMS_XPLAN Estimated Plan 文本结构化（`TYPICAL +PREDICATE` → 现有 IR / metrics / hotspots） | ✅ 已实现；5 个 synthetic text fixture + golden；`Rows` 进入 `estimatedRows`，Oracle `Cost` 保留在 `engineSpecific.oracle` |
 | Phase 3.4 | Dameng Estimated Plan 原生文本结构化（`[cost, rows, bytes-per-row]` → 现有 IR / metrics / hotspots） | ✅ 已实现；1 个 official + 6 个 synthetic text fixture + golden；Dameng cost 保留在 `engineSpecific.dameng`，只用 rows 信号 |
+| Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现；PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) OPEN；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导，PR merge 前不做 v0.6.5 release prep |
 | Phase 4 | Plan Diff / History | 后续 Issue |
-| Phase 5 | Doris / QuestDB 结构化 parser | 需要真实 sample / contract 后再实现（MySQL 已在 Phase 1.1、SQL Server 已在 Phase 3.1、OceanBase Oracle 已在 Phase 3.2、Oracle 已在 Phase 3.3、Dameng 已在 Phase 3.4 完成） |
+| Phase 5 | Doris 结构化 parser | 需要可靠 sample / contract 后再实现（QuestDB 已在 Phase 3.5 完成） |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -232,10 +233,10 @@ raw plan → normalized plan → metrics → findings
 
 约定：
 
-- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oracle/`、`fixtures/dameng/` 按数据库分目录。
+- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oracle/`、`fixtures/dameng/`、`fixtures/questdb/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
-- Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` 四 stage 与预期快照比对；
+- Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` / `hotspots` 五 stage 与预期快照比对；
   约定见 [PLAN_INPUT_AND_FIXTURES.md](PLAN_INPUT_AND_FIXTURES.md)。
 
 PostgreSQL 样本已落地（Phase 0B：20 个）；MySQL 样本已落地
@@ -251,6 +252,7 @@ unknown operator / unknown fields / missing optional fields / `CHILD_<n>` 数字
 Oracle DBMS_XPLAN 样本已落地（Phase 3.3：5 个 synthetic text fixture + golden，覆盖可变列宽、缺失字段、predicate marker、
 CRLF、未知 Operation 子树与缩进建树；见 `fixtures/oracle/README.md`）。
 Dameng 样本已落地（Phase 3.4：1 个 official 文档示例 + 6 个 synthetic estimated text fixture + golden，覆盖 tuple、缩进建树、predicate 关联、未知算子、缺失字段与行数规则；本机无 Dameng 实例，provenance 见 `fixtures/dameng/README.md`）。
+QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription + 3 个 synthetic estimated text fixture + golden，覆盖相对缩进、inline / standalone properties、unknown operator、PageFrame scan 去重、Host / UI pipeline；本机无 QuestDB 实例，未声称真实 capture，provenance 见 `fixtures/questdb/README.md`）。
 
 ## 5. Host 接入与其它阶段仍禁止顺手实现
 
@@ -261,7 +263,7 @@ Dameng 样本已落地（Phase 3.4：1 个 official 文档示例 + 6 个 synthet
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
-- Doris / QuestDB parser（MySQL 已由 Issue #15、SQL Server 已由 Phase 3.1、OceanBase Oracle 已由 Phase 3.2、Oracle 已由 Phase 3.3、Dameng 已由 Phase 3.4 显式启动并完成）
+- Doris parser（MySQL 已由 Issue #15、SQL Server 已由 Phase 3.1、OceanBase Oracle 已由 Phase 3.2、Oracle 已由 Phase 3.3、Dameng 已由 Phase 3.4、QuestDB 已由 Phase 3.5 显式启动并完成）
 - 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
 
@@ -283,7 +285,7 @@ Dameng 样本已落地（Phase 3.4：1 个 official 文档示例 + 6 个 synthet
 [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11) 明确授权实现；仅接入已合并的 #9692 契约，
 不请求 Actual Plan、不建立数据库连接、不引入 Driver / 凭据。
 
-本轮 Phase 3.4 明确授权 Dameng Estimated text parser / normalizer / registry / shared analysis / UI fields / fixtures / docs；不扩展到 Actual / autotrace、Doris / QuestDB、DBX Host、AI、Plan Diff、版本号或 Release。
+本轮 Phase 3.5 明确授权 QuestDB Estimated text parser / normalizer / registry / shared analysis / metrics / UI fields / fixtures / docs；不扩展到 Actual / autotrace、Doris parser、DBX Host、AI、Plan Diff 或版本号。Feature PR 合并前不得准备或发布 v0.6.5；Release 是合并后的独立任务。
 
 ## 6. 依赖约束
 

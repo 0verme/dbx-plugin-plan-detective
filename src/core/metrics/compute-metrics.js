@@ -23,6 +23,9 @@ const SCAN_KINDS = new Set([
   "bitmap_index_scan",
   "tid_scan",
   "sample_scan",
+  // QuestDB Frame / Interval cursor nodes are one physical relation access;
+  // the surrounding PageFrame and Row cursor are execution-pipeline nodes.
+  "scan",
 ]);
 const INDEX_SCAN_KINDS = new Set(["index_scan", "index_only_scan"]);
 const BITMAP_SCAN_KINDS = new Set(["bitmap_heap_scan", "bitmap_index_scan"]);

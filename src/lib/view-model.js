@@ -577,7 +577,7 @@ export function buildNodeInspector(node) {
 
 /**
  * Engine-specific fields. PostgreSQL, MySQL, SQL Server, OceanBase Oracle,
- * Oracle and Dameng keep their own vocabularies: the panel renders whatever
+ * Oracle, Dameng and QuestDB keep their own vocabularies: the panel renders whatever
  * the node's normalizer actually reported and never renames one engine's fields
  * into another's.
  *
@@ -585,6 +585,7 @@ export function buildNodeInspector(node) {
  * @returns {Array<{ label: string, value: string }|null>}
  */
 function engineFields(engine) {
+  if (isPlainObject(engine.questdb)) return questDbEngineFields(engine.questdb);
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
   if (isPlainObject(engine.oceanBase)) return oceanBaseEngineFields(engine.oceanBase);
@@ -613,6 +614,30 @@ function engineFields(engine) {
  * @param {Record<string, unknown>} oceanBase
  * @returns {Array<{ label: string, value: string }|null>}
  */
+function questDbEngineFields(questdb) {
+  return [
+    field("Operator", questdb.rawNodeType ?? questdb.nodeType),
+    field("Relation", questdb.relation),
+    field("Properties", formatQuestDbProperties(questdb.properties)),
+    field("Inline Properties", formatQuestDbProperties(questdb.inlineProperties)),
+    field("Filter", questdb.filter),
+    field("Condition", questdb.condition),
+    field("Workers", formatNumber(questdb.workers)),
+    field("Vectorized", questdb.vectorized),
+    field("Scan Direction", questdb.scanDirection),
+    field("Raw Node", questdb.rawLine),
+  ];
+}
+
+/** @param {unknown} properties */
+function formatQuestDbProperties(properties) {
+  if (!Array.isArray(properties)) return null;
+  const rows = properties
+    .filter((property) => isPlainObject(property) && typeof property.name === "string" && typeof property.value === "string")
+    .map((property) => `${property.name}: ${property.value}`);
+  return rows.length > 0 ? rows.join("\n") : null;
+}
+
 function oceanBaseEngineFields(oceanBase) {
   return [
     field("Operator ID (ID)", formatNumber(oceanBase.id)),

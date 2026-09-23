@@ -42,12 +42,12 @@ Metrics Engine
 | Finding Presentation / i18n | 将 facts 按 locale 表达为 summary / reasons / actions / caveats；不判断规则触发 | Plan Detective |
 | Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
 
-### 当前实现状态（2026-09-22）
+### 当前实现状态（2026-09-23）
 
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
-已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 结构化 parser；Doris / QuestDB raw-only
+已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 结构化 parser；Doris raw-only
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
 已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
 已实现：Hotspot Presentation（结构化 reason code → 中英文自然语言摘要；未知 code 优雅回退到原始 statement）
@@ -70,7 +70,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码）
    ↓
 src/core/adapter/dbx-plan-response.js（dbType → database family，format → RawPlanInput）
    ↓
-src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng structured，其余 raw-only）
+src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb structured，Doris raw-only）
    ↓
 src/core/normalize → metrics → rules → findings（facts + legacy copy）
 src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
@@ -118,7 +118,8 @@ Fixture / mock 只服务测试、离线 UI 开发与 golden sample，**不进入
 | OceanBase Oracle | 结构化 | 宿主返回 `EXPLAIN FORMAT=JSON` 解码后的 JSON 对象（format `json`；`src/core/oceanbase/**`；只解析 Estimated JSON，不解析 `format: "text"` 降级文本） |
 | Oracle | 结构化 | 宿主返回 DBMS_XPLAN 文本（format `text`；`src/core/oracle/**`；只解析 `TYPICAL +PREDICATE` Estimated 输出） |
 | Dameng | 结构化（Estimated only） | 宿主返回驱动原生文本（format `text`；`src/core/dameng/**`）；按缩进建树、operation id 关联 predicate |
-| Doris / QuestDB | raw only | 宿主返回文本计划（format `text`） |
+| QuestDB | 结构化（Estimated only） | 宿主返回 EXPLAIN 文本（format `text`；`src/core/questdb/**`）；相对缩进建树，保留 properties / 未知 operator；PageFrame / Row / Frame pipeline 只计一次 relation access |
+| Doris | raw only | 宿主返回文本计划（format `text`） |
 
 registry 对每个 family 显式声明支持状态；新增 parser 只需新增一个 parser 模块并注册，
 UI / rules / metrics 不变。
@@ -204,11 +205,12 @@ src/
 │   └── host-plan-errors.js     # HostPlanError + 错误分类
 ├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
-│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oracle parser 声明
+│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb 声明
 │   ├── sqlserver/              # ShowPlanXML 读取与 RelOp 映射（无 dependency XML reader）
 │   ├── oceanbase/              # OceanBase Oracle JSON plan 解析（ID / OPERATOR / EST.ROWS / CHILD_<n>）
 │   ├── oracle/                 # Oracle DBMS_XPLAN text 解析（header columns / indentation / predicates）
 │   ├── dameng/                 # Dameng native EXPLAIN text 解析（tuple / indentation / predicates）
+│   ├── questdb/                # QuestDB estimated EXPLAIN text 解析（indentation / properties）
 │   ├── cost/                   # PostgreSQL 代价归因边界（analyzePostgresCost，Metrics + Hotspots 共用）
 │   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
@@ -262,7 +264,7 @@ include = ["assets", "ui"]
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
 - Plan Diff / History / 自定义 Plan Canvas / 大型可视化（当前只做嵌套行计划树）
 - AI / LLM 接入：模型 API / API Key / 聊天窗口 / 自动发送；不包含 #42 已授权的本地 AI prompt / context packaging
-- Doris / QuestDB 的结构化 parser（需要真实 sample / contract 后再实现；Dameng、Oracle 与 OceanBase Oracle 已完成）
+- Doris 的结构化 parser（需要真实 sample / contract 后再实现；QuestDB、Dameng、Oracle 与 OceanBase Oracle 已完成）
 - MariaDB / OceanBase MySQL / ADB MySQL 等 MySQL 兼容方言的自动归入（没有 contract 证据，不自动兼容）
 - MySQL `EXPLAIN ANALYZE` / `FORMAT=TREE` / `FORMAT=TRADITIONAL` 文本计划 parser
 

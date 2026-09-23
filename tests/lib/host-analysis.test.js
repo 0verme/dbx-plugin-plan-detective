@@ -16,6 +16,7 @@ const postgresRawPlan = postgresFixture.input.plan;
 const mysqlFixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-loop-large-inner.synthetic" });
 const mysqlV2Fixture = await loadFixture({ database: "mysql", mode: "estimated", name: "nested-inputs-v2.synthetic" });
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
+const questDbFixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
 
 function capabilities(overrides = {}) {
   return {
@@ -267,6 +268,28 @@ test("runHostAnalysis runs the structured pipeline for a MySQL host response", a
     mysqlFixture.meta.expect.hotspotNodeRefs,
   );
   assert.equal(session.hostResult.rawPlan, mysqlFixture.input.plan, "the host payload must stay available for the Raw Plan viewer");
+});
+
+test("runHostAnalysis runs the structured pipeline for QuestDB Host text", async () => {
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => capabilities({ dbType: "questdb", dbVersion: "documentation-example" }),
+    explainPlan: async (request) => {
+      assert.equal(request.mode, "estimated");
+      return planResult({ dbType: "questdb", dbVersion: "documentation-example", format: "text", rawPlan: questDbFixture.input.plan });
+    },
+  });
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "structured");
+  assert.equal(session.rawInput.database, "questdb");
+  assert.equal(session.rawInput.format, "text");
+  assert.equal(session.analysis.parser, "questdb");
+  assert.equal(session.analysis.metrics.scanCount, 1);
+  assert.equal(session.analysis.metrics.sequentialScanCount, 0);
+  assert.equal(session.analysis.metrics.costAttribution.status, "not-applicable");
+  assert.deepEqual(session.analysis.findings, []);
+  assert.deepEqual(session.analysis.hotspots.items, []);
+  assert.equal(session.hostResult.rawPlan, questDbFixture.input.plan);
 });
 
 test("runHostAnalysis sends a MySQL JSON V2 payload through the unchanged host boundary", async () => {

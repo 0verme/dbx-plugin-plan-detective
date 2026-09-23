@@ -1,0 +1,10 @@
+SelectedRecord
+  Filter filter: l.symbol = r.symbol
+    AsOf Join Fast
+      condition: l.ts = r.ts
+      PageFrame
+        Row forward scan
+        Frame forward scan on: core_price
+      PageFrame
+        Row forward scan
+        Frame forward scan on: market_data

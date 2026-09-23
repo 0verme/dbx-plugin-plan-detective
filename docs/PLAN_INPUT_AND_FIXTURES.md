@@ -2,7 +2,7 @@
 
 > 本文定义 Plan Detective **离线分析内核**（Plan Core）的全部契约：
 > `RawPlanInput`、parser registry、各数据库 parser 输出、`NormalizedPlan`、Metrics、Findings/Rules、
-> fixture 目录约定与 Golden Test 机制。当前 structured parser 包括 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle 与 Dameng。
+> fixture 目录约定与 Golden Test 机制。当前 structured parser 包括 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng 与 QuestDB。
 > DBX Host Plan API（已合并的 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)）到 `RawPlanInput` 的映射见
 > 第 2.1 节；Host adapter 位于 `src/host/**`，与本文件定义的 Core 契约分层。
 
@@ -22,7 +22,7 @@ RawPlanInput                     ← 本文第 2 节，Plan Core 的唯一输入
 src/core/parsers/（registry：database family → structured parser）
    │
    ▼
-Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng） → ParsedPlan（引擎专有、字段完整）
+Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB） → ParsedPlan（引擎专有、字段完整）
    │
    ▼
 Normalizer                        → NormalizedPlan（数据库无关语义 + engineSpecific）
@@ -67,9 +67,9 @@ interface RawPlanInput {
 
 | 字段 | 必填 | 为什么需要 |
 | --- | --- | --- |
-| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"` / `"oceanbase-oracle"` / `"oracle"` / `"dameng"`；raw-only：`"doris"` / `"questdb"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
+| `database` | 是 | 决定由 registry 中哪个 parser 处理。当前 structured：`"postgresql"` / `"mysql"` / `"sqlserver"` / `"oceanbase-oracle"` / `"oracle"` / `"dameng"` / `"questdb"`；raw-only：`"doris"`。该词汇是 Plan Core 自己的，不是 DBX `dbType`；adapter 负责映射。 |
 | `mode` | 是 | 决定是否期望 Actual 执行字段。`EXPLAIN` → `estimated`，`EXPLAIN ANALYZE` → `actual`。DBX Host API 只返回 estimated；actual 值保留给离线 fixture / 未来契约。 |
-| `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / Doris / QuestDB；Oracle 只接受 DBMS_XPLAN `TYPICAL +PREDICATE`，Dameng 只接受 Estimated 原生 EXPLAIN 文本）。registry 对 family + format 组合判定是否 structured。 |
+| `format` | 是 | `json`（PostgreSQL / MySQL / OceanBase Oracle）、`xml`（SQL Server ShowPlanXML）、`text`（Oracle / Dameng / QuestDB / Doris；Oracle 只接受 DBMS_XPLAN `TYPICAL +PREDICATE`，Dameng 与 QuestDB 只接受 Estimated 原生 EXPLAIN 文本）。registry 对 family + format 组合判定是否 structured。 |
 | `plan` | 是 | 原始 payload，原样传递。PostgreSQL 必须保留完整顶层 envelope（单元素数组），而不是内部 `Plan` object；text / xml 为字符串。 |
 | `sql` | 否 | 仅用于展示 / 证据材料。parser 不得依赖，且不得包含凭据。 |
 | `databaseVersion` | 否 | 仅用于 provenance，不参与解析。 |
@@ -114,7 +114,8 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | `dbType: "sqlserver"` | `database: "sqlserver"` | structured（ShowPlanXML，见 4.3） |
 | `dbType: "oceanbase-oracle"` | `database: "oceanbase-oracle"` | structured（`EXPLAIN FORMAT=JSON`，见 4.4） |
 | `dbType: "oracle"` | `database: "oracle"` | structured（DBX 当前返回 DBMS_XPLAN `TYPICAL +PREDICATE` text，见 4.5） |
-| `dbType: "doris"` / `"questdb"` | 同名 family | raw-only |
+| `dbType: "doris"` | 同名 family | raw-only |
+| `dbType: "questdb"` | `database: "questdb"` | structured（`format: "text"`，Estimated only；见 4.7） |
 | `dbType: "dameng"` | `database: "dameng"` | structured（`format: "text"`，Estimated only） |
 | （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径 |
 | `format` | 同名 `format` | `json` / `xml` / `text`；契约外值拒绝 |
@@ -149,7 +150,7 @@ analyzeRawPlan(rawInput) -> {
 }
 ```
 
-- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`、`sqlserver` + `xml`、`oceanbase-oracle` + `json`、`oracle` + `text`、`dameng` + `text`）；跑完整 Core pipeline。
+- `structured`：family 有 parser 且 format 受支持（当前 `postgresql` + `json`、`mysql` + `json`、`sqlserver` + `xml`、`oceanbase-oracle` + `json`、`oracle` + `text`、`dameng` + `text`、`questdb` + `text`）；跑完整 Core pipeline。
 - `raw-only`：`PARSER_NOT_IMPLEMENTED`（family 已知）/ `UNSUPPORTED_FORMAT`（parser 不支持该 format）/ `UNKNOWN_DATABASE`；
   `parsed` / `normalized` / `metrics` 为 `null`，`findings` 为空。UI 展示 Raw Plan 并标注原因，不伪造 parser。
 - 严格入口 `analyzePlan(rawInput)` 对 raw-only 抛 `PlanParseError`，供 fixture / golden 测试使用；
@@ -181,6 +182,8 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | SQL Server | `src/core/sqlserver/parse-showplan-xml.js` + `src/core/sqlserver/xml.js` | `src/core/normalize/normalize-sqlserver.js` | `src/core/parsers/sqlserver.js` |
 | OceanBase Oracle | `src/core/oceanbase/parse-json-plan.js` | `src/core/normalize/normalize-oceanbase.js` | `src/core/parsers/oceanbase-oracle.js` |
 | Oracle | `src/core/oracle/parse-text-plan.js` | `src/core/normalize/normalize-oracle.js` | `src/core/parsers/oracle.js` |
+| Dameng | `src/core/dameng/parse-text-plan.js` | `src/core/normalize/normalize-dameng.js` | `src/core/parsers/dameng.js` |
+| QuestDB | `src/core/questdb/parse-text-plan.js` | `src/core/normalize/normalize-questdb.js` | `src/core/parsers/questdb.js` |
 
 ### 4.1 PostgreSQL
 
@@ -430,16 +433,30 @@ DM8 operation 行的形状为：
 - **原生 cost 边界**：Metrics 的 `costAttribution` 为 `{ engine: "dameng", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }`；规则 / 热点只使用 `estimatedRows`，不从 Dameng cost 推导自代价或占比。
 - **失败模型**：`INVALID_RAW_PLAN_INPUT`、`MALFORMED_PLAN`、`MODE_MISMATCH`；不把任意文本猜成 Dameng plan。
 
+### 4.7 QuestDB Estimated EXPLAIN text
+
+实现：`src/core/questdb/parse-text-plan.js`、`src/core/normalize/normalize-questdb.js` 与
+`src/core/parsers/questdb.js`。DBX Host 对 `dbType: "questdb"` 返回 `format: "text"` 的单个文本字符串；
+Host 负责运行 `EXPLAIN <source SQL>` 与只读边界，Plan Core 不创建连接。Parser 只接受
+`mode: "estimated"`、`format: "text"`，拒绝 Actual 与非文本 payload。
+
+- **结构建树**：按原始行的相对缩进构建 operator tree，不假定固定缩进宽度；standalone `key: value` property
+  行归属最近且缩进不大于 property 行的 operator，不作为结构节点；已识别 operator 的 inline `key: value`
+  保留独立字段。原始 line、indent、未知 properties 与未知 operators 均保留。没有节点或产生多个 root 时抛 `MALFORMED_PLAN`。
+- **有限语义提升**：只把 `Frame ... scan on: <relation>` 与 `Interval ... scan on: <relation>` 提升成 neutral relation；不从任意 `on:` 文本推断关系。Frame / Interval scan 提供一个 relation-access 计数；`PageFrame` / `Row ... scan` 是可见 pipeline 节点，不单独计扫描。
+- **估值边界**：QuestDB EXPLAIN 样本未报告共享 estimated rows 或 PostgreSQL cost；`estimatedRows`、`startupCost`、`totalCost`、actual 字段等保持 `null`。Worker / filter / vectorized 和其他 native properties 只作为 evidence；不据此运行共享行数规则、cost hotspots 或性能判断。
+- **失败模型**：`INVALID_RAW_PLAN_INPUT`、`MALFORMED_PLAN`、`MODE_MISMATCH`；未知 node / property fail-soft 保留，不冒充已知语义。
+
 ## 5. NormalizedPlan
 
 实现：`src/core/normalize/normalize-postgres.js`（PostgreSQL）、
 `src/core/normalize/normalize-mysql.js`（MySQL）、`src/core/normalize/normalize-sqlserver.js`（SQL Server）、
 `src/core/normalize/normalize-oceanbase.js`（OceanBase Oracle）、`src/core/normalize/normalize-oracle.js`（Oracle）与
-`src/core/normalize/normalize-dameng.js`（Dameng）。NormalizedPlan 不是字段改名，而是稳定语义层：
+`src/core/normalize/normalize-dameng.js`（Dameng）与 `src/core/normalize/normalize-questdb.js`（QuestDB）。NormalizedPlan 不是字段改名，而是稳定语义层：
 
 ```text
 NormalizedPlan {
-  database: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng",
+  database: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb",
   mode, format,
   root: NormalizedNode,
   unknownNodeTypes: string[]   // 排序去重，便于测试与 UI 提示
@@ -452,12 +469,12 @@ NormalizedPlan {
 | --- | --- | --- |
 | `id` | `string` | 稳定路径 id：根为 `"0"`，第 n 个子节点为 `"<parent>.<n>"` |
 | `kind` | `string` | 数据库无关语义（见下表），未知类型为 `"unknown"` |
-| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值；SQL Server `PhysicalOp`；OceanBase Oracle `OPERATOR`；Oracle `Operation`；Dameng operator） |
+| `nodeType` | `string` | 原始引擎标签，始终保留（PostgreSQL Node Type；MySQL parser 给出的稳定 label，未知 access type 为原始值；SQL Server `PhysicalOp`；OceanBase Oracle `OPERATOR`；Oracle `Operation`；Dameng operator；QuestDB operator） |
 | `relation` | `{name, alias, indexName} \| null` | 无关系信息时为 `null`；OceanBase Oracle 取 `NAME`（索引访问时为 `TABLE(INDEX)`，原样保留）；Oracle 的 `TABLE ACCESS` / `VIEW` 取 `Name`，`INDEX ... SCAN` 的 `Name` 放 `indexName` |
-| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点）；SQL Server `EstimateRows`；OceanBase Oracle `EST.ROWS`；Oracle `Rows`；Dameng tuple 的 `rows` |
+| `estimatedRows` | `number \| null` | PostgreSQL Plan Rows；MySQL `rows_examined_per_scan`（表）/ join prefix `rows_produced_per_join`（join 节点）；SQL Server `EstimateRows`；OceanBase Oracle `EST.ROWS`；Oracle `Rows`；Dameng tuple 的 `rows`；QuestDB 恒为 `null`（未报告估算行数） |
 | `actualRows` / `actualStartupTime` / `actualTotalTime` / `loops` | `number \| null` | Actual 字段 |
-| `startupCost` / `totalCost` | `number \| null` | PostgreSQL 估计代价；MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 恒为 `null`（各自的 cost / 时间估算在 `engineSpecific` 下，语义不可直接比较） |
-| `width` | `number \| null` | Plan Width；Dameng 为 `bytes-per-row` |
+| `startupCost` / `totalCost` | `number \| null` | 仅 PostgreSQL 填共享估计代价；MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 恒为 `null`，各引擎原生 cost / 时间值若有则只保留在 `engineSpecific`，不可跨引擎比较 |
+| `width` | `number \| null` | Plan Width；Dameng 为 `bytes-per-row`；QuestDB 恒为 `null` |
 | `filter` | `string \| null` | 过滤谓词 |
 | `joinType` | `string \| null` | Inner / Left / … |
 | `joinCondition` | `string \| null` | 取 Hash Cond → Merge Cond → Join Filter 中第一个存在者 |
@@ -504,6 +521,11 @@ NormalizedPlan {
 等价对象形状时填充；`filter(...)` predicate 可进入中立 `filter`，其它 predicate 保持原文。Dameng `cost`
 不复制为 `startupCost` / `totalCost`，`bytesPerRow` 才进入中立 `width`。**不为了"统一"丢弃数据库专有信息。**
 
+`engineSpecific`（QuestDB）：`database`、`questdb`（`nodeType` / `rawNodeType` / `rawLine` / `indent` / `relation` /
+`scanDirection` / `workers` / `filter` / `condition` / `vectorized` / 原样 `properties` / `inlineProperties`）、`extra`。
+QuestDB 只将 scan-on 的 Frame / Interval relation 提升到中立 relation；cursor pipeline、未知 operators / properties
+均保留，且不填充共享 rows / cost / actual 字段。**不为了"统一"丢弃数据库专有信息。**
+
 `kind` 主要映射：
 
 | kind | PostgreSQL 节点 |
@@ -516,6 +538,8 @@ NormalizedPlan {
 | `group` / `analytic` / `unique` / `limit` | Group / WindowAgg / Unique / Limit |
 | `memoize` / `materialize` / `gather` / `gather_merge` | 对应节点 |
 | `append` / `result` / `subquery_scan` / `values_scan` / `function_scan` / `cte_scan` / `modify_table` / … | 常见辅助节点 |
+| `pipeline` | QuestDB `PageFrame` / `Row ... scan`（可视化 pipeline 节点，不计 relation scan） |
+| `scan` | QuestDB `Frame ... scan` / `Interval ... scan`（relation access，只计一个 scan） |
 | `unknown` | 未登记类型；`nodeType` 与 `unknownNodeTypes` 记录原始值 |
 
 MySQL / SQL Server 侧追加的 kind（现有 metrics / rules 不依赖）：
@@ -600,7 +624,7 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 | --- | --- |
 | `nodeCount` / `maxDepth` | 节点数；最长 root-to-leaf 路径（单节点 = 1） |
 | `totalEstimatedCost` / `rootEstimatedRows` | 根节点 Total Cost / Plan Rows |
-| `scanCount` | 所有 scan 类节点（seq / index / index-only / bitmap / tid / sample） |
+| `scanCount` | 所有 scan 类节点（seq / index / index-only / bitmap / tid / sample / QuestDB `scan`） |
 | `sequentialScanCount` / `indexScanCount` / `bitmapScanCount` | 分类计数 |
 | `joinCount` / `sortCount` / `aggregateCount` | join / sort / aggregate+group 计数 |
 | `unknownNodeTypeCount` | 未登记节点类型数 |
@@ -615,7 +639,7 @@ NormalizedPlan 必须 deterministic、可 JSON 序列化、可离线 fixture 测
 ```text
 costAttribution.status = "available"       归因可靠，highestIncrementalCost 可展示
                        = "withheld"        边界不成立或没有可归因节点，指标为 null
-                       = "not-applicable"  MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 等非 PostgreSQL 计划，不进入该语义
+                       = "not-applicable"  MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 等非 PostgreSQL 计划，不进入该语义
 ```
 
 withheld reason（与 `hotspots.cost.reason` 同一套）：
@@ -627,7 +651,7 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `PLAN_CONTAINS_SUBPLAN` | 含 InitPlan / SubPlan，父代价按 `cost_subplan()` 计入，不按子树累加 |
 | `UNVERIFIED_COST_FLOW` | 缺失或未知 `Parent Relationship`，代价流向无法验证 |
 | `NO_ATTRIBUTABLE_COST` | 边界可靠，但没有任何可归因节点（例如根节点自身截断子节点） |
-| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 使用各自的 cost model（OceanBase 为 `EST.TIME(us)` / `COST`，Oracle 为 `Cost` / `%CPU` / `Time`，Dameng 为 `[cost, rows, bytes-per-row]`，本轮不进入任何代价信号） |
+| `NOT_POSTGRES_COST_MODEL` | `status = "not-applicable"`：MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 使用各自的 cost model（OceanBase 为 `EST.TIME(us)` / `COST`，Oracle 为 `Cost` / `%CPU` / `Time`，Dameng 为 `[cost, rows, bytes-per-row]`）；QuestDB 未报告 rows / cost；均不进入共享 PostgreSQL 代价信号 |
 
 单节点负自代价（如 `Limit` 截断子节点）时，该节点及其子树不参与归因，祖先仍可归因；
 `src/core/tree.js` 的 `incrementalCostOf` 作为 legacy 路径继续服务 Findings，
@@ -647,13 +671,13 @@ withheld reason（与 `hotspots.cost.reason` 同一套）：
 | `nested-loop-large-inner` | `nested_loop` | 外层估算行数 ≥ 10 且内层估算行数 ≥ 10 000 | `warning` |
 | | | 内层估算行数 ≥ 100 000 | `high` |
 
-MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng 适用性（cost 语义见上）：
+MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 适用性（cost 语义见上）：
 
-| rule | MySQL | SQL Server | OceanBase Oracle | Oracle | Dameng |
-| --- | --- | --- | --- | --- | --- |
-| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） | 适用（`TABLE FULL SCAN` 按 `EST.ROWS` 触发，同样不触发代价分支） | 适用（`TABLE ACCESS FULL` 按 `Rows` 触发，同样不触发代价分支） | 适用（`CSCN2` 按 tuple 的 `rows` 触发） |
-| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） | 不适用（`EST.TIME(us)` / `COST` 不属于 PostgreSQL 代价语义） | 不适用（Oracle `Cost` / `Time` 不属于 PostgreSQL 代价语义） | 不适用（Dameng `cost` 不属于 PostgreSQL 代价语义） |
-| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） | 适用（只用 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 `Rows`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 tuple `rows`，`estimateOnly: true`） |
+| rule | MySQL | SQL Server | OceanBase Oracle | Oracle | Dameng | QuestDB |
+| --- | --- | --- | --- | --- | --- | --- |
+| `large-sequential-scan` | 适用（`Table Scan` 按估算行数触发；`totalCost` 为 `null` 时代价分支不触发，finding 里不显示 `incremental cost of 0`） | 适用（`Table Scan` 按 `EstimateRows` 触发，同样不触发代价分支） | 适用（`TABLE FULL SCAN` 按 `EST.ROWS` 触发，同样不触发代价分支） | 适用（`TABLE ACCESS FULL` 按 `Rows` 触发，同样不触发代价分支） | 适用（`CSCN2` 按 tuple 的 `rows` 触发） | 不触发（QuestDB 未报告 estimated rows） |
+| `expensive-sort` | 不适用（依赖 PostgreSQL 语义的增量代价与计划总代价，MySQL 不映射） | 不适用（`EstimatedTotalSubtreeCost` 不属于 PostgreSQL 代价语义） | 不适用（`EST.TIME(us)` / `COST` 不属于 PostgreSQL 代价语义） | 不适用（Oracle `Cost` / `Time` 不属于 PostgreSQL 代价语义） | 不适用（Dameng `cost` 不属于 PostgreSQL 代价语义） | 不适用（QuestDB 未报告 PostgreSQL cost） |
+| `nested-loop-large-inner` | 适用（只用估算行数，`estimateOnly: true`） | 适用（只用两个输入的 `EstimateRows`，`estimateOnly: true`） | 适用（只用 `CHILD_1` / `CHILD_2` 的 `EST.ROWS`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 `Rows`，`estimateOnly: true`） | 适用（只用两个缩进子节点的 tuple `rows`，`estimateOnly: true`） | 不触发（QuestDB 未报告 estimated rows） |
 
 规则措辞纪律：
 
@@ -704,7 +728,7 @@ Hotspot 回答的是「这棵计划里优先看哪里」，与 Finding（「命�
 ```ts
 HotspotAnalysis {
   cost: {
-    engine: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng",
+    engine: "postgresql" | "mysql" | "sqlserver" | "oceanbase-oracle" | "oracle" | "dameng" | "questdb",
     status: "available" | "withheld" | "not-applicable",
     reason: string | null,
   },
@@ -811,6 +835,14 @@ fixtures/dameng/                     # 仅 estimated；1 个 official + 6 个 sy
 │   └── <name>[.synthetic].meta.json
 └── golden/
     └── estimated/<name>[.synthetic].json
+
+fixtures/questdb/                    # 仅 estimated；3 个 official docs + 3 个 synthetic native text
+├── README.md
+├── estimated/
+│   ├── <name>[.synthetic].plan.txt  # QuestDB EXPLAIN 原始文本
+│   └── <name>[.synthetic].meta.json
+└── golden/
+    └── estimated/<name>[.synthetic].json
 ```
 
 - `.plan.json` / `.plan.xml` / `.plan.txt` 不重排、不裁剪、不修饰；重采后应与数据库原始输出可直接对照。
@@ -828,6 +860,7 @@ fixtures/dameng/                     # 仅 estimated；1 个 official + 6 个 sy
 - Oracle 只有 `estimated/`：Host API 只提供 Estimated Plan，fixture 的 `format` 必须是 `text`，`.plan.txt`
   保留 DBMS_XPLAN 文本；synthetic 样本覆盖列宽变化、缺失字段、marker、CRLF、未知 operation 子树与尾部 section。
 - Dameng 只有 `estimated/`：Host API 当前只请求 Estimated 原生 `EXPLAIN` 文本，fixture 的 `format` 必须是 `text`；operation id 与 `#` 之间的缩进建树，predicate 按 operation id 关联；不创建 `actual/`，不把 autotrace / runtime 输出写入 fixture。
+- QuestDB 只有 `estimated/`：Host API 返回 `EXPLAIN <source SQL>` 的原生 `text`；官方文档样例必须标明是 transcribed documentation sample 而非本地采集，PageFrame / Row / Frame pipeline 只计一个 relation access；不创建 `actual/`。
 - 测试侧 loader：`tests/helpers/fixtures.js`（按 database + mode 发现 fixture、校验 metadata、生成 `RawPlanInput`）。
 
 当前 fixture：PostgreSQL 20 个（18 个真实采集 + 2 个 synthetic；明细见 `fixtures/postgres/README.md`）；
@@ -838,7 +871,7 @@ OceanBase Oracle 12 个（1 个 official = OceanBase V4.3.5 Oracle 模式 `EXPLA
 11 个 synthetic；本机无 OceanBase 实例，键名与算子名对照官方文档与引擎 JSON plan writer，
 明细见 `fixtures/oceanbase-oracle/README.md`）；Oracle 5 个，全部为 DBX TYPICAL +PREDICATE synthetic text
 （明细见 `fixtures/oracle/README.md`）；Dameng 7 个（1 个 official 文档示例 + 6 个 synthetic，均为 Estimated native text；
-本机无 Dameng 实例，synthetic 与 official provenance 见 `fixtures/dameng/README.md`）。
+本机无 Dameng 实例，synthetic 与 official provenance 见 `fixtures/dameng/README.md`）；QuestDB 6 个（3 个 official documentation transcription + 3 个 synthetic；无本地 QuestDB capture，明细见 `fixtures/questdb/README.md`）。
 
 ## 8. Fixture Provenance
 
@@ -887,7 +920,7 @@ npm run analyze -- estimated/seq-scan   # 开发用：对单个 fixture 跑完�
 
 覆盖范围：契约校验、PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng parser 字段映射与错误路径
 （含 XML namespace / malformed XML / 多 statement / 未知 operator / 未知字段 / 缺失字段 / `CHILD_<n>` 数字排序 /
-Dameng tuple / 缩进建树 / operation-id predicate / runtime marker / 多根 fail-closed、非法根对象）、estimated / actual 不混淆、
+Dameng tuple / 缩进建树 / operation-id predicate / runtime marker / QuestDB property / inline property / relative-indent tree / CRLF / multiple roots fail-closed / PageFrame scan counting / unknown subtree retention）、estimated / actual 不混淆、
 NormalizedPlan 语义与 id、Metrics 计数与增量代价、3 条规则的正反例与阈值边界、
 Hotspot 契约 / PostgreSQL 代价归因边界（Limit 截断、InitPlan / SubPlan、缺失代价）/ MySQL 行数与 cost_info 信号 /
 SQL Server `EstimateRows` 行数信号与成本 not-applicable / OceanBase Oracle `EST.ROWS` 行数信号与 `EST.TIME(us)` 不入信号、Oracle `Rows` 行数信号与 `Cost` 不入 PostgreSQL cost、
@@ -896,11 +929,11 @@ SQL Server `EstimateRows` 行数信号与成本 not-applicable / OceanBase Oracl
 ## 11. 明确不在本轮范围
 
 本轮不实现：Execution Plan 扩展点集成、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
-Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
+Doris parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容、
 其他未声明方言的文本计划 parser、Plan Diff、History、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。
 
-以上均按独立 Issue 推进；Host 接入仍等待 t8y2/dbx#9675 / [PR #9692](https://github.com/t8y2/dbx/pull/9692) 落地，
-落地后只需把 Host 返回值交给第 2.1 节的 Adapter，将 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
+以上均按独立 Issue 推进；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 实现，
+Plan Detective 通过第 2.1 节的 Adapter 将 Host 返回的 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
 
 > 更新（2026-09-20，Issue [#19](https://github.com/0verme/dbx-plugin-plan-detective/issues/19)）：
 > Hotspot Analysis 已实现（`src/core/hotspots/**`）：确定性、engine-aware、无综合评分，与 Findings 分层；
@@ -953,3 +986,11 @@ Doris / QuestDB parser、MariaDB / OceanBase MySQL / ADB MySQL 的自动兼容�
 > 未知 operator/detail、缺失或损坏的 tuple 单项 fail-soft 并保留原文；多根、无 operation row、错误 mode、runtime/autotrace marker fail-closed。
 > Dameng `cost` 不映射 PostgreSQL `startupCost` / `totalCost`，Metrics / Hotspots / Rules 只使用可靠 `rows` 信号，
 > `bytes-per-row` 仅作为 `width` 与 engine-specific evidence。新增 1 个 official 文档示例 + 6 个 synthetic estimated text fixture、golden 与 parser / normalizer / analysis / UI 测试。
+>
+> 更新（2026-09-23，Phase 3.5 · QuestDB Estimated EXPLAIN Structured Parser）：
+> QuestDB 已从 raw-only 升级为 structured：新增 `src/core/questdb/parse-text-plan.js`、
+> `src/core/normalize/normalize-questdb.js` 与 `src/core/parsers/questdb.js`（registry：`questdb` + `text`，Estimated only）。
+> Parser 使用相对缩进建立树，保留原文、inline / standalone properties 与未知 operator；只从 Frame / Interval scan-on 节点提升 relation。
+> PageFrame / Row / Frame 为可视化 pipeline，但只把 Frame / Interval access 计为 relation scan。
+> QuestDB 未提供共享 estimated rows / PostgreSQL cost，Metrics 保持这些值为 `null`，不产生 row / cost Finding 或 Hotspot。
+> 新增 3 个 official documentation transcription + 3 个 synthetic fixture、golden 与 tokenizer / parser / normalizer / metrics / registry / Host adapter / UI 测试；本机无 QuestDB 实例，不声称真实 capture 或 Host smoke。

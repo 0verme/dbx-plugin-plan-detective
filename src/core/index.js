@@ -29,6 +29,8 @@ export { parseOracleTextPlan } from "./oracle/parse-text-plan.js";
 export { normalizeOraclePlan } from "./normalize/normalize-oracle.js";
 export { parseDamengTextPlan } from "./dameng/parse-text-plan.js";
 export { normalizeDamengPlan } from "./normalize/normalize-dameng.js";
+export { parseQuestDbTextPlan, tokenizeQuestDbPlan } from "./questdb/parse-text-plan.js";
+export { normalizeQuestDbPlan } from "./normalize/normalize-questdb.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";

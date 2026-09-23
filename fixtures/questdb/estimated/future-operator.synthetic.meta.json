@@ -1,0 +1,28 @@
+{
+  "database": "questdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic future-compatibility shape with an unknown QuestDB operator and inline / standalone unknown properties; hand-written and not executed.",
+    "reference": null
+  },
+  "features": [
+    "unknown operator fail-soft",
+    "unknown inline property retention",
+    "unknown standalone property retention",
+    "child subtree preservation",
+    "backward scan direction"
+  ],
+  "expect": {
+    "rootNodeType": "QuestDB Future Operator",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

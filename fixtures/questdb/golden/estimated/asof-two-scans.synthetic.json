@@ -1,0 +1,585 @@
+{
+  "parsed": {
+    "database": "questdb",
+    "format": "text",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "SelectedRecord",
+      "rawNodeType": "SelectedRecord",
+      "rawLine": "SelectedRecord",
+      "indent": 0,
+      "relation": null,
+      "scanDirection": null,
+      "properties": [],
+      "inlineProperties": [],
+      "filter": null,
+      "condition": null,
+      "workers": null,
+      "vectorized": null,
+      "children": [
+        {
+          "nodeType": "Filter",
+          "rawNodeType": "Filter",
+          "rawLine": "  Filter filter: l.symbol = r.symbol",
+          "indent": 2,
+          "relation": null,
+          "scanDirection": null,
+          "properties": [],
+          "inlineProperties": [
+            {
+              "name": "filter",
+              "value": "l.symbol = r.symbol",
+              "rawLine": "  Filter filter: l.symbol = r.symbol",
+              "indent": 2
+            }
+          ],
+          "filter": "l.symbol = r.symbol",
+          "condition": null,
+          "workers": null,
+          "vectorized": null,
+          "children": [
+            {
+              "nodeType": "AsOf Join Fast",
+              "rawNodeType": "AsOf Join Fast",
+              "rawLine": "    AsOf Join Fast",
+              "indent": 4,
+              "relation": null,
+              "scanDirection": null,
+              "properties": [
+                {
+                  "name": "condition",
+                  "value": "l.ts = r.ts",
+                  "rawLine": "      condition: l.ts = r.ts",
+                  "indent": 6
+                }
+              ],
+              "inlineProperties": [],
+              "filter": null,
+              "condition": "l.ts = r.ts",
+              "workers": null,
+              "vectorized": null,
+              "children": [
+                {
+                  "nodeType": "PageFrame",
+                  "rawNodeType": "PageFrame",
+                  "rawLine": "      PageFrame",
+                  "indent": 6,
+                  "relation": null,
+                  "scanDirection": null,
+                  "properties": [],
+                  "inlineProperties": [],
+                  "filter": null,
+                  "condition": null,
+                  "workers": null,
+                  "vectorized": null,
+                  "children": [
+                    {
+                      "nodeType": "Row forward scan",
+                      "rawNodeType": "Row forward scan",
+                      "rawLine": "        Row forward scan",
+                      "indent": 8,
+                      "relation": null,
+                      "scanDirection": "forward",
+                      "properties": [],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    },
+                    {
+                      "nodeType": "Frame forward scan",
+                      "rawNodeType": "Frame forward scan",
+                      "rawLine": "        Frame forward scan on: core_price",
+                      "indent": 8,
+                      "relation": "core_price",
+                      "scanDirection": "forward",
+                      "properties": [],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                },
+                {
+                  "nodeType": "PageFrame",
+                  "rawNodeType": "PageFrame",
+                  "rawLine": "      PageFrame",
+                  "indent": 6,
+                  "relation": null,
+                  "scanDirection": null,
+                  "properties": [],
+                  "inlineProperties": [],
+                  "filter": null,
+                  "condition": null,
+                  "workers": null,
+                  "vectorized": null,
+                  "children": [
+                    {
+                      "nodeType": "Row forward scan",
+                      "rawNodeType": "Row forward scan",
+                      "rawLine": "        Row forward scan",
+                      "indent": 8,
+                      "relation": null,
+                      "scanDirection": "forward",
+                      "properties": [],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    },
+                    {
+                      "nodeType": "Frame forward scan",
+                      "rawNodeType": "Frame forward scan",
+                      "rawLine": "        Frame forward scan on: market_data",
+                      "indent": 8,
+                      "relation": "market_data",
+                      "scanDirection": "forward",
+                      "properties": [],
+                      "inlineProperties": [],
+                      "filter": null,
+                      "condition": null,
+                      "workers": null,
+                      "vectorized": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    },
+    "orphanProperties": []
+  },
+  "normalized": {
+    "database": "questdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "project",
+      "nodeType": "SelectedRecord",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "filter",
+          "nodeType": "Filter",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": "l.symbol = r.symbol",
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "join",
+              "nodeType": "AsOf Join Fast",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "pipeline",
+                  "nodeType": "PageFrame",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "pipeline",
+                      "nodeType": "Row forward scan",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Row forward scan",
+                          "rawNodeType": "Row forward scan",
+                          "rawLine": "        Row forward scan",
+                          "indent": 8,
+                          "relation": null,
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    },
+                    {
+                      "id": "0.0.0.0.1",
+                      "kind": "scan",
+                      "nodeType": "Frame forward scan",
+                      "relation": {
+                        "name": "core_price",
+                        "alias": null,
+                        "indexName": null
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Frame forward scan",
+                          "rawNodeType": "Frame forward scan",
+                          "rawLine": "        Frame forward scan on: core_price",
+                          "indent": 8,
+                          "relation": "core_price",
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "questdb",
+                    "questdb": {
+                      "nodeType": "PageFrame",
+                      "rawNodeType": "PageFrame",
+                      "rawLine": "      PageFrame",
+                      "indent": 6,
+                      "relation": null,
+                      "scanDirection": null,
+                      "workers": null,
+                      "filter": null,
+                      "condition": null,
+                      "vectorized": null,
+                      "properties": [],
+                      "inlineProperties": []
+                    },
+                    "extra": {}
+                  }
+                },
+                {
+                  "id": "0.0.0.1",
+                  "kind": "pipeline",
+                  "nodeType": "PageFrame",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.1.0",
+                      "kind": "pipeline",
+                      "nodeType": "Row forward scan",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Row forward scan",
+                          "rawNodeType": "Row forward scan",
+                          "rawLine": "        Row forward scan",
+                          "indent": 8,
+                          "relation": null,
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    },
+                    {
+                      "id": "0.0.0.1.1",
+                      "kind": "scan",
+                      "nodeType": "Frame forward scan",
+                      "relation": {
+                        "name": "market_data",
+                        "alias": null,
+                        "indexName": null
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "questdb",
+                        "questdb": {
+                          "nodeType": "Frame forward scan",
+                          "rawNodeType": "Frame forward scan",
+                          "rawLine": "        Frame forward scan on: market_data",
+                          "indent": 8,
+                          "relation": "market_data",
+                          "scanDirection": "forward",
+                          "workers": null,
+                          "filter": null,
+                          "condition": null,
+                          "vectorized": null,
+                          "properties": [],
+                          "inlineProperties": []
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "questdb",
+                    "questdb": {
+                      "nodeType": "PageFrame",
+                      "rawNodeType": "PageFrame",
+                      "rawLine": "      PageFrame",
+                      "indent": 6,
+                      "relation": null,
+                      "scanDirection": null,
+                      "workers": null,
+                      "filter": null,
+                      "condition": null,
+                      "vectorized": null,
+                      "properties": [],
+                      "inlineProperties": []
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "questdb",
+                "questdb": {
+                  "nodeType": "AsOf Join Fast",
+                  "rawNodeType": "AsOf Join Fast",
+                  "rawLine": "    AsOf Join Fast",
+                  "indent": 4,
+                  "relation": null,
+                  "scanDirection": null,
+                  "workers": null,
+                  "filter": null,
+                  "condition": "l.ts = r.ts",
+                  "vectorized": null,
+                  "properties": [
+                    {
+                      "name": "condition",
+                      "value": "l.ts = r.ts",
+                      "rawLine": "      condition: l.ts = r.ts",
+                      "indent": 6
+                    }
+                  ],
+                  "inlineProperties": []
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "questdb",
+            "questdb": {
+              "nodeType": "Filter",
+              "rawNodeType": "Filter",
+              "rawLine": "  Filter filter: l.symbol = r.symbol",
+              "indent": 2,
+              "relation": null,
+              "scanDirection": null,
+              "workers": null,
+              "filter": "l.symbol = r.symbol",
+              "condition": null,
+              "vectorized": null,
+              "properties": [],
+              "inlineProperties": [
+                {
+                  "name": "filter",
+                  "value": "l.symbol = r.symbol",
+                  "rawLine": "  Filter filter: l.symbol = r.symbol",
+                  "indent": 2
+                }
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "questdb",
+        "questdb": {
+          "nodeType": "SelectedRecord",
+          "rawNodeType": "SelectedRecord",
+          "rawLine": "SelectedRecord",
+          "indent": 0,
+          "relation": null,
+          "scanDirection": null,
+          "workers": null,
+          "filter": null,
+          "condition": null,
+          "vectorized": null,
+          "properties": [],
+          "inlineProperties": []
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 9,
+    "maxDepth": 5,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 2,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "questdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

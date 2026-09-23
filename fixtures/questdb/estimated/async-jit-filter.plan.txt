@@ -1,0 +1,5 @@
+Async JIT Filter workers: 47
+  filter: 100.0<amount [pre-touch]
+    PageFrame
+        Row forward scan
+        Frame forward scan on: trades
