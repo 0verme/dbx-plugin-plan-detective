@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.5 已完成；v0.6.5 Release 准备中** |
+| 当前阶段 | **Phase 1–3.5 已完成；v0.6.5 Release prep PR #57 OPEN** |
 | 插件版本 | 0.6.5（release prep；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
 | 阶段结论 | Phase 3.5 QuestDB Estimated EXPLAIN 已由 PR #56 合并（merge `62bef56`）。v0.6.5 prep：`npm test` 1193/1193、build、`dbx-plugin package .` 与 diff check 通过；本地 universal candidate 87012 bytes，SHA-256 `d998c4d4…`。真实 QuestDB / DBX Desktop Host smoke NOT RUN。Actual Plan / Plan Diff / AI / SQL Rewrite 仍是 Future |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual Plan / autotrace、不接 AI 服务、不改 DBX / Doris / Plan Diff；本轮只准备发布 v0.6.5，不更新 DBX Store |
@@ -16,15 +16,15 @@
 - Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；Release 基线 `origin/main 62bef569cceb2e204d426d1a7417eb315c18567e`；本地 `main` 的未推送 commit `57e4730` 保留、不纳入本次 release worktree
 - Active Tasks:
   - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `worktrees/questdb-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#56`；Notes: merge `62bef56`；3 official documentation transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build passed；Host Smoke NOT RUN。
-  - Issue / Task: v0.6.5 Release；Branch: `chore/prepare-v0.6.5-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.5-release`；State: `IN_PROGRESS`；Conflict Risk: `MEDIUM`；PR: `Pending`；Notes: `npm test` 1193/1193、build、CLI package / metadata / UI parity、diff check passed；unsigned candidate 87012 bytes / SHA-256 `d998c4d4…`；PR merge、tag 与 GitHub Release 尚未完成。
+  - Issue / Task: v0.6.5 Release；Branch: `chore/prepare-v0.6.5-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.5-release`；State: `IN_PROGRESS`；Conflict Risk: `MEDIUM`；PR: `#57`；Notes: `npm test` 1193/1193、build、CLI package / metadata / UI parity、diff check passed；unsigned candidate 87012 bytes / SHA-256 `d998c4d4…`；PR merge、tag 与 GitHub Release 尚未完成。
 - Integration Baseline: `origin/main 62bef569cceb2e204d426d1a7417eb315c18567e`（PR #56 merge commit）。
 - Hotspot Files: `manifest.json`、`README.md`、`STATUS.md`、`docs/PROJECT_PLAN.md`；`ui/**` 必须与 release source 对齐。
 - Blocked: 无代码 blocker；真实 QuestDB / DBX Desktop Host smoke 未运行（当前环境无实例 / Host）。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: `chore/prepare-v0.6.5-release`；验证通过后创建 release prep PR，再按用户授权合并。
+- Merge Queue: Release prep PR #57 OPEN；本地 gates passed，GitHub checks 未报告；用户已授权按验证结果合并。
 - Recently Merged: PR #56 QuestDB structured（merge `62bef56`）；v0.6.4 已发布。
 
-- Next Actions: 提交并 push v0.6.5 release prep，创建中文 PR；按用户授权，在本地 gates 通过且 GitHub 状态允许后合并 PR，再创建 tag / GitHub Release。
+- Next Actions: 合并 PR #57（本地 gates passed、GitHub checks 未报告）；随后创建 annotated tag / GitHub Release，并核验发布 workflow 与 artifacts。
 
 ## 0. 当前状态
 
@@ -214,7 +214,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 
 ### 0.12 v0.6.5 Release（准备中，2026-09-23）
 
-- 本轮为 patch release：版本 `0.6.4 → 0.6.5`；基线为 PR #56 merge `62bef56`，功能内容为 Phase 3.5 QuestDB Estimated EXPLAIN 结构化解析。
+- 本轮为 patch release：版本 `0.6.4 → 0.6.5`；基线为 PR #56 merge `62bef56`，功能内容为 Phase 3.5 QuestDB Estimated EXPLAIN 结构化解析；发布准备 PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) OPEN。
 - 同步 `manifest.json`、README 下载示例与状态 / 项目计划；版本仍处于 release preparation，尚未创建 tag 或 GitHub Release。
 - 本地 Gate：`npm test` 1193/1193；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`npx --yes --package=@dbx-app/plugin-cli@0.1.9 dbx-plugin package .` 成功；`git diff --check` 通过。
 - Candidate：`io.github.0verme.plan-detective-0.6.5-universal.dbxp`，87012 bytes，SHA-256 `d998c4d47d4d7cdeefaf466a57ae3f3ec8fb72cf5b86026610b11e11e9c9eaeb`；包含当前 `ui/`、manifest `0.6.5`，unsigned；尚未发布。
