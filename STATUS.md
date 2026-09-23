@@ -3,27 +3,27 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.6 已合并；v0.6.6 Release Preparation 完成，PR #61 OPEN / READY_FOR_RELEASE_PR_REVIEW** |
-| 插件版本 | 当前已发布 `0.6.5`；正在准备 `0.6.6`（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read` 不变） |
-| 阶段结论 | Phase 3.6 决策为 `B — SMALL_IR_GAP`；Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已合并，merge commit / 当前 `origin/main` 为 `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`。功能验证：`npm test` 1243/1243、`npm run build` 通过；5 个 Doris goldens 已随功能合入。本轮 release 重跑 `npm run test:update-goldens`：83 个已提交 goldens unchanged。真实 Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN` |
-| 当前不做 | 本轮仅准备 v0.6.6 release；不继续 Doris feature 开发，不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual / ANALYZE / PROFILE Plan、不接 AI、不构造完整 Doris DAG、不修改 DBX upstream / Doris server；PR 创建后停止，不 merge、不打 tag、不建 GitHub Release、不更新 DBX Store |
+| 当前阶段 | **Phase 1–3.6 已合并；v0.6.6 已发布（Doris structured + OceanBase MySQL parser fix）** |
+| 插件版本 | 当前已发布 `0.6.6`（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read` 不变） |
+| 阶段结论 | Phase 3.6 Doris parser（PR #59）与 Issue #60 OceanBase MySQL parser（PR #62，merge `939d152`）均已合并并随 v0.6.6 发布；`npm test` 1253/1253、`npm run build`、DBX CLI package preflight 通过。真实 OceanBase 回放与 Doris / DBX Desktop Host Smoke 均 `NOT RUN`，OceanBase 内网验证待用户执行 |
+| 当前不做 | 本轮已发布 GitHub Release；不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual / ANALYZE / PROFILE Plan、不接 AI、不构造完整 Doris DAG、不修改 DBX upstream / Doris server；DBX Store / 签名流程独立处理 |
 
-## 当前任务快照（v0.6.6 Release Preparation）
+## 当前任务快照（v0.6.6 Release Verification）
 
 - Project: `dbx-plugin-plan-detective`
-- Bootstrap Root: 原始初始化根目录未在本轮追溯（复用已初始化 Windows workspace）
-- Workspace Root: `E:/vbcoding/dbx-plugin-plan-detective_base`
-- Current Main: `E:/vbcoding/dbx-plugin-plan-detective`；branch `main`，HEAD `5414a984a91e777ebf831ba80dd14b6c14d97100`，`origin/main` `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`；ahead 0 / behind 62，working tree `CLEAN`。Canonical local main 仅执行安全读取与 `git fetch origin`，未 checkout / pull / merge / rebase / reset / stash / clean。
+- Bootstrap Root: `/vol5/1000/ai-workspace`
+- Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
+- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；branch `main`，本地 HEAD `57e4730`（未推送且保留），远端 `origin/main` `939d152`；本地 worktree `CLEAN`，ahead 1 / behind 32。Release / docs 工作均在独立 worktree 完成。
 - Active Tasks:
-  - Issue / Task: Plan Detective v0.6.6 Release Preparation；Branch: `chore/prepare-v0.6.6-release`；Worktree: `E:/vbcoding/dbx-plugin-plan-detective_base/worktrees/release-v0.6.6`；State: `READY`；Conflict Risk: `MEDIUM`；PR: [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) OPEN；Notes: baseline `origin/main` / PR #59 merge `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`；仅 release manifest / README / STATUS；验证通过；真实 Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`；package preflight `PACKAGE_PREFLIGHT_NOT_RUN`（`dbx-plugin` CLI 不可用）。
-- Integration Baseline: release worktree 从 `origin/main` `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9` 创建；PR #59 merge commit 可达。
+  - Issue / Task: Plan Detective v0.6.6 Release；Branch: `chore/prepare-v0.6.6-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.6-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) merged；Notes: tag `v0.6.6` 指向 `939d152`；GitHub Release / workflow / universal artifact 已验证；真实 OceanBase 回放 `NOT RUN`，用户将内网测试。
+- Integration Baseline: `origin/main` / release tag `v0.6.6` 均指向 `939d152cb72a9d12e205a87079948ade0ed2fd46`；PR #61 与 PR #62 merge commit 均可达。
 - Hotspot Files: `manifest.json`、`README.md`、`STATUS.md`；本轮不修改 Doris feature source / fixtures / goldens；Conflict Risk `MEDIUM`。
-- Blocked: Real Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`；`dbx-plugin package .` 未运行（Windows `dbx-plugin` CLI 不可用），不宣称 package preflight 通过。
-- Cleanup Queue: 无；`node_modules/` 为本轮验证生成的 ignored 依赖目录，保留；没有生成 release package candidate。
-- Merge Queue: v0.6.6 Release PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) OPEN，等待 review；本轮不合并。
-- Recently Merged: PR #59 Phase 3.6 Doris structured（merge `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`）；PR #57 v0.6.5 release prep（merge `eca0052`）；PR #56 QuestDB structured（merge `62bef56`）；v0.6.5 已发布。
+- Blocked: 真实 OceanBase 4.2.5.7 replay `NOT RUN`（用户安排内网测试）；真实 Doris / DBX Desktop Host Smoke `NOT RUN`。上述不影响 GitHub Release；发布包为 unsigned，DBX Store / signing 未处理。
+- Cleanup Queue: 无；release worktree 的 `dist/` package 是 ignored 本地 preflight 产物，依赖安装缓存位于 `/tmp`。
+- Merge Queue: release prep PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) 已合并；发布验证记录 PR 正在本 worktree 准备。
+- Recently Merged: PR #62 OceanBase MySQL parser（merge `939d152`）；PR #61 v0.6.6 release prep（merge `c43e7aa`）；PR #59 Doris structured（merge `5bb3115`）；v0.6.6 已发布。
 
-- Next Actions: 等待 v0.6.6 Release PR #61 review；不 merge、不 tag、不建 GitHub Release、不更新 DBX Store。
+- Next Actions: 用户在内网验证 OceanBase 4.2.5.7 MySQL-mode 计划；DBX Store / signing 独立处理。
 
 ## 0. 当前状态
 
@@ -193,7 +193,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 - 语义边界：仅可靠 `cardinality` → `estimatedRows`；scan 用中性 `scan`；不映射 Doris cost / `avgRowSize` 到 PostgreSQL cost / shared width；不建 runtime Pipeline DAG、不改 DBX upstream。
 - Fixtures：1 official Apache Doris documentation transcription + 4 synthetic，全部 `estimated/`，无假造 capture metadata；Phase 3.6 新增 5 个 Doris goldens。本轮 release 重跑 `npm run test:update-goldens` 报告 0 files written、83 个已提交 goldens unchanged。
 - Gate：`npm test` **1243/1243**；`npm run build` **通过**（`DBX_UI_BUILD_SUCCESS`）。本地 `npm ci` 的 esbuild bundled binary 在工作区呈 mode `000` 导致安装脚本 `EACCES`；忽略脚本安装后只修复 ignored `node_modules` binary 的执行位并验证版本，production build 成功。`git diff --check` **通过**。
-- Real Doris：**NOT AVAILABLE**；Windows DBX Host Smoke：**NOT RUN**。PR #59 已合并，merge commit `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`（当前 `origin/main`）；本轮 release prep 单独处理，不改 Doris feature source。
+- Real Doris：**NOT AVAILABLE**；DBX Desktop Host Smoke：**NOT RUN**。PR #59 已合并，merge commit `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`；当前远端 `origin/main` 为 `939d152`，包含 v0.6.6 与 PR #62。release prep 不修改 Doris feature source。
 
 ### 0.10 v0.6.3 Release（2026-09-22）
 
@@ -234,15 +234,17 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 - Host Smoke：**NOT RUN** — 当前环境无 DBX Desktop Host 或真实 QuestDB 实例；fixtures provenance 明确区分文档转录与 synthetic，未声称本地 capture。
 - DBX Store 更新 / signing 不属于本次 release；需由 Store maintainer 处理候选 PR。
 
-### 0.13 v0.6.6 Release Preparation（2026-09-23，PR #61 OPEN）
+### 0.13 v0.6.6 Release（2026-09-23）
 
-- 版本：`0.6.5 → 0.6.6`；release baseline 为 `origin/main` / PR #59 merge commit `5bb31154de3bfbdf90836b0a0b9d99ba272ca9f9`。本轮只修改 `manifest.json`、`README.md`、`STATUS.md`；Doris feature source、fixtures、goldens 未改，`ui/**` 构建后无变化。
-- Manifest contract 保持：`id = io.github.0verme.plan-detective`、`engines.dbx = >=0.6.18`、`engines.host_api = ^1.2`、`permissions = ["host.plans:read"]`；未新增 permission。`dbx-plugin.toml` 声明 `assets` / `ui` 打包目录。
-- Doris release scope：Estimated EXPLAIN text → Distributed Plan → PLAN FRAGMENT → fragment-local operator tree；保留 Fragment / Sink / Exchange metadata、`cardinality → estimatedRows`、neutral scan、join / sort / aggregate normalization 与未知 operator / property。Sink → Exchange 只作为 metadata / evidence，不构造完整 DAG。Decision `B — SMALL_IR_GAP`：generic structural wrapper 可 traversal，不参与 operator metrics / rules / hotspots。Doris cost 不映射 PostgreSQL cost；`costAttribution = not-applicable`。
-- Validation（Windows）：`npm test` **1243/1243 PASS**；`npm run test:update-goldens` **0 files written / 83 unchanged**（覆盖 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng、QuestDB 与 5 个已提交 Doris goldens）；`npm run build` **PASS**（`DBX_UI_BUILD_SUCCESS`，`ui/**` 无变化）；`git diff --check` **PASS**。
-- Package preflight：**PACKAGE_PREFLIGHT_NOT_RUN** — 当前 Windows 环境没有 `dbx-plugin` CLI；未创建或验证 `.dbxp`，不宣称 PASS。
-- Real Doris：**NOT AVAILABLE**；Windows DBX + Doris Host Smoke：**NOT RUN**。
-- Release PR：[Plan Detective v0.6.6](https://github.com/0verme/dbx-plugin-plan-detective/pull/61)，OPEN，等待 review；创建 PR 后停止。Tag、GitHub Release 与 DBX Store 均未创建 / 更新。
+- 版本：`0.6.5 → 0.6.6`；release prep PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) 于 `2026-09-23T07:20:32Z` 合并（merge `c43e7aa`）。本版本包含 Doris Estimated EXPLAIN structured（PR #59）与 OceanBase MySQL-mode parser fix（Issue #60 / PR #62，merge `939d152`）。
+- Release commit：`939d152cb72a9d12e205a87079948ade0ed2fd46`；annotated tag `v0.6.6`（tag object `d11a9e9fdb0c6e95917724c40ff9d8ccbbaf7578`）已推送。
+- GitHub Release：[Plan Detective v0.6.6](https://github.com/0verme/dbx-plugin-plan-detective/releases/tag/v0.6.6)，published `2026-09-23T12:21:55Z`，非 draft / 非 prerelease。
+- Workflow：[Release DBX plugin · 35860008773](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/35860008773)，`event=release`、`head_sha = 939d152…`、conclusion success；Build universal 与 Publish plugin release assets jobs 均成功。
+- CI asset：`io.github.0verme.plan-detective-0.6.6-universal.dbxp`，91730 bytes，SHA-256 `e765256816d36e43f18728b0b3ee3cae8f07f4550b170eed40a9d3e807060f67`；`release-candidates.json` 的 size / SHA 与下载的 asset 一致。
+- Package contract：target `universal`；manifest `id = io.github.0verme.plan-detective`、`publisher = 0verme`、`version = 0.6.6`、`engines.dbx = >=0.6.18`、`engines.host_api = ^1.2`、`permissions = ["host.plans:read"]`；5 个内部 SHA-256 checksums 通过；包内无 `signature.json`。CI 包解压文件与 local CLI preflight package 逐文件一致。
+- 本地 Gate：`npm test` **1253/1253**；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`npx --yes --package=@dbx-app/plugin-cli@0.1.9 dbx-plugin package .` 成功；`git diff --check` 通过。发布工作流无失败；日志含 Node.js 20 deprecation 与可选 Go cache 警告。
+- Host Smoke：**NOT RUN** — 真实 OceanBase 4.2.5.7 replay 待用户内网验证；真实 Doris / DBX Desktop Host smoke 也未运行。本次没有声称真实数据库回放。
+- DBX Store 更新 / signing 不属于本次 Release；按独立维护者流程处理。
 
 ### 0.3 Phase 0 审计结论（历史，2026-09-18）
 
