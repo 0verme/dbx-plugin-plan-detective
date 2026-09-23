@@ -1,0 +1,11 @@
+PLAN FRAGMENT 0
+VRESULT SINK
+1:VOlapScanNode
+TABLE: catalog.db.orders
+cardinality: unknown
+avgRowSize: 40.5
+numNodes: 3
+partitions: 2/6 [p1, p2]
+tablets: 14/96
+future optimizer flag: enabled
+unclassified detail from a later Doris version

@@ -1,0 +1,731 @@
+{
+  "parsed": {
+    "database": "doris",
+    "format": "text",
+    "mode": "estimated",
+    "fragments": [
+      {
+        "id": "0",
+        "description": null,
+        "outputExpressions": [],
+        "partition": null,
+        "hasColoPlanNode": null,
+        "sink": {
+          "type": "VRESULT SINK",
+          "exchangeId": null,
+          "distribution": null,
+          "properties": [],
+          "rawLines": [
+            "VRESULT SINK"
+          ],
+          "extra": {
+            "headerLine": 2
+          }
+        },
+        "root": {
+          "operationId": "8",
+          "operator": "SORT",
+          "rawOperator": "SORT",
+          "properties": [
+            {
+              "name": "order by",
+              "value": "amount DESC",
+              "rawLine": "order by: amount DESC",
+              "lineNumber": 4
+            }
+          ],
+          "children": [
+            {
+              "operationId": "7",
+              "operator": "VAGGREGATE",
+              "rawOperator": "VAGGREGATE",
+              "properties": [
+                {
+                  "name": "group by",
+                  "value": "customer_id",
+                  "rawLine": "group by: customer_id",
+                  "lineNumber": 6
+                }
+              ],
+              "children": [
+                {
+                  "operationId": "5",
+                  "operator": "SELECT",
+                  "rawOperator": "SELECT",
+                  "properties": [
+                    {
+                      "name": "conjuncts",
+                      "value": "amount > 0",
+                      "rawLine": "conjuncts: amount > 0",
+                      "lineNumber": 8
+                    }
+                  ],
+                  "children": [
+                    {
+                      "operationId": "2",
+                      "operator": "VOlapScanNode",
+                      "rawOperator": "VOlapScanNode",
+                      "properties": [
+                        {
+                          "name": "TABLE",
+                          "value": "sales.orders",
+                          "rawLine": "TABLE: sales.orders",
+                          "lineNumber": 10
+                        },
+                        {
+                          "name": "cardinality",
+                          "value": "1200",
+                          "rawLine": "cardinality=1200",
+                          "lineNumber": 11
+                        }
+                      ],
+                      "children": [],
+                      "rawLines": [
+                        "|    |    |----2:VOlapScanNode",
+                        "TABLE: sales.orders",
+                        "cardinality=1200"
+                      ],
+                      "extra": {
+                        "headerColumn": 15,
+                        "branchColumn": 10,
+                        "branchConnector": true
+                      }
+                    }
+                  ],
+                  "rawLines": [
+                    "|    |----5:SELECT",
+                    "conjuncts: amount > 0"
+                  ],
+                  "extra": {
+                    "headerColumn": 10,
+                    "branchColumn": 5,
+                    "branchConnector": true
+                  }
+                }
+              ],
+              "rawLines": [
+                "|----7:VAGGREGATE",
+                "group by: customer_id"
+              ],
+              "extra": {
+                "headerColumn": 5,
+                "branchColumn": 0,
+                "branchConnector": true
+              }
+            }
+          ],
+          "rawLines": [
+            "8:SORT",
+            "order by: amount DESC"
+          ],
+          "extra": {
+            "headerColumn": 0,
+            "branchColumn": null,
+            "branchConnector": false
+          }
+        },
+        "properties": [],
+        "rawLines": [
+          "PLAN FRAGMENT 0"
+        ],
+        "extra": {
+          "headerLine": 1
+        }
+      }
+    ],
+    "exchangeEdges": [],
+    "raw": "PLAN FRAGMENT 0\nVRESULT SINK\n8:SORT\norder by: amount DESC\n|----7:VAGGREGATE\ngroup by: customer_id\n|    |----5:SELECT\nconjuncts: amount > 0\n|    |    |----2:VOlapScanNode\nTABLE: sales.orders\ncardinality=1200\n",
+    "extraLines": []
+  },
+  "normalized": {
+    "database": "doris",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "Doris Distributed Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "structural",
+          "nodeType": "Fragment 0",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "sort",
+              "nodeType": "SORT",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": [
+                "amount DESC"
+              ],
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "aggregate",
+                  "nodeType": "VAGGREGATE",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": [
+                    "customer_id"
+                  ],
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "filter",
+                      "nodeType": "SELECT",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": "amount > 0",
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [
+                        {
+                          "id": "0.0.0.0.0.0",
+                          "kind": "scan",
+                          "nodeType": "VOlapScanNode",
+                          "relation": {
+                            "name": "sales.orders",
+                            "alias": null,
+                            "indexName": null
+                          },
+                          "estimatedRows": 1200,
+                          "actualRows": null,
+                          "actualStartupTime": null,
+                          "actualTotalTime": null,
+                          "loops": null,
+                          "startupCost": null,
+                          "totalCost": null,
+                          "width": null,
+                          "filter": null,
+                          "joinType": null,
+                          "joinCondition": null,
+                          "indexCondition": null,
+                          "sortKeys": null,
+                          "groupKeys": null,
+                          "children": [],
+                          "engineSpecific": {
+                            "database": "doris",
+                            "doris": {
+                              "fragmentId": "0",
+                              "operationId": "2",
+                              "operator": "VOlapScanNode",
+                              "cardinality": "1200",
+                              "avgRowSize": null,
+                              "table": "sales.orders",
+                              "joinOp": null,
+                              "joinStrategy": null,
+                              "distributionMode": null,
+                              "equalJoinConjuncts": [],
+                              "otherJoinPredicates": [],
+                              "runtimeFilters": [],
+                              "preaggregation": null,
+                              "partitions": null,
+                              "tablets": null,
+                              "tabletList": null,
+                              "numNodes": null,
+                              "output": [],
+                              "projections": [],
+                              "limit": null,
+                              "offset": null,
+                              "properties": [
+                                {
+                                  "name": "TABLE",
+                                  "value": "sales.orders",
+                                  "rawLine": "TABLE: sales.orders",
+                                  "lineNumber": 10
+                                },
+                                {
+                                  "name": "cardinality",
+                                  "value": "1200",
+                                  "rawLine": "cardinality=1200",
+                                  "lineNumber": 11
+                                }
+                              ],
+                              "rawLines": [
+                                "|    |    |----2:VOlapScanNode",
+                                "TABLE: sales.orders",
+                                "cardinality=1200"
+                              ],
+                              "extra": {
+                                "headerColumn": 15,
+                                "branchColumn": 10,
+                                "branchConnector": true
+                              }
+                            },
+                            "extra": {
+                              "fragmentId": "0",
+                              "operationId": "2",
+                              "operator": "VOlapScanNode",
+                              "cardinality": "1200",
+                              "avgRowSize": null,
+                              "table": "sales.orders",
+                              "joinOp": null,
+                              "joinStrategy": null,
+                              "distributionMode": null,
+                              "equalJoinConjuncts": [],
+                              "otherJoinPredicates": [],
+                              "runtimeFilters": [],
+                              "preaggregation": null,
+                              "partitions": null,
+                              "tablets": null,
+                              "tabletList": null,
+                              "numNodes": null,
+                              "output": [],
+                              "projections": [],
+                              "limit": null,
+                              "offset": null,
+                              "properties": [
+                                {
+                                  "name": "TABLE",
+                                  "value": "sales.orders",
+                                  "rawLine": "TABLE: sales.orders",
+                                  "lineNumber": 10
+                                },
+                                {
+                                  "name": "cardinality",
+                                  "value": "1200",
+                                  "rawLine": "cardinality=1200",
+                                  "lineNumber": 11
+                                }
+                              ],
+                              "rawLines": [
+                                "|    |    |----2:VOlapScanNode",
+                                "TABLE: sales.orders",
+                                "cardinality=1200"
+                              ],
+                              "extra": {
+                                "headerColumn": 15,
+                                "branchColumn": 10,
+                                "branchConnector": true
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "engineSpecific": {
+                        "database": "doris",
+                        "doris": {
+                          "fragmentId": "0",
+                          "operationId": "5",
+                          "operator": "SELECT",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": null,
+                          "properties": [
+                            {
+                              "name": "conjuncts",
+                              "value": "amount > 0",
+                              "rawLine": "conjuncts: amount > 0",
+                              "lineNumber": 8
+                            }
+                          ],
+                          "rawLines": [
+                            "|    |----5:SELECT",
+                            "conjuncts: amount > 0"
+                          ],
+                          "extra": {
+                            "headerColumn": 10,
+                            "branchColumn": 5,
+                            "branchConnector": true
+                          }
+                        },
+                        "extra": {
+                          "fragmentId": "0",
+                          "operationId": "5",
+                          "operator": "SELECT",
+                          "cardinality": null,
+                          "avgRowSize": null,
+                          "table": null,
+                          "joinOp": null,
+                          "joinStrategy": null,
+                          "distributionMode": null,
+                          "equalJoinConjuncts": [],
+                          "otherJoinPredicates": [],
+                          "runtimeFilters": [],
+                          "preaggregation": null,
+                          "partitions": null,
+                          "tablets": null,
+                          "tabletList": null,
+                          "numNodes": null,
+                          "output": [],
+                          "projections": [],
+                          "limit": null,
+                          "offset": null,
+                          "properties": [
+                            {
+                              "name": "conjuncts",
+                              "value": "amount > 0",
+                              "rawLine": "conjuncts: amount > 0",
+                              "lineNumber": 8
+                            }
+                          ],
+                          "rawLines": [
+                            "|    |----5:SELECT",
+                            "conjuncts: amount > 0"
+                          ],
+                          "extra": {
+                            "headerColumn": 10,
+                            "branchColumn": 5,
+                            "branchConnector": true
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "doris",
+                    "doris": {
+                      "fragmentId": "0",
+                      "operationId": "7",
+                      "operator": "VAGGREGATE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "group by",
+                          "value": "customer_id",
+                          "rawLine": "group by: customer_id",
+                          "lineNumber": 6
+                        }
+                      ],
+                      "rawLines": [
+                        "|----7:VAGGREGATE",
+                        "group by: customer_id"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    },
+                    "extra": {
+                      "fragmentId": "0",
+                      "operationId": "7",
+                      "operator": "VAGGREGATE",
+                      "cardinality": null,
+                      "avgRowSize": null,
+                      "table": null,
+                      "joinOp": null,
+                      "joinStrategy": null,
+                      "distributionMode": null,
+                      "equalJoinConjuncts": [],
+                      "otherJoinPredicates": [],
+                      "runtimeFilters": [],
+                      "preaggregation": null,
+                      "partitions": null,
+                      "tablets": null,
+                      "tabletList": null,
+                      "numNodes": null,
+                      "output": [],
+                      "projections": [],
+                      "limit": null,
+                      "offset": null,
+                      "properties": [
+                        {
+                          "name": "group by",
+                          "value": "customer_id",
+                          "rawLine": "group by: customer_id",
+                          "lineNumber": 6
+                        }
+                      ],
+                      "rawLines": [
+                        "|----7:VAGGREGATE",
+                        "group by: customer_id"
+                      ],
+                      "extra": {
+                        "headerColumn": 5,
+                        "branchColumn": 0,
+                        "branchConnector": true
+                      }
+                    }
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "doris",
+                "doris": {
+                  "fragmentId": "0",
+                  "operationId": "8",
+                  "operator": "SORT",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "order by",
+                      "value": "amount DESC",
+                      "rawLine": "order by: amount DESC",
+                      "lineNumber": 4
+                    }
+                  ],
+                  "rawLines": [
+                    "8:SORT",
+                    "order by: amount DESC"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                },
+                "extra": {
+                  "fragmentId": "0",
+                  "operationId": "8",
+                  "operator": "SORT",
+                  "cardinality": null,
+                  "avgRowSize": null,
+                  "table": null,
+                  "joinOp": null,
+                  "joinStrategy": null,
+                  "distributionMode": null,
+                  "equalJoinConjuncts": [],
+                  "otherJoinPredicates": [],
+                  "runtimeFilters": [],
+                  "preaggregation": null,
+                  "partitions": null,
+                  "tablets": null,
+                  "tabletList": null,
+                  "numNodes": null,
+                  "output": [],
+                  "projections": [],
+                  "limit": null,
+                  "offset": null,
+                  "properties": [
+                    {
+                      "name": "order by",
+                      "value": "amount DESC",
+                      "rawLine": "order by: amount DESC",
+                      "lineNumber": 4
+                    }
+                  ],
+                  "rawLines": [
+                    "8:SORT",
+                    "order by: amount DESC"
+                  ],
+                  "extra": {
+                    "headerColumn": 0,
+                    "branchColumn": null,
+                    "branchConnector": false
+                  }
+                }
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "doris",
+            "structural": true,
+            "doris": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            },
+            "extra": {
+              "structuralType": "fragment",
+              "fragmentId": "0",
+              "description": null,
+              "partition": null,
+              "outputExpressions": [],
+              "hasColoPlanNode": null,
+              "sinkType": "VRESULT SINK",
+              "sinkExchangeId": null,
+              "sinkDistribution": null,
+              "sinkProperties": [],
+              "sinkRawLines": [
+                "VRESULT SINK"
+              ],
+              "properties": [],
+              "rawLines": [
+                "PLAN FRAGMENT 0"
+              ],
+              "extra": {
+                "headerLine": 1
+              }
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "doris",
+        "structural": true,
+        "doris": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        },
+        "extra": {
+          "structuralType": "distributed-plan",
+          "fragmentCount": 1,
+          "exchangeEdges": [],
+          "extraLines": []
+        }
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 4,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0.0.0.0",
+      "kind": "scan",
+      "nodeType": "VOlapScanNode",
+      "relation": "sales.orders",
+      "estimatedRows": 1200
+    },
+    "costAttribution": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "doris",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

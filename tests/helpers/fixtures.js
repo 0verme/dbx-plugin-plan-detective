@@ -13,11 +13,12 @@ export const OCEANBASE_ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "o
 export const ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oracle");
 export const DAMENG_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "dameng");
 export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
+export const DORIS_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "doris");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
  * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle /
- * Oracle call sites pass the family explicitly.
+ * Oracle, Dameng, QuestDB and Doris call sites pass the family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
   postgresql: POSTGRES_FIXTURES_DIR,
@@ -27,15 +28,16 @@ export const FIXTURE_DIRS = Object.freeze({
   oracle: ORACLE_FIXTURES_DIR,
   dameng: DAMENG_FIXTURES_DIR,
   questdb: QUESTDB_FIXTURES_DIR,
+  doris: DORIS_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb", "doris"]);
 export const MODES = ["estimated", "actual"];
 /**
  * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle,
- * Oracle and Dameng support estimated plans only: the Host API never serves an
- * actual plan for them, and none of them has an actual-plan shape this plugin
- * models, so there is no `actual/` directory for any of them by design.
+ * Oracle, Dameng, QuestDB and Doris support estimated plans only: the Host API
+ * never serves an actual plan for them, and none of them has an actual-plan
+ * shape this plugin models, so there is no `actual/` directory for them by design.
  */
 export const MODES_BY_DATABASE = Object.freeze({
   postgresql: ["estimated", "actual"],
@@ -45,6 +47,7 @@ export const MODES_BY_DATABASE = Object.freeze({
   oracle: ["estimated"],
   dameng: ["estimated"],
   questdb: ["estimated"],
+  doris: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
 
@@ -57,6 +60,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   oracle: ".plan.txt",
   dameng: ".plan.txt",
   questdb: ".plan.txt",
+  doris: ".plan.txt",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -68,6 +72,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   oracle: "text",
   dameng: "text",
   questdb: "text",
+  doris: "text",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -189,17 +194,18 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle` / `dameng` / `questdb`) and must match
- *   the fixture directory when known;
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle` / `dameng` / `questdb` / `doris`) and
+ *   must match the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;
  * - `format` must match the family's committed payload format (`json` for
- *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle / Dameng / QuestDB);
+ *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle / Dameng / QuestDB / Doris);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
  * - real captures must record databaseVersion / capturedAt / captureCommand / sql;
- * - synthetic fixtures must carry nulls there and be marked in the file name
- *   with `.synthetic`;
+ * - synthetic fixtures carry nulls there and are marked in the file name with
+ *   `.synthetic`; official documentation transcriptions may also carry nulls
+ *   when `source.detail` explicitly says no database capture was made;
  * - `expect` records the behavior the fixture pins down. `hotspotNodeRefs` is
  *   optional; when present it is the deterministic attention order of the
  *   fixture's hotspots, independent of the golden snapshot.
@@ -217,6 +223,9 @@ export function validateFixtureMeta(meta, context = {}) {
   const source = isPlainObject(meta.source) ? meta.source : undefined;
   const kind = source?.kind;
   const isSynthetic = kind === "synthetic";
+  const captureFields = ["databaseVersion", "capturedAt", "captureCommand", "sql"];
+  const isUncapturedOfficialTranscript =
+    kind === "official" && captureFields.every((field) => meta[field] === null);
 
   if (!FIXTURE_DATABASES.includes(meta.database)) {
     problems.push(`database must be one of ${FIXTURE_DATABASES.join(", ")}; got ${JSON.stringify(meta.database)}`);
@@ -265,11 +274,19 @@ export function validateFixtureMeta(meta, context = {}) {
     }
   }
 
-  if (isSynthetic) {
-    for (const field of ["databaseVersion", "capturedAt", "captureCommand", "sql"]) {
+  if (isSynthetic || isUncapturedOfficialTranscript) {
+    for (const field of captureFields) {
       if (meta[field] !== null) {
-        problems.push(`${field} must be null for synthetic fixtures; got ${JSON.stringify(meta[field])}`);
+        const provenance = isSynthetic ? "synthetic" : "uncaptured official transcription";
+        problems.push(`${field} must be null for ${provenance} fixtures; got ${JSON.stringify(meta[field])}`);
       }
+    }
+    if (
+      isUncapturedOfficialTranscript &&
+      typeof source?.detail === "string" &&
+      !/not (?:a )?(?:local )?(?:database )?capture|not executed/i.test(source.detail)
+    ) {
+      problems.push('official fixtures without capture metadata must state in source.detail that they are not a capture / were not executed');
     }
   } else {
     if (typeof meta.databaseVersion !== "string" || meta.databaseVersion.length === 0) {

@@ -1,5 +1,5 @@
 import { createFinding, nodeEvidence } from "../findings/finding.js";
-import { incrementalCostOf, walkNodes } from "../tree.js";
+import { incrementalCostOf, walkOperatorNodes } from "../tree.js";
 import { EXPENSIVE_SORT } from "./thresholds.js";
 
 const RULE_ID = "expensive-sort";
@@ -28,7 +28,7 @@ export const expensiveSortRule = {
     if (typeof totalPlanCost !== "number" || totalPlanCost <= 0) return [];
 
     const findings = [];
-    for (const node of walkNodes(normalized.root)) {
+    for (const node of walkOperatorNodes(normalized.root)) {
       if (node.kind !== "sort" && node.kind !== "incremental_sort") continue;
 
       const incrementalCost = incrementalCostOf(node);

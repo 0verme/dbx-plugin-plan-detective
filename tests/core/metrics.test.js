@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { computeMetrics } from "../../src/core/metrics/compute-metrics.js";
-import { depthOf, flattenNodes, incrementalCostOf, walkNodes } from "../../src/core/tree.js";
+import { depthOf, flattenNodes, flattenOperatorNodes, incrementalCostOf, operatorDepthOf, walkNodes, walkOperatorNodes } from "../../src/core/tree.js";
 import { normalizedNode, normalizedPlan } from "../helpers/plan-builders.js";
 
 /**
@@ -34,6 +34,48 @@ test("walkNodes and flattenNodes visit pre-order and include the root", () => {
     ["0", "0.0", "0.1", "0.1.0"],
   );
   assert.equal(flattenNodes(root).length, 4);
+});
+
+test("operator traversal skips structural containers while preserving their descendants", () => {
+  const root = normalizedNode({
+    kind: "structural",
+    estimatedRows: 999,
+    totalCost: 999,
+    engineSpecific: { structural: true },
+    children: [
+      normalizedNode({
+        id: "fragment",
+        kind: "structural",
+        engineSpecific: { structural: true },
+        children: [
+          normalizedNode({ id: "operator", kind: "hash_join", nodeType: "Hash Join", estimatedRows: 20, children: [normalizedNode({ id: "scan", kind: "scan" })] }),
+        ],
+      }),
+    ],
+  });
+  const plan = normalizedPlan({ database: "doris", mode: "estimated", format: "text", root });
+
+  assert.equal(flattenNodes(root).length, 4, "general tree traversal remains unchanged");
+  assert.deepEqual([...walkOperatorNodes(root)].map((node) => node.id), ["operator", "scan"]);
+  assert.deepEqual(flattenOperatorNodes(root).map((node) => node.id), ["operator", "scan"]);
+  assert.equal(operatorDepthOf(root), 2);
+  assert.deepEqual(computeMetrics(plan), {
+    nodeCount: 2,
+    maxDepth: 2,
+    totalEstimatedCost: null,
+    rootEstimatedRows: null,
+    scanCount: 1,
+    sequentialScanCount: 0,
+    indexScanCount: 0,
+    bitmapScanCount: 0,
+    joinCount: 1,
+    sortCount: 0,
+    aggregateCount: 0,
+    unknownNodeTypeCount: 0,
+    largestEstimatedRows: { nodeId: "operator", kind: "hash_join", nodeType: "Hash Join", relation: null, estimatedRows: 20 },
+    costAttribution: { engine: "doris", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
+    highestIncrementalCost: null,
+  });
 });
 
 test("incrementalCostOf subtracts child costs and returns null without a total cost", () => {

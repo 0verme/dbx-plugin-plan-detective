@@ -4,18 +4,16 @@
  *     RawPlanInput -> analyzeRawPlan() -> ParsedPlan -> NormalizedPlan -> Metrics -> Findings
  *
  * The registry is the only place that decides whether a database family has a
- * structured parser. A family without one is not an error: the host can return
- * a perfectly valid estimated plan for Doris, and the UI still shows the Raw
- * Plan and the host warnings. What it must not do is
- * pretend to parse a payload no one has validated against a real sample.
- *
- * Adding a database means adding one parser module here; the UI, rules and
- * metrics never change.
+ * structured parser. A family without one is not an error: the UI can still
+ * show its raw payload and host warnings. Adding a parser normally requires a
+ * parser module and registration; an audited IR gap must be handled through
+ * an explicit, generic contract rather than a database-specific UI shortcut.
  */
 
 import { PlanInputError, PlanParseError } from "../errors.js";
 import { computeHotspots } from "../hotspots/compute-hotspots.js";
 import { damengParser } from "./dameng.js";
+import { dorisParser } from "./doris.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
@@ -39,16 +37,8 @@ const PARSERS = new Map([
   [oracleParser.database, oracleParser],
   [damengParser.database, damengParser],
   [questDbParser.database, questDbParser],
+  [dorisParser.database, dorisParser],
 ]);
-
-/**
- * Dialects the merged host contract can return that have no structured parser
- * yet. They are listed explicitly so the UI can say *which* parser is missing
- * instead of reporting a generic failure. The value is a stable reason code.
- *
- * @type {Map<string, string>}
- */
-const PENDING_PARSERS = new Map([["doris", "PARSER_NOT_IMPLEMENTED"]]);
 
 /**
  * @typedef {Object} PlanAnalysis
@@ -85,9 +75,6 @@ export function describeParserSupport(database, format) {
   if (parser !== undefined) {
     if (parser.formats.includes(format)) return { structured: true, parser: parser.id, reasonCode: null };
     return { structured: false, parser: parser.id, reasonCode: "UNSUPPORTED_FORMAT" };
-  }
-  if (PENDING_PARSERS.has(database)) {
-    return { structured: false, parser: "none", reasonCode: PENDING_PARSERS.get(database) ?? "PARSER_NOT_IMPLEMENTED" };
   }
   return { structured: false, parser: "none", reasonCode: "UNKNOWN_DATABASE" };
 }

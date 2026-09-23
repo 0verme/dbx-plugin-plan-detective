@@ -47,7 +47,7 @@ Metrics Engine
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
-已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB 结构化 parser；Doris raw-only
+已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris Estimated 结构化 parser
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
 已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
 已实现：Hotspot Presentation（结构化 reason code → 中英文自然语言摘要；未知 code 优雅回退到原始 statement）
@@ -70,7 +70,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码）
    ↓
 src/core/adapter/dbx-plan-response.js（dbType → database family，format → RawPlanInput）
    ↓
-src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb structured，Doris raw-only）
+src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb / doris structured）
    ↓
 src/core/normalize → metrics → rules → findings（facts + legacy copy）
 src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
@@ -97,7 +97,7 @@ Svelte components
 ### Offline / Fixture 数据链路（开发用）
 
 ```text
-fixture（fixtures/postgres/**；MySQL / SQL Server / OceanBase Oracle / Oracle fixture 由核心测试与 golden 直接加载）
+fixture（fixtures/postgres/**；其他数据库 fixture 由核心测试与 golden 直接加载，包括 Doris estimated text）
    ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
 RawPlanInput
    ↓ analyzePlan()
@@ -119,10 +119,9 @@ Fixture / mock 只服务测试、离线 UI 开发与 golden sample，**不进入
 | Oracle | 结构化 | 宿主返回 DBMS_XPLAN 文本（format `text`；`src/core/oracle/**`；只解析 `TYPICAL +PREDICATE` Estimated 输出） |
 | Dameng | 结构化（Estimated only） | 宿主返回驱动原生文本（format `text`；`src/core/dameng/**`）；按缩进建树、operation id 关联 predicate |
 | QuestDB | 结构化（Estimated only） | 宿主返回 EXPLAIN 文本（format `text`；`src/core/questdb/**`）；相对缩进建树，保留 properties / 未知 operator；PageFrame / Row / Frame pipeline 只计一次 relation access |
-| Doris | raw only | 宿主返回文本计划（format `text`） |
+| Doris | 结构化（Estimated only） | 宿主返回 EXPLAIN 文本（format `text`；`src/core/doris/**`）；按 Fragment 与 branch glyph 构建 local tree，跨 Fragment exchange 仅作 metadata |
 
-registry 对每个 family 显式声明支持状态；新增 parser 只需新增一个 parser 模块并注册，
-UI / rules / metrics 不变。
+registry 对每个 family 显式声明支持状态；Doris 复用单 root NormalizedPlan，以 `engineSpecific.structural: true` 标记分布式 root / Fragment wrappers。通用 operator traversal 跳过容器自身但继续遍历 children；UI 继续显示完整嵌套树，跨 Fragment edge 只在 generic Inspector metadata 中展示，不重构 DAG Canvas。
 
 ## 3. 职责边界
 
@@ -205,12 +204,13 @@ src/
 │   └── host-plan-errors.js     # HostPlanError + 错误分类
 ├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
-│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb 声明
+│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oracle / dameng / questdb / doris 声明
 │   ├── sqlserver/              # ShowPlanXML 读取与 RelOp 映射（无 dependency XML reader）
 │   ├── oceanbase/              # OceanBase Oracle JSON plan 解析（ID / OPERATOR / EST.ROWS / CHILD_<n>）
 │   ├── oracle/                 # Oracle DBMS_XPLAN text 解析（header columns / indentation / predicates）
 │   ├── dameng/                 # Dameng native EXPLAIN text 解析（tuple / indentation / predicates）
 │   ├── questdb/                # QuestDB estimated EXPLAIN text 解析（indentation / properties）
+│   ├── doris/                  # Doris estimated EXPLAIN tokenizer / Fragment-local branch tree
 │   ├── cost/                   # PostgreSQL 代价归因边界（analyzePostgresCost，Metrics + Hotspots 共用）
 │   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）
@@ -264,7 +264,7 @@ include = ["assets", "ui"]
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
 - Plan Diff / History / 自定义 Plan Canvas / 大型可视化（当前只做嵌套行计划树）
 - AI / LLM 接入：模型 API / API Key / 聊天窗口 / 自动发送；不包含 #42 已授权的本地 AI prompt / context packaging
-- Doris 的结构化 parser（需要真实 sample / contract 后再实现；QuestDB、Dameng、Oracle 与 OceanBase Oracle 已完成）
+- Doris Actual / ANALYZE / PROFILE、Pipeline DAG / runtime profile 解析（Doris Estimated parser 只处理官方 EXPLAIN 输出；无真实 Doris / Windows DBX smoke）
 - MariaDB / OceanBase MySQL / ADB MySQL 等 MySQL 兼容方言的自动归入（没有 contract 证据，不自动兼容）
 - MySQL `EXPLAIN ANALYZE` / `FORMAT=TREE` / `FORMAT=TRADITIONAL` 文本计划 parser
 

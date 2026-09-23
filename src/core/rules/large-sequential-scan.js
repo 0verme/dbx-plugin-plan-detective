@@ -1,5 +1,5 @@
 import { createFinding, nodeEvidence } from "../findings/finding.js";
-import { incrementalCostOf, walkNodes } from "../tree.js";
+import { incrementalCostOf, walkOperatorNodes } from "../tree.js";
 import { LARGE_SEQUENTIAL_SCAN } from "./thresholds.js";
 
 const RULE_ID = "large-sequential-scan";
@@ -30,7 +30,7 @@ export const largeSequentialScanRule = {
    */
   run(normalized) {
     const findings = [];
-    for (const node of walkNodes(normalized.root)) {
+    for (const node of walkOperatorNodes(normalized.root)) {
       if (node.kind !== "seq_scan") continue;
 
       const estimatedRows = typeof node.estimatedRows === "number" ? node.estimatedRows : 0;

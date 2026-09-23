@@ -1,0 +1,26 @@
+{
+  "database": "doris",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic Doris scan text testing malformed cardinality and forward-compatible property preservation; no database was used.",
+    "reference": "https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN/"
+  },
+  "features": [
+    "conservative scan normalization",
+    "invalid cardinality preserved but not numeric",
+    "avgRowSize not mapped to width",
+    "unknown property and trailing-line preservation"
+  ],
+  "expect": {
+    "rootNodeType": "Doris Distributed Plan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": []
+  }
+}

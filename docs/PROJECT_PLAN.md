@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；v0.6.5 已由 Release PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) 合并并发布。当前支持 PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured，Doris raw-only；Actual Plan / Plan Diff / AI 属于 Future。
+> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；v0.6.5 已由 Release PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) 合并并发布。Phase 3.6 Doris Estimated parser 按先行的 Host Contract / Plan Contract / IR Gap / Decision Gate（`B — SMALL_IR_GAP`）已在当前 worktree 实现，回归与 Feature PR pending；当前支持 Doris structured，但尚无真实 Doris / Windows Host smoke。Actual Plan / Plan Diff / AI 属于 Future。
 
 ## 1. 已确认决策
 
@@ -179,7 +179,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 ```text
 DBX Host Adapter          ← 已接入（Host API 1.2，权限 host.plans:read）
 → Estimated Raw Plan（EXPLAIN ...，宿主构造）
-→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB structured；Doris raw-only）
+→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris structured）
 → Normalization
 → Metrics
 → Rules
@@ -216,8 +216,9 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 3.3 | Oracle DBMS_XPLAN Estimated Plan 文本结构化（`TYPICAL +PREDICATE` → 现有 IR / metrics / hotspots） | ✅ 已实现；5 个 synthetic text fixture + golden；`Rows` 进入 `estimatedRows`，Oracle `Cost` 保留在 `engineSpecific.oracle` |
 | Phase 3.4 | Dameng Estimated Plan 原生文本结构化（`[cost, rows, bytes-per-row]` → 现有 IR / metrics / hotspots） | ✅ 已实现；1 个 official + 6 个 synthetic text fixture + golden；Dameng cost 保留在 `engineSpecific.dameng`，只用 rows 信号 |
 | Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现并合并；PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) merge `62bef56`；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导 |
+| Phase 3.6 | Doris Estimated EXPLAIN text 结构化（Host / Plan contract → IR Gate → parser / normalizer / UI） | 当前 Feature branch 实现完成；Decision Gate `B — SMALL_IR_GAP`；1 official docs transcription + 4 synthetic + 5 golden；`npm test` 1243/1243、`npm run build` passed；Feature PR pending；Real Doris `NOT AVAILABLE` / Host Smoke `NOT RUN` |
 | Phase 4 | Plan Diff / History | 后续 Issue |
-| Phase 5 | Doris 结构化 parser | 需要可靠 sample / contract 后再实现（QuestDB 已在 Phase 3.5 完成） |
+| Phase 5 | Actual Plan / EXPLAIN ANALYZE | Future，需独立 upstream proposal 与授权 / 安全审计 |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
 
@@ -233,7 +234,7 @@ raw plan → normalized plan → metrics → findings
 
 约定：
 
-- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oracle/`、`fixtures/dameng/`、`fixtures/questdb/` 按数据库分目录。
+- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oracle/`、`fixtures/dameng/`、`fixtures/questdb/`、`fixtures/doris/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
 - Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` / `hotspots` 五 stage 与预期快照比对；
@@ -252,7 +253,7 @@ unknown operator / unknown fields / missing optional fields / `CHILD_<n>` 数字
 Oracle DBMS_XPLAN 样本已落地（Phase 3.3：5 个 synthetic text fixture + golden，覆盖可变列宽、缺失字段、predicate marker、
 CRLF、未知 Operation 子树与缩进建树；见 `fixtures/oracle/README.md`）。
 Dameng 样本已落地（Phase 3.4：1 个 official 文档示例 + 6 个 synthetic estimated text fixture + golden，覆盖 tuple、缩进建树、predicate 关联、未知算子、缺失字段与行数规则；本机无 Dameng 实例，provenance 见 `fixtures/dameng/README.md`）。
-QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription + 3 个 synthetic estimated text fixture + golden，覆盖相对缩进、inline / standalone properties、unknown operator、PageFrame scan 去重、Host / UI pipeline；本机无 QuestDB 实例，未声称真实 capture，provenance 见 `fixtures/questdb/README.md`）。
+QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription + 3 个 synthetic estimated text fixture + golden，覆盖相对缩进、inline / standalone properties、unknown operator、PageFrame scan 去重、Host / UI pipeline；本机无 QuestDB 实例，未声称真实 capture，provenance 见 `fixtures/questdb/README.md`）。Doris Phase 3.6 样本：1 个 official documentation transcription + 4 个 synthetic estimated EXPLAIN fixture + golden；覆盖 Fragment / Sink metadata、exchange edge、branch child order、unknown properties、generic UI；不是真实 capture。
 
 ## 5. Host 接入与其它阶段仍禁止顺手实现
 
@@ -263,7 +264,7 @@ QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）
-- Doris parser（MySQL 已由 Issue #15、SQL Server 已由 Phase 3.1、OceanBase Oracle 已由 Phase 3.2、Oracle 已由 Phase 3.3、Dameng 已由 Phase 3.4、QuestDB 已由 Phase 3.5 显式启动并完成）
+- Doris Actual / ANALYZE / PROFILE parser 与 runtime Pipeline / DAG（Doris Estimated EXPLAIN parser 已由 Phase 3.6 显式启动）
 - 自定义 Plan Canvas / Plan Diff UI
 - 数据库连接层
 
@@ -285,7 +286,7 @@ QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription
 [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11) 明确授权实现；仅接入已合并的 #9692 契约，
 不请求 Actual Plan、不建立数据库连接、不引入 Driver / 凭据。
 
-本轮 Phase 3.5 明确授权 QuestDB Estimated text parser / normalizer / registry / shared analysis / metrics / UI fields / fixtures / docs；不扩展到 Actual / autotrace、Doris parser、DBX Host、AI、Plan Diff 或版本号。Feature PR #56 已合并；v0.6.5 Release 是独立任务，本次开始准备。
+Phase 3.5 已合并：QuestDB Estimated text parser / normalizer / registry / shared analysis / metrics / UI fields / fixtures / docs（Feature PR #56）。当前 Phase 3.6 明确授权 Doris Estimated text parser / normalizer / registry / generic structural IR traversal / shared analysis / metrics / generic UI fields / fixtures / docs；禁止扩展到 Actual / ANALYZE / PROFILE、Pipeline DAG、DBX upstream、AI、Plan Diff 或版本发布。
 
 ## 6. 依赖约束
 

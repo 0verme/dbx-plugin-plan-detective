@@ -29,6 +29,41 @@ export function flattenNodes(root) {
 }
 
 /**
+ * Structural nodes are presentation / grouping containers, not operators.
+ * The optional marker is generic and backward-compatible: existing normalized
+ * plans without it retain their original traversal and metric semantics.
+ *
+ * @param {{ engineSpecific?: Record<string, unknown> }} node
+ */
+export function isStructuralNode(node) {
+  return node?.engineSpecific?.structural === true;
+}
+
+/**
+ * Depth-first iteration over operator nodes only. Structural nodes are omitted
+ * from the result, but their children are still traversed.
+ *
+ * @template {{ children: Array<unknown>, engineSpecific?: Record<string, unknown> }} T
+ * @param {T} root
+ * @yields {T}
+ */
+export function* walkOperatorNodes(root) {
+  if (!isStructuralNode(root)) yield root;
+  for (const child of /** @type {any} */ (root).children) {
+    yield* walkOperatorNodes(child);
+  }
+}
+
+/**
+ * @template {{ children: Array<unknown>, engineSpecific?: Record<string, unknown> }} T
+ * @param {T} root
+ * @returns {T[]}
+ */
+export function flattenOperatorNodes(root) {
+  return [...walkOperatorNodes(root)];
+}
+
+/**
  * Number of nodes on the longest root-to-leaf path; a single node has depth 1.
  *
  * @param {{ children: Array<any> }} node
@@ -40,6 +75,24 @@ export function depthOf(node) {
     deepest = Math.max(deepest, depthOf(child));
   }
   return 1 + deepest;
+}
+
+/**
+ * Longest operator-only path. Structural wrappers do not add depth, but their
+ * children remain on the same path. A tree with no operator nodes has depth 0.
+ *
+ * @param {{ children: Array<any>, engineSpecific?: Record<string, unknown> }} root
+ * @returns {number}
+ */
+export function operatorDepthOf(root) {
+  /** @param {any} node @param {number} depth */
+  function visit(node, depth) {
+    const currentDepth = depth + (isStructuralNode(node) ? 0 : 1);
+    let deepest = currentDepth;
+    for (const child of node.children) deepest = Math.max(deepest, visit(child, currentDepth));
+    return deepest;
+  }
+  return visit(root, 0);
 }
 
 /**

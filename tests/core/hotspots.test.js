@@ -73,6 +73,18 @@ test("HotspotAnalysis has a stable shape and every hotspot explains itself", () 
   assert.equal(hotspot.reasons[0].level, "high");
 });
 
+test("hotspot traversal skips structural containers but analyzes their operator descendants", () => {
+  const root = normalizedNode({
+    kind: "seq_scan",
+    nodeType: "Fragment container",
+    estimatedRows: 1_000_000,
+    engineSpecific: { structural: true },
+    children: [normalizedNode({ id: "operator", kind: "seq_scan", nodeType: "Seq Scan", estimatedRows: 50_000 })],
+  });
+  const analysis = run(root);
+  assert.deepEqual(analysis.items.map((hotspot) => hotspot.nodeId), ["operator"]);
+});
+
 test("the analysis is JSON-serializable and does not mutate its inputs", () => {
   const root = pgChild({
     kind: "nested_loop",
@@ -694,8 +706,8 @@ test("partial and malformed plans degrade without throwing", () => {
   assert.deepEqual(computeHotspots(unknownKind, computeMetrics(unknownKind)).items, []);
 });
 
-test("raw-only databases do not enter structured hotspot analysis", () => {
-  const analysis = analyzeRawPlan({ database: "doris", mode: "estimated", format: "text", plan: "| 0 | SELECT STATEMENT |" });
+test("raw-only parser formats do not enter structured hotspot analysis", () => {
+  const analysis = analyzeRawPlan({ database: "postgresql", mode: "estimated", format: "text", plan: "Seq Scan" });
 
   assert.equal(analysis.status, "raw-only");
   assert.equal(analysis.hotspots, null);

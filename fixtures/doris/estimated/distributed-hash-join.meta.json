@@ -1,0 +1,27 @@
+{
+  "database": "doris",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "official",
+    "detail": "Transcribed from the Apache Doris 4.x EXPLAIN documentation return-result example on 2026-09-23. This is a documentation transcription, not a local database capture; the source does not publish the example SQL, and no SQL was executed.",
+    "reference": "https://doris.apache.org/docs/4.x/sql-manual/sql-statements/data-query/EXPLAIN/"
+  },
+  "features": [
+    "documented multi-fragment EXPLAIN text",
+    "fragment output expressions and partition metadata",
+    "hash join with two branch-ordered exchange children",
+    "sink and exchange metadata",
+    "unknown documented properties retained"
+  ],
+  "expect": {
+    "rootNodeType": "Doris Distributed Plan",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}

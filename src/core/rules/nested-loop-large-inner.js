@@ -1,5 +1,5 @@
 import { createFinding, nodeEvidence } from "../findings/finding.js";
-import { walkNodes } from "../tree.js";
+import { walkOperatorNodes } from "../tree.js";
 import { NESTED_LOOP_LARGE_INNER } from "./thresholds.js";
 
 const RULE_ID = "nested-loop-large-inner";
@@ -25,7 +25,7 @@ export const nestedLoopLargeInnerRule = {
    */
   run(normalized) {
     const findings = [];
-    for (const node of walkNodes(normalized.root)) {
+    for (const node of walkOperatorNodes(normalized.root)) {
       if (node.kind !== "nested_loop") continue;
 
       const [outer, inner] = node.children;
