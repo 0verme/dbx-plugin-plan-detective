@@ -3,9 +3,9 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.5 已合并；Phase 3.6 Doris Estimated text parser 已实现，Feature PR 待提交** |
+| 当前阶段 | **Phase 1–3.5 已合并；Phase 3.6 Doris Estimated text parser PR #59 已提交，READY（未合并）** |
 | 插件版本 | 0.6.5（已发布；`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read`） |
-| 阶段结论 | Phase 3.6 按 Host Contract → Plan Contract → IR Gap audit → Decision Gate 顺序完成审计，Gate `B — SMALL_IR_GAP`；Doris Estimated `format: text` parser / normalizer / generic structural traversal / UI metadata / 1 official docs transcription + 4 synthetic fixtures 与 goldens 已实现。`npm test` 1243/1243、`npm run build` 通过；78 个既有 goldens unchanged。真实 Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`。Feature PR 尚未创建；不发布版本 |
+| 阶段结论 | Phase 3.6 按 Host Contract → Plan Contract → IR Gap audit → Decision Gate 顺序完成审计，Gate `B — SMALL_IR_GAP`；Doris Estimated `format: text` parser / normalizer / generic structural traversal / UI metadata / 1 official docs transcription + 4 synthetic fixtures 与 goldens 已实现。`npm test` 1243/1243、`npm run build` 通过；78 个既有 goldens unchanged。真实 Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`。Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已提交，`READY != MERGED`；不发布版本 |
 | 当前不做 | 不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual / ANALYZE / PROFILE Plan、不接 AI 服务、不修改 DBX upstream 或 Doris server、不重构 IR 为 DAG、不做 Plan Diff、不改版本 / 不发布；DBX Store candidate / signing 为独立流程 |
 
 ## 当前任务快照（Phase 3.6 Doris Estimated parser）
@@ -15,17 +15,17 @@
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
 - Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；本地 `main` 当前 `57e473029cffac3d565f26042ad1f2e1b67ba6ad`（ahead 1 / behind 29 of origin/main），保持原样、不在 Main Workspace 开发本任务
 - Active Tasks:
-  - Issue / Task: Phase 3.6 Doris Estimated EXPLAIN text structured parser；Branch: `feat/doris-structured-plan`；Worktree: `worktrees/doris-structured-plan`；State: `IN_PROGRESS`；Conflict Risk: `HIGH`；PR: `pending`；Notes: baseline `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`；Host / Plan contracts 与 `B — SMALL_IR_GAP` gate 审计完成；`npm test` 1243/1243、build passed；1 official docs transcription + 4 synthetic; Real Doris `NOT AVAILABLE`; Host Smoke `NOT RUN`; 不发 release。
+  - Issue / Task: Phase 3.6 Doris Estimated EXPLAIN text structured parser；Branch: `feat/doris-structured-plan`；Worktree: `worktrees/doris-structured-plan`；State: `READY`；Conflict Risk: `HIGH`；PR: `#59`；Notes: commit `23115b7`；baseline `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`；Host / Plan contracts 与 `B — SMALL_IR_GAP` gate 审计完成；`npm test` 1243/1243、build passed；1 official docs transcription + 4 synthetic; Real Doris `NOT AVAILABLE`; Host Smoke `NOT RUN`; PR #59 is OPEN / merge state CLEAN, no status checks reported yet; READY != MERGED；不发 release。
   - Issue / Task: Phase 3.5 QuestDB Estimated EXPLAIN Structured Parser；Branch: `feat/questdb-structured-plan`；Worktree: `worktrees/questdb-structured-plan`；State: `MERGED`；Conflict Risk: `HIGH`；PR: `#56`；Notes: merge `62bef56`；3 official documentation transcriptions + 3 synthetic fixtures；`npm test` 1193/1193、build passed；Host Smoke NOT RUN。
   - Issue / Task: v0.6.5 Release；Branch: `chore/prepare-v0.6.5-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.5-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: `#57`；Notes: merge / release commit `eca0052`；tag `v0.6.5` 与 GitHub Release 已发布；workflow `35817327732` success；universal artifact 87012 bytes / SHA-256 `2140f568…` 已核验；Host Smoke NOT RUN。
 - Integration Baseline: `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`（本任务 feature worktree 起点；与 divergent local Main 区分）。
 - Hotspot Files: `src/core/tree.js`、Metrics / Rules / Hotspots traversal、Doris parser registry / normalizer、fixture convention / goldens、`README.md`、`STATUS.md`、`docs/PROJECT_PLAN.md`、tracked `ui/**`；Conflict Risk `HIGH`。
 - Blocked: Real Doris `NOT AVAILABLE`；Windows DBX Host Smoke `NOT RUN`。本地回归与 production build 已通过。
 - Cleanup Queue: 无；release candidate `dist/` 不纳入 Git。
-- Merge Queue: Phase 3.6 feature PR 尚未创建；不包含 Release PR。
+- Merge Queue: Phase 3.6 Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已提交，等待 review / CI；不包含 Release PR。
 - Recently Merged: PR #57 v0.6.5 release prep（merge `eca0052`）；PR #56 QuestDB structured（merge `62bef56`）；v0.6.5 已发布。
 
-- Next Actions: 完成 staged diff / UTF-8 检查，commit 并推送 `feat/doris-structured-plan`，创建目标为 `main` 的 Feature PR；如环境允许，在真实 Doris / Windows DBX 完成后续 Host Smoke。不得发 Release。
+- Next Actions: 等待 PR #59 review / CI；按 review 在当前 worktree 修订。如维护者可用真实 Doris / Windows DBX，可补 Host Smoke；不得发 Release。
 
 ## 0. 当前状态
 
@@ -186,7 +186,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 - Gate：`npm test` 1019/1019；`npm run build` 输出 `DBX_UI_BUILD_SUCCESS`；`dbx-plugin package .` 与 `git diff --check` 通过；
   Host Smoke **NOT RUN**（当前环境无 DBX Desktop Host）。本轮不发 Release（不改版本号 / 不打 tag / 不建 GitHub Release / 不更新 DBX Store）。
 
-### 0.2.7 Doris Estimated EXPLAIN text 结构化（Phase 3.6，当前 Feature PR）
+### 0.2.7 Doris Estimated EXPLAIN text 结构化（Phase 3.6，PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59)，READY）
 
 - 基线：独立 worktree `worktrees/doris-structured-plan`、branch `feat/doris-structured-plan`，起点 `origin/main` `11820fc1c70dc03c6ccdc98406624374a3686b67`；canonical Main Workspace 未修改。
 - Gate 顺序：Host Contract → Plan Contract → IR Gap audit → Decision Gate；结论 `B — SMALL_IR_GAP`。完整审计见 `docs/DORIS_HOST_CONTRACT_AUDIT.md`、`docs/DORIS_PLAN_CONTRACT_AUDIT.md`、`docs/DORIS_IR_GAP_AUDIT.md`。
@@ -195,7 +195,7 @@ DBX Host（dbType: "oceanbase-oracle" / format: "json" / EXPLAIN FORMAT=JSON 解
 - 语义边界：仅可靠 `cardinality` → `estimatedRows`；scan 用中性 `scan`；不映射 Doris cost / `avgRowSize` 到 PostgreSQL cost / shared width；不建 runtime Pipeline DAG、不改 DBX upstream。
 - Fixtures：1 official Apache Doris documentation transcription + 4 synthetic，全部 `estimated/`，无假造 capture metadata；新增 5 个 goldens。`npm run test:update-goldens` 报告 78 个既有 goldens unchanged。
 - Gate：`npm test` **1243/1243**；`npm run build` **通过**（`DBX_UI_BUILD_SUCCESS`）。本地 `npm ci` 的 esbuild bundled binary 在工作区呈 mode `000` 导致安装脚本 `EACCES`；忽略脚本安装后只修复 ignored `node_modules` binary 的执行位并验证版本，production build 成功。`git diff --check` **通过**。
-- Real Doris：**NOT AVAILABLE**；Windows DBX Host Smoke：**NOT RUN**。Feature PR pending；无版本变更 / 不发布。
+- Real Doris：**NOT AVAILABLE**；Windows DBX Host Smoke：**NOT RUN**。PR #59 已提交；**READY != MERGED**；无版本变更 / 不发布。
 
 ### 0.10 v0.6.3 Release（2026-09-22）
 

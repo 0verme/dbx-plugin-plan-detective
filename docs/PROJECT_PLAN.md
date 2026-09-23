@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；v0.6.5 已由 Release PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) 合并并发布。Phase 3.6 Doris Estimated parser 按先行的 Host Contract / Plan Contract / IR Gap / Decision Gate（`B — SMALL_IR_GAP`）已在当前 worktree 实现，回归与 Feature PR pending；当前支持 Doris structured，但尚无真实 Doris / Windows Host smoke。Actual Plan / Plan Diff / AI 属于 Future。
+> 状态（2026-09-23）：Phase 0 已完成；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 合并。Phase 3.5「QuestDB Estimated EXPLAIN 结构化 parser」已由 Feature PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) 合并（merge `62bef56`）；v0.6.5 已由 Release PR [#57](https://github.com/0verme/dbx-plugin-plan-detective/pull/57) 合并并发布。Phase 3.6 Doris Estimated parser 按先行的 Host Contract / Plan Contract / IR Gap / Decision Gate（`B — SMALL_IR_GAP`）已在 feature branch 实现；Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) 已提交（READY，未合并）；当前分支支持 Doris structured，但尚无真实 Doris / Windows Host smoke。Actual Plan / Plan Diff / AI 属于 Future。
 
 ## 1. 已确认决策
 
@@ -216,7 +216,7 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 3.3 | Oracle DBMS_XPLAN Estimated Plan 文本结构化（`TYPICAL +PREDICATE` → 现有 IR / metrics / hotspots） | ✅ 已实现；5 个 synthetic text fixture + golden；`Rows` 进入 `estimatedRows`，Oracle `Cost` 保留在 `engineSpecific.oracle` |
 | Phase 3.4 | Dameng Estimated Plan 原生文本结构化（`[cost, rows, bytes-per-row]` → 现有 IR / metrics / hotspots） | ✅ 已实现；1 个 official + 6 个 synthetic text fixture + golden；Dameng cost 保留在 `engineSpecific.dameng`，只用 rows 信号 |
 | Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现并合并；PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) merge `62bef56`；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导 |
-| Phase 3.6 | Doris Estimated EXPLAIN text 结构化（Host / Plan contract → IR Gate → parser / normalizer / UI） | 当前 Feature branch 实现完成；Decision Gate `B — SMALL_IR_GAP`；1 official docs transcription + 4 synthetic + 5 golden；`npm test` 1243/1243、`npm run build` passed；Feature PR pending；Real Doris `NOT AVAILABLE` / Host Smoke `NOT RUN` |
+| Phase 3.6 | Doris Estimated EXPLAIN text 结构化（Host / Plan contract → IR Gate → parser / normalizer / UI） | 当前 Feature branch 实现完成；Decision Gate `B — SMALL_IR_GAP`；1 official docs transcription + 4 synthetic + 5 golden；`npm test` 1243/1243、`npm run build` passed；Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) open（READY，未合并）；Real Doris `NOT AVAILABLE` / Host Smoke `NOT RUN` |
 | Phase 4 | Plan Diff / History | 后续 Issue |
 | Phase 5 | Actual Plan / EXPLAIN ANALYZE | Future，需独立 upstream proposal 与授权 / 安全审计 |
 
