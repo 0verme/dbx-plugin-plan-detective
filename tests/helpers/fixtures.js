@@ -10,6 +10,7 @@ export const POSTGRES_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "postgres"
 export const MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "mysql");
 export const SQLSERVER_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlserver");
 export const OCEANBASE_ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oceanbase-oracle");
+export const OCEANBASE_MYSQL_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oceanbase-mysql");
 export const ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oracle");
 export const DAMENG_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "dameng");
 export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
@@ -17,7 +18,7 @@ export const DORIS_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "doris");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
- * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle /
+ * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle / MySQL /
  * Oracle, Dameng, QuestDB and Doris call sites pass the family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
@@ -25,16 +26,17 @@ export const FIXTURE_DIRS = Object.freeze({
   mysql: MYSQL_FIXTURES_DIR,
   sqlserver: SQLSERVER_FIXTURES_DIR,
   "oceanbase-oracle": OCEANBASE_ORACLE_FIXTURES_DIR,
+  "oceanbase-mysql": OCEANBASE_MYSQL_FIXTURES_DIR,
   oracle: ORACLE_FIXTURES_DIR,
   dameng: DAMENG_FIXTURES_DIR,
   questdb: QUESTDB_FIXTURES_DIR,
   doris: DORIS_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb", "doris"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
 export const MODES = ["estimated", "actual"];
 /**
- * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle,
+ * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle / MySQL,
  * Oracle, Dameng, QuestDB and Doris support estimated plans only: the Host API
  * never serves an actual plan for them, and none of them has an actual-plan
  * shape this plugin models, so there is no `actual/` directory for them by design.
@@ -44,12 +46,13 @@ export const MODES_BY_DATABASE = Object.freeze({
   mysql: ["estimated"],
   sqlserver: ["estimated"],
   "oceanbase-oracle": ["estimated"],
+  "oceanbase-mysql": ["estimated"],
   oracle: ["estimated"],
   dameng: ["estimated"],
   questdb: ["estimated"],
   doris: ["estimated"],
 });
-export const SOURCE_KINDS = ["official", "locally-generated", "synthetic"];
+export const SOURCE_KINDS = ["official", "locally-generated", "synthetic", "real"];
 
 /** Plan file suffix by database family (SQL Server XML and Oracle text are strings). */
 const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
@@ -57,6 +60,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   mysql: ".plan.json",
   sqlserver: ".plan.xml",
   "oceanbase-oracle": ".plan.json",
+  "oceanbase-mysql": ".plan.json",
   oracle: ".plan.txt",
   dameng: ".plan.txt",
   questdb: ".plan.txt",
@@ -69,6 +73,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   mysql: "json",
   sqlserver: "xml",
   "oceanbase-oracle": "json",
+  "oceanbase-mysql": "json",
   oracle: "text",
   dameng: "text",
   questdb: "text",
@@ -194,15 +199,15 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oracle` / `dameng` / `questdb` / `doris`) and
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oceanbase-mysql` / `oracle` / `dameng` / `questdb` / `doris`) and
  *   must match the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;
  * - `format` must match the family's committed payload format (`json` for
- *   PostgreSQL / MySQL / OceanBase Oracle, `xml` for SQL Server, `text` for Oracle / Dameng / QuestDB / Doris);
+ *   PostgreSQL / MySQL / OceanBase Oracle / MySQL, `xml` for SQL Server, `text` for Oracle / Dameng / QuestDB / Doris);
  * - provenance (`source.kind`, `source.detail`) is mandatory and must match the
  *   kind of data that is actually committed;
- * - real captures must record databaseVersion / capturedAt / captureCommand / sql;
+ * - locally captured data records databaseVersion / capturedAt / captureCommand / sql; reported real samples require databaseVersion and preserve unknown capture details as null;
  * - synthetic fixtures carry nulls there and are marked in the file name with
  *   `.synthetic`; official documentation transcriptions may also carry nulls
  *   when `source.detail` explicitly says no database capture was made;
@@ -226,6 +231,7 @@ export function validateFixtureMeta(meta, context = {}) {
   const captureFields = ["databaseVersion", "capturedAt", "captureCommand", "sql"];
   const isUncapturedOfficialTranscript =
     kind === "official" && captureFields.every((field) => meta[field] === null);
+  const isReportedRealSample = kind === "real";
 
   if (!FIXTURE_DATABASES.includes(meta.database)) {
     problems.push(`database must be one of ${FIXTURE_DATABASES.join(", ")}; got ${JSON.stringify(meta.database)}`);
@@ -287,6 +293,19 @@ export function validateFixtureMeta(meta, context = {}) {
       !/not (?:a )?(?:local )?(?:database )?capture|not executed/i.test(source.detail)
     ) {
       problems.push('official fixtures without capture metadata must state in source.detail that they are not a capture / were not executed');
+    }
+  } else if (isReportedRealSample) {
+    if (typeof meta.databaseVersion !== "string" || meta.databaseVersion.length === 0) {
+      problems.push("databaseVersion must be a non-empty string for real-source fixtures");
+    }
+    if (meta.capturedAt !== null && (typeof meta.capturedAt !== "string" || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(meta.capturedAt))) {
+      problems.push("capturedAt must be null or a YYYY-MM-DD string for real-source fixtures");
+    }
+    if (meta.captureCommand !== null && (typeof meta.captureCommand !== "string" || meta.captureCommand.length === 0)) {
+      problems.push("captureCommand must be null or a non-empty string for real-source fixtures");
+    }
+    if (meta.sql !== null && (typeof meta.sql !== "string" || meta.sql.length === 0)) {
+      problems.push("sql must be null or a non-empty string for real-source fixtures");
     }
   } else {
     if (typeof meta.databaseVersion !== "string" || meta.databaseVersion.length === 0) {

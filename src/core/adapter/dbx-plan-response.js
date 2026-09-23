@@ -16,6 +16,8 @@
  *
  * `dbType` uses DBX's `db_type` vocabulary (for example `"postgres"` or
  * `"oceanbase-oracle"`); the adapter maps it to Plan Core's database family.
+ * MySQL is mapped to `oceanbase-mysql` only when `dbVersion` independently
+ * identifies OceanBase; the plan payload is never inspected to guess a family.
  * The response carries no `mode`: #9692 only serves estimated plans, so this
  * adapter always emits `mode: "estimated"`. There is no actual-plan path and no
  * actual -> estimated fallback; actual plans need a separate contract.
@@ -26,7 +28,7 @@
  */
 
 import { DbxPlanAdapterError } from "../errors.js";
-import { SUPPORTED_DATABASES, SUPPORTED_FORMATS, createRawPlanInput } from "../raw-plan-input.js";
+import { SUPPORTED_FORMATS, createRawPlanInput } from "../raw-plan-input.js";
 
 /**
  * DBX `db_type` -> Plan Core database family.
@@ -46,6 +48,22 @@ const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
   dameng: "dameng",
   questdb: "questdb",
 });
+
+/**
+ * Map the host's protocol-level type to the plan dialect. OceanBase MySQL is
+ * selected only from the independently reported version string; the Raw Plan
+ * shape is never used for database-family detection.
+ *
+ * @param {string} dbType
+ * @param {string|undefined} dbVersion
+ * @returns {string|undefined}
+ */
+function mapDatabaseFamily(dbType, dbVersion) {
+  if (dbType === "mysql" && typeof dbVersion === "string" && /oceanbase/i.test(dbVersion)) {
+    return "oceanbase-mysql";
+  }
+  return DATABASE_BY_DBX_DB_TYPE[dbType];
+}
 
 /** The only mode this host contract serves (t8y2/dbx#9692). */
 const CORE_MODE_ESTIMATED = "estimated";
@@ -76,12 +94,12 @@ export function adaptDbxEstimatedPlanResponse(response, options) {
 
   assertResponseShape(response);
 
-  const database = DATABASE_BY_DBX_DB_TYPE[response.dbType];
+  const database = mapDatabaseFamily(response.dbType, response.dbVersion);
   if (database === undefined) {
     throw new DbxPlanAdapterError(
       "UNSUPPORTED_DB_TYPE",
       `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
-        `supported dbTypes map to ${SUPPORTED_DATABASES.map((family) => JSON.stringify(family)).join(", ")}.`,
+        `supported dbTypes are ${Object.keys(DATABASE_BY_DBX_DB_TYPE).map((dbType) => JSON.stringify(dbType)).join(", ")}.`,
     );
   }
 

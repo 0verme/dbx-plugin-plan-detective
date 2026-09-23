@@ -1,8 +1,8 @@
 /**
- * OceanBase Oracle parsed plan -> database-neutral NormalizedPlan.
+ * OceanBase parsed plan -> database-neutral NormalizedPlan.
  *
  * The normalizer mirrors the PostgreSQL / MySQL / SQL Server stages: it maps
- * OceanBase operator labels onto stable semantic `kind` values, promotes the
+ * OceanBase Oracle / MySQL-mode operator labels onto stable semantic `kind` values, promotes the
  * fields metrics and rules care about into database-neutral names, and keeps
  * everything OceanBase-specific under `engineSpecific.oceanBase`.
  *
@@ -12,7 +12,7 @@
  * mapped onto `startupCost` / `totalCost`: those stay `null`, both values stay
  * under `engineSpecific.oceanBase`, and the shared metrics report
  * `costAttribution.status = "not-applicable"`. As a consequence the cost-based
- * branches of the existing rules cannot fire for OceanBase Oracle; the rules
+ * branches of the existing rules cannot fire for OceanBase; the rules
  * still work through kind / estimated rows.
  *
  * Predicate mapping decision: the official Oracle-mode JSON example and the
@@ -115,7 +115,7 @@ const KIND_BY_OPERATOR_SUFFIX = Object.freeze([
  * @property {Record<string, unknown>} engineSpecific OceanBase-only fields
  *
  * @typedef {Object} NormalizedPlan
- * @property {"oceanbase-oracle"} database
+ * @property {"oceanbase-oracle"|"oceanbase-mysql"} database
  * @property {"estimated"} mode
  * @property {"json"} format
  * @property {NormalizedNode} root
@@ -128,10 +128,10 @@ const KIND_BY_OPERATOR_SUFFIX = Object.freeze([
  */
 export function normalizeOceanBasePlan(parsed) {
   const unknownNodeTypes = new Set();
-  const root = normalizeNode(parsed.root, "0", unknownNodeTypes);
+  const root = normalizeNode(parsed.root, "0", unknownNodeTypes, parsed.database);
 
   return {
-    database: "oceanbase-oracle",
+    database: parsed.database,
     mode: parsed.mode,
     format: parsed.format,
     root,
@@ -143,9 +143,10 @@ export function normalizeOceanBasePlan(parsed) {
  * @param {import("../oceanbase/parse-json-plan.js").ParsedOceanBaseNode} node
  * @param {string} id
  * @param {Set<string>} unknownNodeTypes
+ * @param {"oceanbase-oracle"|"oceanbase-mysql"} database
  * @returns {NormalizedNode}
  */
-function normalizeNode(node, id, unknownNodeTypes) {
+function normalizeNode(node, id, unknownNodeTypes, database) {
   const kind = kindOf(node.nodeType);
   // The `Plan` placeholder is not an engine label, so only labels the engine
   // actually reported are recorded as unclassified.
@@ -177,9 +178,9 @@ function normalizeNode(node, id, unknownNodeTypes) {
     indexCondition: null,
     sortKeys: null,
     groupKeys: null,
-    children: node.children.map((child, index) => normalizeNode(child, `${id}.${index}`, unknownNodeTypes)),
+    children: node.children.map((child, index) => normalizeNode(child, `${id}.${index}`, unknownNodeTypes, database)),
     engineSpecific: {
-      database: "oceanbase-oracle",
+      database,
       oceanBase: {
         id: node.nodeId,
         operator: node.operator,

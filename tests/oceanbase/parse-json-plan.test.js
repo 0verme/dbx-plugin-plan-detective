@@ -5,7 +5,8 @@ import { parseOceanBaseJsonPlan } from "../../src/core/oceanbase/parse-json-plan
 import { createRawPlanInput } from "../../src/core/raw-plan-input.js";
 
 /**
- * Parser contract for OceanBase Oracle `EXPLAIN FORMAT=JSON`.
+ * Parser contract for the shared OceanBase Oracle / MySQL compatibility-mode
+ * `EXPLAIN FORMAT=JSON` parser.
  *
  * The parser owns the engine-native shape: `ID` / `OPERATOR` / `NAME` /
  * `EST.ROWS` / `EST.TIME(us)` / `COST` / `output` / `CHILD_<n>`. Everything else
@@ -246,7 +247,10 @@ test("rejects a missing plan payload before it reaches the parser", () => {
 test("rejects an actual-mode OceanBase plan", () => {
   assert.throws(
     () => parseOceanBaseJsonPlan(input(ROOT, { mode: "actual" })),
-    (error) => error instanceof PlanParseError && error.code === "MODE_MISMATCH",
+    (error) =>
+      error instanceof PlanParseError &&
+      error.code === "MODE_MISMATCH" &&
+      error.message === 'OceanBase Oracle plans are parsed in mode "estimated" only; the host never returns runtime counters for them.',
   );
 });
 

@@ -41,7 +41,7 @@ test("reports every contract violation in a single error", () => {
 });
 
 test("accepts the dialect families and formats the merged host contract can return", () => {
-  for (const database of ["postgresql", "mysql", "sqlserver", "oracle", "oceanbase-oracle", "doris", "dameng", "questdb"]) {
+  for (const database of ["postgresql", "mysql", "sqlserver", "oracle", "oceanbase-oracle", "oceanbase-mysql", "doris", "dameng", "questdb"]) {
     assert.deepEqual(validateRawPlanInput({ database, mode: "estimated", format: "json", plan: [] }), [], database);
   }
 

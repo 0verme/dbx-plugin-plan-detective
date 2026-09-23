@@ -34,12 +34,12 @@ import { PlanInputError } from "./errors.js";
  */
 
 /** Database families with a structured parser today. */
-export const STRUCTURED_DATABASES = ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oracle", "dameng", "questdb", "doris"];
+export const STRUCTURED_DATABASES = ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"];
 
 /**
- * Database families this contract accepts. Mirrors the dialects DBX can return
- * an estimated plan for (`supports_explain_plan` in `crates/dbx-sql`); the rest
- * are raw-only until a parser exists. A family is never silently renamed.
+ * Database families this contract accepts. These correspond to dialects DBX
+ * can return plus compatibility-mode families selected by adapter evidence;
+ * the rest are raw-only until a parser exists. A family is never silently renamed.
  */
 export const SUPPORTED_DATABASES = [
   "postgresql",
@@ -47,6 +47,7 @@ export const SUPPORTED_DATABASES = [
   "sqlserver",
   "oracle",
   "oceanbase-oracle",
+  "oceanbase-mysql",
   "doris",
   "dameng",
   "questdb",

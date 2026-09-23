@@ -16,16 +16,6 @@
  * that combination as raw-only instead of guessing at a text plan.
  */
 
-import { normalizeOceanBasePlan } from "../normalize/normalize-oceanbase.js";
-import { parseOceanBaseJsonPlan } from "../oceanbase/parse-json-plan.js";
+import { createOceanBaseJsonParser } from "./oceanbase-json.js";
 
-export const oceanBaseOracleParser = Object.freeze({
-  id: "oceanbase-oracle",
-  database: "oceanbase-oracle",
-  /** Formats this parser accepts. OceanBase Oracle estimated plans are JSON. */
-  formats: Object.freeze(["json"]),
-  /** @param {import("../raw-plan-input.js").RawPlanInput} rawInput */
-  parse: (rawInput) => parseOceanBaseJsonPlan(rawInput),
-  /** @param {ReturnType<typeof parseOceanBaseJsonPlan>} parsed */
-  normalize: (parsed) => normalizeOceanBasePlan(parsed),
-});
+export const oceanBaseOracleParser = createOceanBaseJsonParser("oceanbase-oracle");

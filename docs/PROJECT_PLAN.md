@@ -179,7 +179,7 @@ DBX connection → getPlanCapabilities → explainPlan(mode: "estimated")
 ```text
 DBX Host Adapter          ← 已接入（Host API 1.2，权限 host.plans:read）
 → Estimated Raw Plan（EXPLAIN ...，宿主构造）
-→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / Oracle / Dameng / QuestDB / Doris structured）
+→ Parser（PostgreSQL / MySQL / SQL Server / OceanBase Oracle / MySQL / Oracle / Dameng / QuestDB / Doris structured）
 → Normalization
 → Metrics
 → Rules
@@ -234,7 +234,7 @@ raw plan → normalized plan → metrics → findings
 
 约定：
 
-- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oracle/`、`fixtures/dameng/`、`fixtures/questdb/`、`fixtures/doris/` 按数据库分目录。
+- `fixtures/postgres/`、`fixtures/mysql/`、`fixtures/sqlserver/`、`fixtures/oceanbase-oracle/`、`fixtures/oceanbase-mysql/`、`fixtures/oracle/`、`fixtures/dameng/`、`fixtures/questdb/`、`fixtures/doris/` 按数据库分目录。
 - fixture 必须是**真实采集**的计划样本，或明确标注为人工构造的最小样本；不得用伪造样本冒充真实数据。
 - 每个样本记录来源（数据库版本、是否实际执行、是否裁剪）与预期分析结论。
 - Golden Fixture 测试：`parsed` / `normalized` / `metrics` / `findings` / `hotspots` 五 stage 与预期快照比对；
@@ -250,6 +250,7 @@ OceanBase Oracle 样本已落地（Phase 3.2：12 个 = 1 个官方 Oracle 模�
 覆盖 table full scan / index access / table get / nested-loop / hash join / sort / aggregate / multi-level tree /
 unknown operator / unknown fields / missing optional fields / `CHILD_<n>` 数字排序；本机无 OceanBase 实例，
 键名与算子名对照官方文档与引擎 JSON plan writer，见 `fixtures/oceanbase-oracle/README.md`）。
+OceanBase MySQL compatibility-mode 路由修复（Issue [#60](https://github.com/0verme/dbx-plugin-plan-detective/issues/60)）：DBX `dbType=mysql` 且 `dbVersion` 含 OceanBase evidence 时保留独立 family `oceanbase-mysql`，与 Oracle mode 共用 JSON parser / normalizer；真实来源脱敏样本和回归 golden 见 `fixtures/oceanbase-mysql/README.md`。该样本来自问题报告，原 SQL / capture 日期未提供，未声称本机真实实例回放。
 Oracle DBMS_XPLAN 样本已落地（Phase 3.3：5 个 synthetic text fixture + golden，覆盖可变列宽、缺失字段、predicate marker、
 CRLF、未知 Operation 子树与缩进建树；见 `fixtures/oracle/README.md`）。
 Dameng 样本已落地（Phase 3.4：1 个 official 文档示例 + 6 个 synthetic estimated text fixture + golden，覆盖 tuple、缩进建树、predicate 关联、未知算子、缺失字段与行数规则；本机无 Dameng 实例，provenance 见 `fixtures/dameng/README.md`）。

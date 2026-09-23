@@ -11,6 +11,7 @@ DBX 的 SQL 执行计划分析插件。
 [![MySQL](https://img.shields.io/badge/MySQL-structured-4479A1)](https://www.mysql.com/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-structured-CC2927)](https://www.microsoft.com/sql-server)
 [![OceanBase Oracle](https://img.shields.io/badge/OceanBase%20Oracle-structured-0b5fff)](https://www.oceanbase.com/)
+[![OceanBase MySQL](https://img.shields.io/badge/OceanBase%20MySQL-structured-0b5fff)](https://www.oceanbase.com/)
 [![Oracle](https://img.shields.io/badge/Oracle-structured-f80000)](https://www.oracle.com/database/)
 [![Dameng](https://img.shields.io/badge/Dameng-structured-0b6e99)](https://www.dameng.com/)
 [![QuestDB](https://img.shields.io/badge/QuestDB-structured-5f43e9)](https://questdb.com/)
@@ -29,7 +30,7 @@ DBX 当前连接
     → Hotspots / Findings
 ```
 
-PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng、QuestDB 和 Doris 会进入结构化分析。Doris 输出保留多个 Fragment-local operator tree 与仅用于 metadata 的跨 Fragment exchange link。
+PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、Dameng、QuestDB 和 Doris 会进入结构化分析。OceanBase MySQL 仅在 DBX `dbVersion` 明确包含 OceanBase 标识时与 Native MySQL 区分，并与 OceanBase Oracle 共享 OceanBase JSON plan pipeline。Doris 输出保留多个 Fragment-local operator tree 与仅用于 metadata 的跨 Fragment exchange link。
 
 ## 主界面
 
@@ -43,7 +44,7 @@ PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng、QuestDB �
 - **PostgreSQL 结构化解析**：将 JSON 执行计划整理为统一的计划树和指标。
 - **MySQL JSON Explain 结构化解析**：支持 DBX Host 返回的 `EXPLAIN FORMAT=JSON`。
 - **SQL Server ShowPlanXML 结构化解析**：支持 DBX Host 返回的 `format: "xml"` Estimated Plan，保留 ShowPlanXML 专有代价与对象信息。
-- **OceanBase Oracle JSON 结构化解析**：支持 DBX Host 返回的 `format: "json"` Estimated Plan（`EXPLAIN FORMAT=JSON`），按 `CHILD_<n>` 递归构建计划树，保留 `EST.TIME(us)` / `COST` 等 OceanBase 专有估算信息。
+- **OceanBase Oracle / MySQL JSON 结构化解析**：支持 DBX Host 返回的 `format: "json"` Estimated Plan（`EXPLAIN FORMAT=JSON`），按 `CHILD_<n>` 递归构建计划树，共享 OceanBase JSON parser / normalizer，并保留 `EST.TIME(us)` / `COST` 等 OceanBase 专有估算信息。OceanBase MySQL 根据 DBX `dbType=mysql` 与 `dbVersion` 中的 OceanBase 证据保守识别，不改变 Native MySQL `query_block` parser。
 - **Oracle DBMS_XPLAN 文本结构化解析**：支持 DBX Host 当前生成的 `DBMS_XPLAN.DISPLAY(..., 'TYPICAL +PREDICATE')` Estimated Plan，按 Operation 缩进恢复树结构，保留 `Rows`、predicate marker / text 与 Oracle 原生估算字段。
 - **Dameng Estimated Plan 文本结构化解析**：支持 DBX Host 返回的 Dameng 原生 `EXPLAIN` 文本，按缩进恢复树结构、按 operation id 关联 predicate，保留 `[cost, rows, bytes-per-row]` 与未知算子原文；仅支持 Estimated Plan。
 - **QuestDB Estimated EXPLAIN 文本结构化解析**：按相对缩进恢复 operator tree，保留原始行、inline / standalone properties 与未知 operator；PageFrame / Row / Frame pipeline 只将 relation-access Frame / Interval 节点计作一次扫描。
@@ -122,6 +123,7 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 | MySQL | Structured |
 | SQL Server | Structured |
 | OceanBase Oracle | Structured |
+| OceanBase MySQL compatibility mode | Structured (shared OceanBase JSON pipeline; requires OceanBase version evidence) |
 | Oracle | Structured |
 | Dameng | Structured (Estimated only) |
 | QuestDB | Structured (Estimated only) |
@@ -146,8 +148,8 @@ DBX 负责 Connection、Credential、Driver 和 Plan Execution；Plan Detective 
 ## 当前限制
 
 - 当前只支持 Estimated Plan，不支持 Actual Plan 或 `EXPLAIN ANALYZE`。
-- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、Oracle、Dameng、QuestDB 和 Doris 提供 Estimated structured parser；Doris 的 Fragment wrappers 不计入 operator metrics，cost / width 不跨引擎推断。
-- OceanBase Oracle 的 `EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，不会映射成 PostgreSQL 语义的代价，也不参与代价类 Hotspot / Finding；OceanBase Oracle 的 `format: "text"` 降级计划仍只展示 Raw Plan。
+- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL compatibility mode、Oracle、Dameng、QuestDB 和 Doris 提供 Estimated structured parser；OceanBase MySQL / Oracle 共享 JSON plan pipeline；Doris 的 Fragment wrappers 不计入 operator metrics，cost / width 不跨引擎推断。
+- OceanBase Oracle / MySQL 的 `EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，不会映射成 PostgreSQL 语义的代价，也不参与代价类 Hotspot / Finding；OceanBase JSON 的 `format: "text"` 降级计划仍只展示 Raw Plan。
 - Oracle parser 只接受 Estimated `DBMS_XPLAN.DISPLAY(..., 'TYPICAL +PREDICATE')`；Oracle `Cost` 只保留在 `engineSpecific.oracle`，不映射为共享 `startupCost` / `totalCost`，也不产生 PostgreSQL cost hotspot。
 - Dameng parser 只接受 Estimated 原生文本；`[cost, rows, bytes-per-row]` 的 `cost` 只保留在 `engineSpecific.dameng`，不伪装为 PostgreSQL `startupCost` / `totalCost`，热点与规则只使用可靠的行数信号。
 - QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。

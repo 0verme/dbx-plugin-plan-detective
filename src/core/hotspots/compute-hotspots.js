@@ -29,7 +29,7 @@
  *   evidence and never becomes a shared cost signal.
  *
  * There is no combined score and no cross-engine comparison: PostgreSQL, MySQL,
- * SQL Server, OceanBase Oracle, Oracle, Dameng, QuestDB and Doris cost models never meet. Ordering is a stated attention order
+ * SQL Server, OceanBase Oracle / MySQL, Oracle, Dameng, QuestDB and Doris cost models never meet. Ordering is a stated attention order
  * (`level` -> number of reasons -> plan pre-order), not a performance ranking.
  *
  * The stage is pure: it never mutates the plan or metrics, never throws on
@@ -64,7 +64,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oracle"|"dameng"|"questdb"|"doris",
+ *   engine: "postgresql"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oceanbase-mysql"|"oracle"|"dameng"|"questdb"|"doris",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -597,7 +597,7 @@ function mysqlFlagReason(node, input) {
 function estimatedRowsSource(database, sources) {
   if (database === "mysql") return sources.mysql;
   if (database === "sqlserver") return sources.sqlserver;
-  if (database === "oceanbase-oracle") return "EST.ROWS";
+  if (database === "oceanbase-oracle" || database === "oceanbase-mysql") return "EST.ROWS";
   if (database === "oracle") return "Rows";
   if (database === "dameng") return "[cost, rows, bytes-per-row]";
   return "Plan Rows";

@@ -9,6 +9,7 @@ import {
   MODES_BY_DATABASE,
   MYSQL_FIXTURES_DIR,
   OCEANBASE_ORACLE_FIXTURES_DIR,
+  OCEANBASE_MYSQL_FIXTURES_DIR,
   ORACLE_FIXTURES_DIR,
   DAMENG_FIXTURES_DIR,
   DORIS_FIXTURES_DIR,
@@ -78,6 +79,14 @@ test("fixtures/oceanbase-oracle has an estimated directory of plan.json files an
   assert.equal(planSuffixFor("oceanbase-oracle"), ".plan.json");
 });
 
+test("fixtures/oceanbase-mysql has estimated JSON plans and no actual directory", async () => {
+  const entries = await readdir(path.join(OCEANBASE_MYSQL_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.json")), "fixtures/oceanbase-mysql/estimated must contain .plan.json files");
+  await assert.rejects(readdir(path.join(OCEANBASE_MYSQL_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE["oceanbase-mysql"], ["estimated"]);
+  assert.equal(planSuffixFor("oceanbase-mysql"), ".plan.json");
+});
+
 test("fixtures/oracle has an estimated directory of plan.txt files and no actual directory", async () => {
   const entries = await readdir(path.join(ORACLE_FIXTURES_DIR, "estimated"));
   assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/oracle/estimated must contain .plan.txt files");
@@ -130,7 +139,8 @@ test("every plan file has exactly one metadata sidecar in every fixture root", a
 test("all committed fixtures satisfy the fixture convention", async () => {
   for (const database of FIXTURE_DATABASES) {
     const fixtures = await loadAllFixtures(database);
-    assert.ok(fixtures.length >= 5, `expected at least 5 ${database} fixtures, found ${fixtures.length}`);
+    const minimumFixtures = database === "oceanbase-mysql" ? 1 : 5;
+    assert.ok(fixtures.length >= minimumFixtures, `expected at least ${minimumFixtures} ${database} fixtures, found ${fixtures.length}`);
     for (const fixture of fixtures) {
       assert.ok(fixture.meta.features.length > 0, `${database}/${fixture.mode}/${fixture.name} must declare features`);
       assert.equal(fixture.meta.database, database, `${database}/${fixture.mode}/${fixture.name} database must match its root`);
@@ -242,6 +252,24 @@ test("metadata validation rejects convention violations", () => {
   assert.match(
     validateFixtureMeta({ ...oceanBaseMeta, mode: "actual" }, { database: "oceanbase-oracle", mode: "actual", name: "x.synthetic" }).join("\n"),
     /oceanbase-oracle fixtures only support mode "estimated"/,
+  );
+
+  const oceanBaseMysqlMeta = validMeta({
+    database: "oceanbase-mysql",
+    databaseVersion: "5.7.25-OceanBase-v4.2.5.7",
+    capturedAt: null,
+    captureCommand: null,
+    sql: null,
+    source: { kind: "real", detail: "Real user-reported OceanBase MySQL sample; business identifiers are sanitized.", reference: null },
+  });
+  assert.deepEqual(
+    validateFixtureMeta(oceanBaseMysqlMeta, { database: "oceanbase-mysql", mode: "estimated", name: "mysql-mode-full-scan" }),
+    [],
+    "a reported real OceanBase MySQL fixture may leave unprovided capture details null",
+  );
+  assert.match(
+    validateFixtureMeta({ ...oceanBaseMysqlMeta, databaseVersion: null }, { database: "oceanbase-mysql", mode: "estimated", name: "mysql-mode-full-scan" }).join("\\n"),
+    /databaseVersion must be a non-empty string for real-source fixtures/,
   );
 
   const oracleMeta = validMeta({

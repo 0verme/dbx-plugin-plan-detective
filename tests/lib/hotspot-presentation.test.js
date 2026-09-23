@@ -228,4 +228,20 @@ test("cost notes keep the Core status and never invent a cost attribution", () =
   const en = presentHotspotCostNote({ status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }, "en");
   assert.match(en, /SQL Server/);
   assert.match(en, /EstimatedTotalSubtreeCost/);
+
+  const oceanBaseMysql = presentHotspotCostNote(
+    { engine: "oceanbase-mysql", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
+    "zh-CN",
+  );
+  assert.match(oceanBaseMysql, /OceanBase MySQL/);
+  assert.match(oceanBaseMysql, /EST\.ROWS/);
+  assert.doesNotMatch(oceanBaseMysql, /SQL Server/);
+
+  const oceanBaseMysqlEnglish = presentHotspotCostNote(
+    { engine: "oceanbase-mysql", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" },
+    "en",
+  );
+  assert.match(oceanBaseMysqlEnglish, /OceanBase MySQL compatibility mode/);
+  assert.match(oceanBaseMysqlEnglish, /EST\.ROWS/);
+  assert.doesNotMatch(oceanBaseMysqlEnglish, /SQL Server/);
 });
