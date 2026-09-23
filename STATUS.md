@@ -15,15 +15,15 @@
 - Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
 - Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；branch `main`，本地 HEAD `57e4730`（未推送且保留），远端 `origin/main` `939d152`；本地 worktree `CLEAN`，ahead 1 / behind 32。Release / docs 工作均在独立 worktree 完成。
 - Active Tasks:
-  - Issue / Task: Plan Detective v0.6.6 Release；Branch: `chore/prepare-v0.6.6-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.6-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) merged；Notes: tag `v0.6.6` 指向 `939d152`；GitHub Release / workflow / universal artifact 已验证；真实 OceanBase 回放 `NOT RUN`，用户将内网测试。
+  - Issue / Task: Plan Detective v0.6.6 Release；Branch: `chore/prepare-v0.6.6-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.6-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) merged / verification [#64](https://github.com/0verme/dbx-plugin-plan-detective/pull/64) OPEN；Notes: tag `v0.6.6` 指向 `939d152`；GitHub Release / workflow / universal artifact 已验证；真实 OceanBase 回放 `NOT RUN`，用户将内网测试。
 - Integration Baseline: `origin/main` / release tag `v0.6.6` 均指向 `939d152cb72a9d12e205a87079948ade0ed2fd46`；PR #61 与 PR #62 merge commit 均可达。
 - Hotspot Files: `manifest.json`、`README.md`、`STATUS.md`；本轮不修改 Doris feature source / fixtures / goldens；Conflict Risk `MEDIUM`。
 - Blocked: 真实 OceanBase 4.2.5.7 replay `NOT RUN`（用户安排内网测试）；真实 Doris / DBX Desktop Host Smoke `NOT RUN`。上述不影响 GitHub Release；发布包为 unsigned，DBX Store / signing 未处理。
 - Cleanup Queue: 无；release worktree 的 `dist/` package 是 ignored 本地 preflight 产物，依赖安装缓存位于 `/tmp`。
-- Merge Queue: release prep PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) 已合并；发布验证记录 PR 正在本 worktree 准备。
+- Merge Queue: release verification PR [#64](https://github.com/0verme/dbx-plugin-plan-detective/pull/64) OPEN（docs-only）；release prep PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) 已合并。
 - Recently Merged: PR #62 OceanBase MySQL parser（merge `939d152`）；PR #61 v0.6.6 release prep（merge `c43e7aa`）；PR #59 Doris structured（merge `5bb3115`）；v0.6.6 已发布。
 
-- Next Actions: 用户在内网验证 OceanBase 4.2.5.7 MySQL-mode 计划；DBX Store / signing 独立处理。
+- Next Actions: review / merge docs-only PR #64；用户在内网验证 OceanBase 4.2.5.7 MySQL-mode 计划；DBX Store / signing 独立处理。
 
 ## 0. 当前状态
 
