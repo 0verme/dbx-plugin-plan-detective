@@ -2,7 +2,7 @@
 
 DBX 的 SQL 执行计划分析插件。
 
-基于数据库返回的 **Estimated Plan**，对执行计划进行结构化解析、热点定位和确定性诊断，帮助快速发现大表扫描、Nested Loop 放大、Sort 等值得关注的执行计划特征。它提供证据和检查方向，不把估算结果当作真实运行时事实，也不自动改写 SQL。
+解析 SQL 预估执行计划（Estimated Plan），可视化执行过程，帮助定位潜在的性能瓶颈和异常节点。分析结果基于优化器估算，不代表 SQL 的实际运行表现；它提供排查线索，不会自动修改 SQL。
 
 [![DBX >=0.6.18](https://img.shields.io/badge/DBX-%3E%3D0.6.18-4c8bf5)](https://github.com/t8y2/dbx)
 [![Release](https://img.shields.io/github/v/release/0verme/dbx-plugin-plan-detective)](https://github.com/0verme/dbx-plugin-plan-detective/releases)
@@ -19,7 +19,7 @@ DBX 的 SQL 执行计划分析插件。
 
 ## 插件简介
 
-Plan Detective 从 DBX 当前已打开的数据库连接获取 Estimated Plan，然后把 Host 返回的原始计划交给分析流水线：
+在 DBX 中，可以从查询结果或 Workbench 发起分析，并通过执行计划树查看各节点的层级关系。插件还会整理出值得进一步检查的诊断提示和热点节点：
 
 ```text
 DBX 当前连接
@@ -36,11 +36,11 @@ PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、
 
 ![DBX Plan Detective 主界面](docs/screenshots/02-plan-analysis.png)
 
-> Plan Detective 在 DBX Host Mode 下分析 Estimated Plan，展示 Plan Summary、Findings、Hotspots 与 Plan Tree。
+> Plan Detective 在 DBX 中展示预估执行计划树，以及相关诊断提示和热点节点，帮助用户判断后续检查方向。
 
 ## 主要功能
 
-- **Estimated Plan 分析**：从 DBX 查询结果上下文或 Workbench 发起分析。
+- **预估执行计划分析**：从 DBX 查询结果上下文或 Workbench 发起分析。
 - **PostgreSQL 结构化解析**：将 JSON 执行计划整理为统一的计划树和指标。
 - **MySQL JSON Explain 结构化解析**：支持 DBX Host 返回的 `EXPLAIN FORMAT=JSON`。
 - **SQL Server ShowPlanXML 结构化解析**：支持 DBX Host 返回的 `format: "xml"` Estimated Plan，保留 ShowPlanXML 专有代价与对象信息。
@@ -60,11 +60,20 @@ PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、
 
 ## 安装
 
-当前版本已发布到 [GitHub Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases)，但尚未进入 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录；目前以 GitHub Release 的未签名候选包手动安装为主。
+Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录，可在 DBX 插件中心搜索并安装。GitHub Releases 也提供未签名候选包，供需要手动安装的用户使用。
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载对应版本的 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.6-universal.dbxp`。
+### 通过 DBX Store 安装
+
+1. 打开 DBX → **插件中心**。
+2. 搜索 `Plan Detective`，选择官方条目并安装。
+
+### 从 GitHub Release 手动安装
+
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.7-universal.dbxp`。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
+
+GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
 
 运行要求：DBX `>=0.6.18`，并需要支持 Host Plan API 1.2 的宿主。当前插件声明的权限为 `host.plans:read`。
 
