@@ -5,6 +5,8 @@
   "scripts": {
     "build": "vite build",
     "build:watch": "vite build --watch",
+    "package": "npm run build && node scripts/package-plugin.mjs",
+    "package:artifact": "node scripts/package-plugin.mjs",
     "test": "node --test \"tests/**/*.test.js\"",
     "test:update-goldens": "node scripts/update-goldens.mjs",
     "analyze": "node scripts/analyze-fixture.mjs"
