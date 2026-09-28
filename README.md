@@ -4,7 +4,7 @@ DBX 的 SQL 执行计划分析插件。
 
 解析 SQL 预估执行计划（Estimated Plan），可视化执行过程，帮助定位潜在的性能瓶颈和异常节点。分析结果基于优化器估算，不代表 SQL 的实际运行表现；它提供排查线索，不会自动修改 SQL。
 
-[![DBX >=0.6.18](https://img.shields.io/badge/DBX-%3E%3D0.6.18-4c8bf5)](https://github.com/t8y2/dbx)
+[![DBX >=0.6.23](https://img.shields.io/badge/DBX-%3E%3D0.6.23-4c8bf5)](https://github.com/t8y2/dbx)
 [![Release](https://img.shields.io/github/v/release/0verme/dbx-plugin-plan-detective)](https://github.com/0verme/dbx-plugin-plan-detective/releases)
 [![License](https://img.shields.io/github/license/0verme/dbx-plugin-plan-detective)](LICENSE)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-structured-336791)](https://www.postgresql.org/)
@@ -53,6 +53,7 @@ PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
 - **复制 AI 分析提示词**：把当前分析上下文（Database Context / SQL / Plan Summary / Findings / Hotspots / Evidence）在本地打包成结构化 Prompt，由用户自行粘贴到外部 AI 工具；插件不调用任何 AI 服务，也不自动发送任何内容。
+- **DBX Built-in AI Tool（0.7.0-rc.1）**：新增只读 `analyze_estimated_plan` sidecar tool，将已取得的完整 Estimated Plan 交给现有 Plan Core 做确定性分析；插件不获取计划、不执行 SQL、不连接数据库。当前 DBX 上游尚不支持把此类独立插件 tool 绑定到普通原生数据库连接，故真实 Agent 链路仍待上游能力与 Desktop runtime smoke 验证。
 - **Findings 确定性诊断**：针对已实现的规则提供 Finding、证据和检查方向。
 - **中文 / English Finding 解释**：将结构化诊断事实按语言呈现。
 - **Raw Plan 查看**：保留并展示 DBX Host 返回的原始执行计划。
@@ -75,7 +76,7 @@ Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官�
 
 GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
 
-运行要求：DBX `>=0.6.18`，并需要支持 Host Plan API 1.2 的宿主。当前插件声明的权限为 `host.plans:read`。
+运行要求：DBX `>=0.6.23`、支持 Host API 1.2 的宿主及系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前 AI Tool 版本为 `0.7.0-rc.1`，尚未通过 DBX Desktop runtime smoke，不代表运行时已验证。
 
 ## 使用方法
 
@@ -105,6 +106,12 @@ GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要
 ```
 
 Plan Detective 不创建数据库连接，也不读取数据库凭据；Workbench 只引用 DBX 中已经打开的连接。
+
+### DBX 内置 Agent（0.7.0-rc.1）
+
+`analyze_estimated_plan` 只接收已取得的完整 Estimated Plan raw JSON / text / XML，以及显式 `dbType`、`mode=estimated`、`format` 和完整性元数据；不接收 SQL 或 Markdown 表格代替 raw plan，也不会自行获取计划。当前 DBX Agent `explain_query` 没有可交接的 structured raw-plan contract，因此若无法独立获得完整原始计划与来源信息，**不要调用此工具**。
+
+当前上游 DBX 只在 plugin-owned connection 上发现 / 执行 plugin tools；Agent 的 `explain_query` 只向模型提供 Markdown 表格文本，结构化 plan data 只供 UI 使用。因此本版本虽包含 sidecar 与工具 contract，**尚不能在普通 DBX 原生数据库连接上完成端到端 Agent 链路**，不得视为 runtime verified。完整审计、上游 capability gap 与 Desktop smoke checklist 见 [docs/AI_TOOL_V0.7.0.md](docs/AI_TOOL_V0.7.0.md)。
 
 ## Finding 示例
 
@@ -150,9 +157,9 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 
 DBX 负责 Connection、Credential、Driver 和 Plan Execution；Plan Detective 只消费 Host 返回的执行计划。插件不建立连接、不读取凭据，也不引入自己的数据库驱动。
 
-### 当前不依赖 AI
+### AI Tool 只提供确定性证据
 
-当前 Finding 和 Hotspot 基于确定性规则，仓库中不依赖 LLM 或 AI SDK。这里描述的是当前实现边界，不预设未来不会增加其他辅助能力。
+Plan Detective 不调用 LLM 或 AI SDK。`analyze_estimated_plan` 只接受已取得且完整的 Estimated Plan raw payload，复用同一套 Plan Core 和既有 AI context builder；它不会获取计划、执行 SQL、访问连接 lifecycle 或业务数据。当前 DBX Agent 尚不能把原生 `explain_query` 结果按该 contract 交接给插件。输出中的 Finding / Hotspot 是带 caveat 的确定性线索，不是实际运行性能证明；没有 Finding 不代表 SQL 没问题。
 
 ## 当前限制
 
@@ -164,6 +171,7 @@ DBX 负责 Connection、Credential、Driver 和 Plan Execution；Plan Detective 
 - QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。
 - Doris parser 只接受 Estimated `format: "text"`；保留 Distributed Plan / PLAN FRAGMENT / fragment-local operator tree，Sink→Exchange link 只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；`cardinality` 映射 `estimatedRows`，scan 使用中性 `scan`，Doris cost 与 `avgRowSize` 不映射 PostgreSQL cost / shared width。官方文档转录与 synthetic fixtures 不是真实 Doris capture。
 - 尚未实现 Plan Diff、Plan History、AI SQL Rewrite 或自动调优。
+- 当前 DBX 0.6.26 上游只从打开的 plugin-owned connection 发现 plugin tools；Plan Detective 没有数据库 connection provider，因而 `analyze_estimated_plan` 暂不能绑定普通 DBX 原生 Agent 连接。DBX `explain_query` 给模型的是 Markdown 表格文本，结构化 `explain_data` 只供 UI 使用；端到端交接需要上游提供普通 Agent connection tool binding 和可供后续 tool 消费的结构化 Estimated Plan 结果。插件不会用 Host API 重跑 EXPLAIN 绕过此限制。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 
 ## 工作原理
@@ -182,6 +190,7 @@ DBX Connection
 - [架构与职责边界](docs/ARCHITECTURE.md)
 - [Plan Core 输入、parser 与 fixture 契约](docs/PLAN_INPUT_AND_FIXTURES.md)
 - [项目计划与 Future 边界](docs/PROJECT_PLAN.md)
+- [v0.7.0 AI Tool 契约、上游 gap 与 Runtime gate](docs/AI_TOOL_V0.7.0.md)
 
 ## 开发
 
@@ -192,16 +201,17 @@ npm install
 npm test
 npm run build
 dbx-plugin dev --path . --port 5190
-dbx-plugin package .
+npm run package
 ```
 
-`ui/` 是必须入库的发布产物：官方 release workflow 直接打包它，不会替你重新构建。`dist/` 是本地生成的候选包目录，不入库。
+`npm run package` 会构建 UI 并调用自有 Node sidecar packager；DBX CLI package 当前只从 `[backend]` 编译 Rust/Go sidecar，不适用于本插件的 Node runtime。`ui/` 是必须入库的发布产物。`dist/` 是本地生成的候选包目录，不入库。
 
 ## 项目结构
 
 ```text
 assets/          插件图标等静态资源
-src/             Svelte 前端与 Plan Core 源码
+backend/         Node JSONL sidecar 与平台 launcher
+src/             Svelte UI、AI Tool adapter、Plan Core 源码
 ui/              已构建、需要入库的 DBX UI 发布产物
 docs/            架构、契约、计划与截图资源
 fixtures/        离线执行计划样本

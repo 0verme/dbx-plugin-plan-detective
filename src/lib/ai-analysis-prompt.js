@@ -49,6 +49,7 @@ const SUMMARY_METRIC_ROWS = Object.freeze([
  *   }|null,
  *   locale?: unknown,
  *   databaseType?: string|null,
+ *   sourceWarnings?: string[],
  *   maxEvidenceChars?: number,
  * }} [context]
  * @returns {string}
@@ -70,6 +71,13 @@ export function buildAiAnalysisPrompt(context = {}) {
   const databaseLines = databaseContextLines(rawInput, context?.databaseType);
   if (databaseLines.length > 0) {
     lines.push("## Database Context", ...databaseLines, "");
+  }
+
+  const sourceWarnings = Array.isArray(context?.sourceWarnings)
+    ? context.sourceWarnings.filter((warning) => typeof warning === "string" && /^[a-z0-9][a-z0-9_-]{0,127}$/.test(warning))
+    : [];
+  if (sourceWarnings.length > 0) {
+    lines.push("## Source Plan Warnings", ...sourceWarnings.map((warning) => `- \`${warning}\``), "");
   }
 
   lines.push("## SQL");

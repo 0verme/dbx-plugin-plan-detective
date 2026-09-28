@@ -1,7 +1,20 @@
 schema_version = 1
 
 [package]
-include = ["assets", "ui"]
+include = [
+  "assets",
+  "ui",
+  "backend",
+  "package.json",
+  "src/ai-tool",
+  "src/core",
+  "src/lib/ai-analysis-prompt.js",
+  "src/lib/finding-presentation.js",
+  "src/lib/hotspot-presentation.js",
+  "src/lib/i18n",
+  "src/lib/format.js",
+  "src/lib/view-model.js",
+]
 
 [dev]
 ui_build = ["npm", "run", "build"]
