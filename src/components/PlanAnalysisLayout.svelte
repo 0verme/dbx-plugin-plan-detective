@@ -4,12 +4,14 @@
   import NodeInspector from "./NodeInspector.svelte";
   import PlanSummary from "./PlanSummary.svelte";
   import PlanTree from "./PlanTree.svelte";
+  import { createTranslator } from "../lib/i18n/index.js";
 
   /**
    * Page-level analysis layout. The child panels render their own content, but
    * this component owns the shared Summary / Workspace / Inspector geometry.
    */
   let {
+    locale = "zh-CN",
     summary = null,
     selectedNodeId = null,
     onSelectNode = () => {},
@@ -25,17 +27,20 @@
     selectedNodeFindings = [],
     onToggleNode = () => {},
   } = $props();
+
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 <div class="analysis-grid">
-  <aside class="summary-column" aria-label="Plan summary">
-    <PlanSummary {summary} {selectedNodeId} onSelectNode={onSelectNode} />
+  <aside class="summary-column" aria-label={t("layout.summary.ariaLabel")}>
+    <PlanSummary {locale} {summary} {selectedNodeId} onSelectNode={onSelectNode} />
   </aside>
 
-  <main class="workspace-column" aria-label="Plan analysis workspace">
-    <FindingsList views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={onSelectNode} />
-    <HotspotsList view={hotspotView} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
+  <main class="workspace-column" aria-label={t("layout.workspace.ariaLabel")}>
+    <FindingsList {locale} views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={onSelectNode} />
+    <HotspotsList {locale} view={hotspotView} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
     <PlanTree
+      {locale}
       {rows}
       {collapsed}
       selectedId={selectedNodeId}
@@ -46,8 +51,8 @@
     />
   </main>
 
-  <aside class="inspector-column" aria-label="Selected node details">
-    <NodeInspector inspector={inspector} nodeFindings={selectedNodeFindings} />
+  <aside class="inspector-column" aria-label={t("layout.inspector.ariaLabel")}>
+    <NodeInspector {locale} inspector={inspector} nodeFindings={selectedNodeFindings} />
   </aside>
 </div>
 

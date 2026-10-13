@@ -12,7 +12,7 @@ function fieldsByLabel(inspector) {
 test("generic Node Inspector presents reported QuestDB operator and property evidence", async () => {
   const fixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
   const analysis = analyzePlan(fixture.input);
-  const inspector = buildNodeInspector(analysis.normalized.root);
+  const inspector = buildNodeInspector(analysis.normalized.root, "en");
   const fields = fieldsByLabel(inspector);
 
   assert.equal(fields.get("Operator"), "Async JIT Filter");
@@ -30,7 +30,7 @@ test("QuestDB scan inspector shows relation and direction without adding compone
   const fixture = await loadFixture({ database: "questdb", mode: "estimated", name: "ordered-backward" });
   const analysis = analyzePlan(fixture.input);
   const scan = flattenNodes(analysis.normalized.root).find((node) => node.nodeType === "Frame backward scan");
-  const fields = fieldsByLabel(buildNodeInspector(scan));
+  const fields = fieldsByLabel(buildNodeInspector(scan, "en"));
   const rows = buildTreeRows(analysis.normalized.root);
 
   assert.equal(fields.get("Operator"), "Frame backward scan");
@@ -44,7 +44,7 @@ test("group-by vectorized and unknown properties appear only when present", asyn
   const fixture = await loadFixture({ database: "questdb", mode: "estimated", name: "inline-properties.synthetic" });
   const analysis = analyzePlan(fixture.input);
   const group = flattenNodes(analysis.normalized.root).find((node) => node.nodeType === "GroupByRecord");
-  const fields = fieldsByLabel(buildNodeInspector(group));
+  const fields = fieldsByLabel(buildNodeInspector(group, "en"));
 
   assert.equal(fields.get("Vectorized"), "true");
   assert.equal(fields.get("Workers"), "2");

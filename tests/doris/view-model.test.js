@@ -32,10 +32,10 @@ test("generic Node Inspector shows Doris properties and fragment / sink metadata
   const fragment = analysis.normalized.root.children[1];
   const join = fragment.children[0];
   const scan = join.children.find((node) => node.kind === "scan");
-  const fragmentFields = fieldsByLabel(buildNodeInspector(fragment));
-  const joinFields = fieldsByLabel(buildNodeInspector(join));
-  const scanFields = fieldsByLabel(buildNodeInspector(scan));
-  const rootFields = fieldsByLabel(buildNodeInspector(analysis.normalized.root));
+  const fragmentFields = fieldsByLabel(buildNodeInspector(fragment, "en"));
+  const joinFields = fieldsByLabel(buildNodeInspector(join, "en"));
+  const scanFields = fieldsByLabel(buildNodeInspector(scan, "en"));
+  const rootFields = fieldsByLabel(buildNodeInspector(analysis.normalized.root, "en"));
 
   assert.equal(fragmentFields.get("fragmentId"), "1");
   assert.equal(fragmentFields.get("sinkType"), "STREAM DATA SINK");

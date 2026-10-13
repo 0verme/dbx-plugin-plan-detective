@@ -24,7 +24,7 @@ test("shared tree and inspector render Oracle normalized nodes", () => {
   assert.equal(rows[1].label, "TABLE ACCESS FULL · PD_ORDERS");
   assert.equal(rows[1].totalCost, null);
 
-  const inspector = buildNodeInspector(indexNodesById(tableScan.normalized.root).get("0.0"));
+  const inspector = buildNodeInspector(indexNodesById(tableScan.normalized.root).get("0.0"), "en");
   const fields = inspectorFields(inspector);
   assert.equal(fields.get("Operation ID (Id)"), "1");
   assert.equal(fields.get("Raw Operation"), "TABLE ACCESS FULL");

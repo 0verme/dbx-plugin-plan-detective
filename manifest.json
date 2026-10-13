@@ -5,7 +5,7 @@
   "name": "DBX Plan Detective",
   "version": "0.7.0-rc.1",
   "publisher": "0verme",
-  "description": "解析 SQL 预估执行计划，可视化执行过程，帮助定位潜在的性能瓶颈和异常节点。",
+  "description": "Analyze SQL estimated execution plans, visualize plan trees, and identify nodes worth investigating.",
   "icon": "assets/plugin.svg",
   "engines": { "dbx": ">=0.6.23", "host_api": "^1.2" },
   "permissions": ["host.plans:read"],
@@ -22,14 +22,14 @@
       "type": "workbench",
       "id": "io.github.0verme.plan-detective.workbench",
       "label": "DBX Plan Detective",
-      "description": "选择 DBX 中已打开的连接并输入 SQL，查看预估执行计划和值得进一步检查的节点。",
+      "description": "Choose an open DBX connection and enter SQL to inspect its estimated plan and nodes worth investigating.",
       "icon": "assets/plugin.svg"
     },
     {
       "type": "result-view",
       "id": "io.github.0verme.plan-detective.audit-result-view",
       "label": "Plan Detective",
-      "description": "从当前查询结果上下文打开：带入 connectionId / database / SQL，并通过 Host Plan API 获取 Estimated Plan。"
+      "description": "Open from the current query result context with connectionId / database / SQL, then request an Estimated Plan through the Host Plan API."
     }
   ],
   "localizations": {

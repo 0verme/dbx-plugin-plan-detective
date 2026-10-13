@@ -32,6 +32,16 @@ DBX 当前连接
 
 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、Dameng、QuestDB 和 Doris 会进入结构化分析。OceanBase MySQL 仅在 DBX `dbVersion` 明确包含 OceanBase 标识时与 Native MySQL 区分，并与 OceanBase Oracle 共享 OceanBase JSON plan pipeline。Doris 输出保留多个 Fragment-local operator tree 与仅用于 metadata 的跨 Fragment exchange link。
 
+## 界面语言 / Interface language
+
+界面支持简体中文和 English。在页面 Header 右侧选择 **中文** 或 **English**，切换会立即更新界面、Finding / Hotspot 解释、状态提示和复制 AI Prompt 的语言；不会重新获取计划、执行 SQL，也不会清除当前分析结果、节点选择或折叠状态。
+
+语言优先级为：**本次手动选择 > 已保存的用户偏好 > DBX Host locale > 默认简体中文**。用户选择会保存在当前应用的本地存储中；如果宿主环境禁用存储，切换仍会在当前页面会话生效，但不会跨会话保存。`zh` / `zh-*` 会映射到简体中文，`en` / `en-*` 会映射到 English；不支持或未知的 Host locale 回退到简体中文。仅支持这两种界面语言。
+
+The UI is available in Simplified Chinese and English. Use **中文** or **English** in the right side of the page header. Switching updates interface copy, Finding / Hotspot explanations, status messages, and the copied AI prompt immediately. It does not request another plan, execute SQL, or reset the current analysis, selected node, or collapsed tree state.
+
+Locale precedence is **manual selection for this session > saved user preference > DBX Host locale > Simplified Chinese default**. The preference is stored locally. If storage is unavailable, switching still works for the current session but is not persisted. `zh` / `zh-*` map to Simplified Chinese, `en` / `en-*` map to English, and unknown Host locales fall back to Simplified Chinese. Only these two interface locales are supported.
+
 ## 主界面
 
 ![DBX Plan Detective 主界面](docs/screenshots/02-plan-analysis.png)

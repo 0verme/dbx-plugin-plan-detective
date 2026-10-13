@@ -13,7 +13,8 @@
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
   import { copyTextToClipboard } from "./lib/clipboard-copy.js";
   import { analyzeFixture, countByMode, findCatalogEntry, pickDefaultFixture } from "./lib/fixture-catalog.js";
-  import { normalizeLocale } from "./lib/i18n/index.js";
+  import { createTranslator, normalizeLocale } from "./lib/i18n/index.js";
+  import { readLocalePreference, resolveLocalePreference, saveLocalePreference } from "./lib/i18n/locale-preference.js";
   import {
     describeAnalysisError,
     describeAnalysisNotice,
@@ -55,9 +56,11 @@
   const isDev = import.meta.env.DEV;
 
   let planApi = $state(describePlanApi(bridge));
-  // Finding Presentation follows the host locale; the rest of the existing UI
-  // remains backward-compatible while the message catalog grows incrementally.
-  let diagnosisLocale = $state(normalizeLocale(bridge?.locale));
+  let storedLocale = $state(readLocalePreference());
+  let manualLocale = $state(null);
+  let hostLocale = $state(bridge?.locale ?? null);
+  let locale = $state(resolveLocalePreference({ storedLocale, hostLocale }));
+  const t = $derived(createTranslator(locale).t);
 
   /* ------------------------------------------------------------- fixtures -- */
 
@@ -89,8 +92,14 @@
   onMount(() => {
     if (bridge === null) return undefined;
 
+    const syncLocale = () => {
+      hostLocale = bridge.locale ?? null;
+      locale = resolveLocalePreference({ manualLocale, storedLocale, hostLocale });
+    };
+
     const syncContext = () => {
       hostContext = bridge.context ?? null;
+      syncLocale();
       const contextSql = hostContext?.sql;
       if (sqlText.length === 0 && typeof contextSql === "string" && contextSql.trim().length > 0) {
         sqlText = contextSql;
@@ -107,7 +116,6 @@
     const handleInit = () => {
       syncPlanApi();
       syncContext();
-      diagnosisLocale = normalizeLocale(bridge.locale);
     };
 
     const offContext = typeof bridge.onContext === "function" ? bridge.onContext(syncContext) : null;
@@ -122,7 +130,7 @@
   });
 
   const contextView = $derived(describeConnectionContext(hostContext));
-  const hostGate = $derived(describeHostGate(planApi));
+  const hostGate = $derived(describeHostGate(planApi, locale));
   const effectiveConnectionId = $derived(contextView.connectionId ?? (manualConnectionId.trim().length > 0 ? manualConnectionId.trim() : null));
   const capabilitiesView = $derived(describeCapabilities(capabilities));
   const capabilityMatches = $derived(capabilitiesConnectionId !== null && capabilitiesConnectionId === effectiveConnectionId);
@@ -166,12 +174,12 @@
 
   const analyzeDisabledReason = $derived.by(() => {
     if (!planApi.available) return planApi.reason ?? "DBX Plan API is unavailable.";
-    if (effectiveConnectionId === null) return "缺少 connectionId";
-    if (sqlText.trim().length === 0) return "请输入 SQL";
-    if (capabilityState === "loading") return "正在读取宿主能力…";
-    if (capabilityState === "error") return "连接能力读取失败";
-    if (!capabilityMatches) return "请先刷新 Plan Capabilities";
-    if (capabilities?.supports.estimatedPlan !== true) return "该方言不支持 Estimated Plan";
+    if (effectiveConnectionId === null) return t("app.disabled.noConnection");
+    if (sqlText.trim().length === 0) return t("app.disabled.noSql");
+    if (capabilityState === "loading") return t("app.disabled.capabilitiesLoading");
+    if (capabilityState === "error") return t("app.disabled.capabilitiesError");
+    if (!capabilityMatches) return t("app.disabled.refreshCapabilities");
+    if (capabilities?.supports.estimatedPlan !== true) return t("app.disabled.unsupported");
     return null;
   });
 
@@ -216,30 +224,30 @@
   const rows = $derived(activeAnalysis ? buildTreeRows(activeAnalysis.normalized.root) : []);
   const rowsById = $derived(indexRowsById(rows));
   const nodesById = $derived(activeAnalysis ? indexNodesById(activeAnalysis.normalized.root) : new Map());
-  const summary = $derived(activeAnalysis ? buildPlanSummary(activeAnalysis.metrics) : null);
-  const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById, diagnosisLocale) : []);
+  const summary = $derived(activeAnalysis ? buildPlanSummary(activeAnalysis.metrics, locale) : null);
+  const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById, locale) : []);
   const findingCounts = $derived(countFindingsBySeverity(activeAnalysis?.findings ?? []));
   const findingsByNodeRef = $derived(groupFindingsByNodeRef(activeAnalysis?.findings ?? []));
   const hotspotViews = $derived(
-    activeAnalysis ? buildHotspotViews(activeAnalysis.hotspots, rowsById, activeAnalysis.findings, diagnosisLocale) : { items: [], costNote: null },
+    activeAnalysis ? buildHotspotViews(activeAnalysis.hotspots, rowsById, activeAnalysis.findings, locale) : { items: [], costNote: null },
   );
   const hotspotCounts = $derived(countHotspotLevels(hotspotViews.items));
   const hotspotsByNodeRef = $derived(groupHotspotsByNodeRef(hotspotViews.items));
-  const inspector = $derived(activeAnalysis ? buildNodeInspector(nodesById.get(selectedNodeId)) : null);
+  const inspector = $derived(activeAnalysis ? buildNodeInspector(nodesById.get(selectedNodeId), locale) : null);
   const selectedNodeFindings = $derived(findingViews.filter((finding) => finding.nodeRef === selectedNodeId));
 
   /* ---------------------------------------------------- host view mapping -- */
 
-  const analysisNotice = $derived(describeAnalysisNotice(session));
+  const analysisNotice = $derived(describeAnalysisNotice(session, locale));
   const analysisError = $derived(
     session.status === "error"
-      ? { ...describeAnalysisError(session.error.code), code: session.error.code, message: session.error.message, hostMessage: session.error.hostMessage }
+      ? { ...describeAnalysisError(session.error.code, locale), code: session.error.code, message: session.error.message, hostMessage: session.error.hostMessage }
       : null,
   );
   const rawPlanPreview = $derived(session.hostResult ? formatRawPlan(session.hostResult) : null);
-  const rawPlanWarnings = $derived((session.hostResult?.warnings ?? []).map(describePlanWarning));
+  const rawPlanWarnings = $derived((session.hostResult?.warnings ?? []).map((warning) => describePlanWarning(warning, locale)));
   const copyPromptAction = $derived(
-    session.status === "structured" ? { ...describeCopyPromptAction(copyState, diagnosisLocale), onCopy: copyAiAnalysisPrompt } : null,
+    session.status === "structured" ? { ...describeCopyPromptAction(copyState, locale), onCopy: copyAiAnalysisPrompt } : null,
   );
 
   /* ------------------------------------------------------------ copy prompt -- */
@@ -257,7 +265,7 @@
       rawInput: session.rawInput,
       analysis: session.analysis,
       databaseType: session.capabilities?.dbType ?? null,
-      locale: diagnosisLocale,
+      locale,
     });
     const result = await copyTextToClipboard({ bridge, text: prompt });
     copyState = result.ok ? "copied" : "failed";
@@ -270,6 +278,12 @@
   }
 
   /* --------------------------------------------------------------- events -- */
+
+  function selectLocale(nextLocale) {
+    manualLocale = normalizeLocale(nextLocale);
+    locale = resolveLocalePreference({ manualLocale, storedLocale, hostLocale });
+    saveLocalePreference(manualLocale);
+  }
 
   function selectFixture(id) {
     if (id === selectedFixtureId) return;
@@ -291,42 +305,54 @@
 
 <svelte:head><title>DBX Plan Detective</title></svelte:head>
 
-<div class="app">
+<div class="app" lang={locale}>
   <header class="app-header">
     <div class="brand">
       <span class="eyebrow">DBX Plan Detective</span>
-      <h1>执行计划分析</h1>
+      <h1>{t("app.header.title")}</h1>
     </div>
     <div class="header-right">
       {#if view === "host"}
         <span class="badge {hostGate.tone}">{hostGate.badgeLabel}</span>
       {:else if isDev}
-        <span class="badge offline">Offline / Fixture Mode</span>
+        <span class="badge offline">{t("app.badge.offline")}</span>
       {/if}
-      <nav class="view-switch" aria-label="视图切换">
-        <button type="button" class:active={view === "host"} onclick={() => (view = "host")}>Host 分析</button>
+      <nav class="view-switch" aria-label={t("app.a11y.viewSwitcher")}>
+        <button type="button" class:active={view === "host"} onclick={() => (view = "host")}>{t("app.view.host")}</button>
         {#if isDev}
-          <button type="button" class:active={view === "fixtures"} onclick={() => (view = "fixtures")}>Fixtures（开发）</button>
-          <button type="button" class:active={view === "audit"} onclick={() => (view = "audit")}>宿主审计（开发）</button>
+          <button type="button" class:active={view === "fixtures"} onclick={() => (view = "fixtures")}>{t("app.view.fixtures")}</button>
+          <button type="button" class:active={view === "audit"} onclick={() => (view = "audit")}>{t("app.view.audit")}</button>
         {/if}
       </nav>
+      <div class="language-switch" role="group" aria-label={t("locale.switcher.label")}>
+        <button
+          type="button"
+          class:active={locale === "zh-CN"}
+          aria-pressed={locale === "zh-CN"}
+          onclick={() => selectLocale("zh-CN")}
+        >{t("locale.switcher.chinese")}</button>
+        <button
+          type="button"
+          class:active={locale === "en"}
+          aria-pressed={locale === "en"}
+          onclick={() => selectLocale("en")}
+        >{t("locale.switcher.english")}</button>
+      </div>
     </div>
   </header>
 
   {#if isDev && view === "audit"}
-    <HostAudit />
+    <HostAudit {locale} />
   {:else if isDev && view === "fixtures"}
-    <p class="mode-note">
-      当前为 <strong>Offline / Fixture Mode</strong>（开发用）：数据来自仓库内 <code>fixtures/postgres/**</code>，
-      经 <code>RawPlanInput → analyzePlan()</code> 离线分析。它不访问 DBX、数据库或网络。
-    </p>
+    <p class="mode-note">{t("app.mode.fixture", { mode: "Offline / Fixture Mode" })}</p>
 
-    <FixtureSelector {catalog} selectedId={selectedFixtureId} onSelect={selectFixture} />
+    <FixtureSelector {locale} {catalog} selectedId={selectedFixtureId} onSelect={selectFixture} />
 
     {#if fixtureAnalysis?.error}
-      <p class="panel error-panel">分析 fixture 失败：{fixtureAnalysis.error}</p>
+      <p class="panel error-panel">{t("app.fixture.error", { error: fixtureAnalysis.error })}</p>
     {:else if fixtureAnalysis?.result}
       <PlanAnalysisLayout
+        {locale}
         {summary}
         selectedNodeId={selectedNodeId}
         onSelectNode={selectNode}
@@ -343,13 +369,10 @@
         onToggleNode={toggleNode}
       />
     {:else}
-      <p class="panel empty">没有可用的 fixture（{catalogCounts.total} 个）。</p>
+      <p class="panel empty">{t("app.fixture.empty", { count: catalogCounts.total })}</p>
     {/if}
   {:else}
-    <p class="mode-note">
-      当前为 <strong>DBX Host Mode</strong>：计划来自 <code>window.dbxPlugin.explainPlan</code>（仅
-      <code>mode: "estimated"</code>）。插件不建立数据库连接、不读取凭据、不执行 SQL；<code>EXPLAIN</code> 由 DBX 宿主生成。
-    </p>
+    <p class="mode-note">{t("app.mode.host")}</p>
 
     {#if hostGate.state === "initializing"}
       <section class="panel" aria-live="polite">
@@ -358,15 +381,16 @@
       </section>
     {:else if !planApi.available}
       <section class="panel error-panel" role="alert">
-        <strong>{describeAnalysisError("PLAN_API_UNAVAILABLE").title}</strong>
-        <p>{hostGate.message ?? "DBX Plan API is unavailable."}</p>
+        <strong>{describeAnalysisError("PLAN_API_UNAVAILABLE", locale).title}</strong>
+        <p>{hostGate.message ?? t("host.gate.unavailable")}</p>
         {#if isDev}
-          <p class="hint">离线开发可切换到 Fixtures（开发）视图；该视图不访问宿主。</p>
+          <p class="hint">{t("app.host.offlineHint")}</p>
         {/if}
       </section>
     {:else}
       <div class="input-grid">
         <ConnectionContext
+          {locale}
           {contextView}
           bind:manualConnectionId
           capabilities={capabilitiesView}
@@ -375,13 +399,14 @@
           onRefresh={refreshCapabilities}
         />
         <div class="sql-workspace">
-          <SqlInput bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
-          <AnalysisNotice status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} copyPrompt={copyPromptAction} />
+          <SqlInput {locale} bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
+          <AnalysisNotice {locale} status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} copyPrompt={copyPromptAction} />
         </div>
       </div>
 
       {#if session.status === "structured" && hostStructured}
         <PlanAnalysisLayout
+          {locale}
           {summary}
           selectedNodeId={selectedNodeId}
           onSelectNode={selectNode}
@@ -400,7 +425,7 @@
       {/if}
 
       <div class="raw-plan-section">
-        <RawPlanViewer hostResult={session.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
+        <RawPlanViewer {locale} hostResult={session.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
       </div>
     {/if}
   {/if}
@@ -440,12 +465,16 @@
 
   .header-right {
     display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    justify-content: flex-end;
   }
 
   .view-switch {
     display: inline-flex;
+    flex-wrap: wrap;
     gap: 2px;
     padding: 2px;
     border: 1px solid var(--pd-border);
@@ -468,6 +497,40 @@
     background: var(--pd-accent-soft);
     color: var(--pd-accent);
     font-weight: 600;
+  }
+
+  .language-switch {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--pd-border);
+    border-radius: 6px;
+    background: var(--pd-surface);
+  }
+
+  .language-switch button {
+    min-height: 24px;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--pd-muted);
+    font: inherit;
+    font-size: 11px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .language-switch button.active {
+    background: var(--pd-accent-soft);
+    color: var(--pd-accent);
+    font-weight: 650;
+  }
+
+  .language-switch button:focus-visible,
+  .view-switch button:focus-visible {
+    outline: 2px solid var(--pd-accent);
+    outline-offset: 1px;
   }
 
   .mode-note {
@@ -517,6 +580,14 @@
   }
 
   @media (max-width: 899px) {
+    .app-header {
+      align-items: flex-start;
+    }
+
+    .header-right {
+      justify-content: flex-start;
+    }
+
     .input-grid {
       grid-template-columns: minmax(0, 1fr);
     }

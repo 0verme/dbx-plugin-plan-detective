@@ -1,12 +1,14 @@
 <script>
   import { formatNumber } from "../lib/format.js";
   import { visibleTreeRows } from "../lib/view-model.js";
+  import { createTranslator } from "../lib/i18n/index.js";
 
   /**
    * Plan Tree: a scannable nested list of rows, no canvas / DAG. Collapse
    * state, finding and hotspot markers come from the pure view model.
    */
   let {
+    locale = "zh-CN",
     rows = [],
     collapsed = new Set(),
     selectedId = null,
@@ -17,6 +19,7 @@
   } = $props();
 
   const visible = $derived(visibleTreeRows(rows, collapsed));
+  const t = $derived(createTranslator(locale).t);
 
   /**
    * @param {KeyboardEvent} event
@@ -41,11 +44,11 @@
 
 <section class="panel tree-panel">
   <header class="panel-head">
-    <h2>Plan Tree</h2>
-    <span class="hint">{rows.length} nodes · 点击节点查看右侧字段</span>
+    <h2>{t("tree.title")}</h2>
+    <span class="hint">{t("tree.hint", { count: rows.length })}</span>
   </header>
 
-  <div class="tree" role="tree" aria-label="Plan tree">
+  <div class="tree" role="tree" aria-label={t("tree.ariaLabel")}>
     {#each visible as row (row.id)}
       {@const finding = findingsByNodeRef.get(row.id)}
       {@const hotspot = hotspotsByNodeRef.get(row.id)}
@@ -66,7 +69,7 @@
             <button
               type="button"
               class="caret"
-              aria-label={collapsed.has(row.id) ? "展开子树" : "折叠子树"}
+              aria-label={collapsed.has(row.id) ? t("tree.expand") : t("tree.collapse")}
               aria-expanded={!collapsed.has(row.id)}
               onclick={(event) => {
                 event.stopPropagation();
@@ -82,22 +85,22 @@
 
         <span class="label">
           {#if hotspot}
-            <span class="hotspot-marker {hotspot.level}" title="{hotspot.count} hotspot(s) on this node">◆</span>
+            <span class="hotspot-marker {hotspot.level}" title={t("tree.hotspots.tooltip", { count: hotspot.count })}>◆</span>
           {/if}
           {row.label}
         </span>
 
         {#if finding}
-          <span class="badge {finding.severity}" title="{finding.count} finding(s) on this node">
+          <span class="badge {finding.severity}" title={t("tree.findings.tooltip", { count: finding.count })}>
             {finding.count}
           </span>
         {/if}
 
         <span class="metric mono">
-          {row.estimatedRows === null ? "" : `rows ≈ ${formatNumber(row.estimatedRows)}`}
+          {row.estimatedRows === null ? "" : t("tree.rows", { value: formatNumber(row.estimatedRows) })}
         </span>
         <span class="metric mono">
-          {row.totalCost === null ? "" : `cost ${formatNumber(row.totalCost)}`}
+          {row.totalCost === null ? "" : t("tree.cost", { value: formatNumber(row.totalCost) })}
         </span>
       </div>
     {/each}

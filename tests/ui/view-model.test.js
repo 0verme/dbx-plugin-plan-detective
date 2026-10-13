@@ -97,8 +97,27 @@ test("buildPlanSummary shows the core metrics verbatim", () => {
   assert.equal(largestRows.node.nodeId, "0");
   assert.equal(largestRows.node.relation, "pd_fix_events");
   assert.equal(highestCost.value, "3,497");
-  assert.equal(highestCost.detail, "node total cost 3,497");
+  assert.equal(highestCost.detail, "节点 total cost 3,497");
   assert.equal(highestCost.note, null, "an available attribution needs no disclaimer");
+});
+
+test("Plan Summary and Node Inspector labels switch locale while technical values stay unchanged", () => {
+  const zhSummary = buildPlanSummary(largeSeqScanAnalysis.metrics, "zh-CN");
+  const enSummary = buildPlanSummary(largeSeqScanAnalysis.metrics, "en");
+  assert.equal(zhSummary.rows[0].label, "预计总成本");
+  assert.equal(enSummary.rows[0].label, "Total Estimated Cost");
+  assert.equal(zhSummary.rows[0].value, enSummary.rows[0].value);
+  assert.notEqual(zhSummary.rows[0].hint, enSummary.rows[0].hint);
+
+  const node = nestedLoopAnalysis.normalized.root.children[0];
+  const zhInspector = buildNodeInspector(node, "zh-CN");
+  const enInspector = buildNodeInspector(node, "en");
+  assert.equal(zhInspector.groups[0].label, "节点信息");
+  assert.equal(enInspector.groups[0].label, "Identity");
+  const zhFields = new Map(zhInspector.groups.flatMap((group) => group.fields).map((field) => [field.label, field.value]));
+  const enFields = new Map(enInspector.groups.flatMap((group) => group.fields).map((field) => [field.label, field.value]));
+  assert.equal(zhFields.get("节点类型"), node.nodeType);
+  assert.equal(enFields.get("Node Type"), node.nodeType);
 });
 
 test("buildPlanSummary tolerates missing metric values without inventing numbers", () => {
@@ -316,14 +335,14 @@ test("buildNodeInspector omits unavailable values instead of showing null noise"
   assert.equal(allLabels.includes("Actual Rows"), false);
   assert.equal(allLabels.includes("Filter"), false);
   assert.equal(allLabels.includes("Index Name"), false);
-  assert.equal(allLabels.includes("Plan Width"), true);
+  assert.equal(allLabels.includes("计划宽度"), true);
   assert.equal(inspector.title, "Seq Scan · pd_fix_customers [c]");
-  assert.equal(inspector.subtitle, "seq_scan · alias c");
+  assert.equal(inspector.subtitle, "seq_scan · 别名 c");
 });
 
 test("buildNodeInspector shows actual-execution fields for actual plans", () => {
   const indexScan = actualLoopsAnalysis.normalized.root.children[1].children[0];
-  const inspector = buildNodeInspector(indexScan);
+  const inspector = buildNodeInspector(indexScan, "en");
   const fields = new Map(inspector.groups.flatMap((group) => group.fields).map((field) => [field.label, field.value]));
 
   assert.equal(fields.get("Actual Rows"), "1");

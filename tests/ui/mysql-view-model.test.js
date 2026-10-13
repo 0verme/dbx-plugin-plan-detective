@@ -44,7 +44,7 @@ test("buildTreeRows renders the MySQL tree with relation and index labels", () =
 
 test("buildNodeInspector renders MySQL engine-specific fields and no PostgreSQL vocabulary", () => {
   const nodes = indexNodesById(groupingAnalysis.normalized.root);
-  const tableInspector = buildNodeInspector(nodes.get("0.0.0"));
+  const tableInspector = buildNodeInspector(nodes.get("0.0.0"), "en");
   const fields = inspectorFields(tableInspector);
 
   assert.equal(tableInspector.title, "Index Range Scan · payments via idx_payments_created_at");
@@ -68,13 +68,13 @@ test("buildNodeInspector renders MySQL engine-specific fields and no PostgreSQL 
     assert.equal(fields.has(label), false, `${label} is not a MySQL field`);
   }
 
-  const groupingInspector = buildNodeInspector(nodes.get("0.0"));
+  const groupingInspector = buildNodeInspector(nodes.get("0.0"), "en");
   const groupingFields = inspectorFields(groupingInspector);
   assert.equal(groupingFields.get("Structure"), "grouping_operation");
   assert.equal(groupingFields.get("Using Temporary Table"), "true");
   assert.equal(groupingFields.has("Using Filesort"), false, "false flags stay hidden");
 
-  const blockFields = inspectorFields(buildNodeInspector(nodes.get("0")));
+  const blockFields = inspectorFields(buildNodeInspector(nodes.get("0"), "en"));
   assert.equal(blockFields.get("Select ID"), "1");
   assert.equal(blockFields.get("Query Cost"), "660");
 });
@@ -123,7 +123,7 @@ test("issue #38: a data-size data_read_per_join reaches the Node Inspector as by
   const loaded = await loadFixture({ database: "mysql", mode: "estimated", name: "data-read-per-join-unit.synthetic" });
   const analysis = analyzePlan(loaded.input);
   const nodes = indexNodesById(analysis.normalized.root);
-  const fields = inspectorFields(buildNodeInspector(nodes.get("0.0")));
+  const fields = inspectorFields(buildNodeInspector(nodes.get("0.0"), "en"));
 
   assert.equal(fields.get("Data Read Per Join"), "171,008");
 });

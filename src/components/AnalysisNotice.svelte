@@ -6,30 +6,35 @@
    * it. Host errors keep their original message as a detail line instead of
    * collapsing into a generic "Analysis failed".
    */
+  import { createTranslator } from "../lib/i18n/index.js";
+
   let {
+    locale = "zh-CN",
     status = "idle",
     notice = null,
     error = null,
     onRetry = () => {},
     copyPrompt = null,
   } = $props();
+
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 {#if status === "loading"}
-  <p class="banner info" role="status">{notice?.title ?? "正在获取计划…"}</p>
+  <p class="banner info" role="status">{notice?.title ?? t("analysis.notice.loading")}</p>
 {:else if status === "error" && error}
   <section class="banner error" role="alert">
     <div class="error-head">
       <strong>{error.title}</strong>
       <span class="code mono">{error.code}</span>
-      <button type="button" class="retry" onclick={onRetry}>重试</button>
+      <button type="button" class="retry" onclick={onRetry}>{t("analysis.retry")}</button>
     </div>
     <p class="hint-line">{error.hint}</p>
     {#if error.message}
-      <p class="detail mono">插件：{error.message}</p>
+      <p class="detail mono">{t("analysis.pluginMessage", { message: error.message })}</p>
     {/if}
     {#if error.hostMessage}
-      <p class="detail mono">宿主：{error.hostMessage}</p>
+      <p class="detail mono">{t("analysis.hostMessage", { message: error.hostMessage })}</p>
     {/if}
   </section>
 {:else if notice}

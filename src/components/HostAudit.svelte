@@ -1,4 +1,6 @@
 <script>
+  import { createTranslator } from "../lib/i18n/index.js";
+
   // ---------------------------------------------------------------------------
   // Phase 0 · Host Capability Audit Harness (development view)
   //
@@ -20,10 +22,6 @@
   // error for a registered method and "Unsupported plugin host method" for an
   // unknown one.
   // ---------------------------------------------------------------------------
-
-  const AUDIT_NOTICE =
-    "DEVELOPMENT / AUDIT ONLY — Phase 0 Host Capability Audit. No plan analysis is implemented here. " +
-    "The real analysis path is the Host 分析 view; this harness only reports the raw bridge surface.";
 
   /** Methods the public plugin-host bridge is documented to dispatch. */
   const DOCUMENTED_PROBES = [
@@ -79,8 +77,13 @@
   let bridgedContext = $state(null);
   let probes = $state([]);
   let running = $state(false);
-  let error = $state("");
-  let report = $state("");
+  let error = $state(null);
+  let reportData = $state(null);
+
+  let { locale = "zh-CN" } = $props();
+  const t = $derived(createTranslator(locale).t);
+  const auditNotice = $derived(t("dev.audit.notice"));
+  const report = $derived(reportData === null ? "" : JSON.stringify({ ...reportData, auditNotice }, null, 2));
 
   /** The public bridge is only injected inside a real DBX host. */
   function hostBridge() {
@@ -149,11 +152,11 @@
   async function runAudit() {
     const bridge = hostBridge();
     if (bridge === null) {
-      error = "未检测到 window.dbxPlugin：当前不是 DBX 宿主，宿主能力审计不可用。";
+      error = { key: "dev.audit.error.noHost" };
       return;
     }
     running = true;
-    error = "";
+    error = null;
     try {
       bridgeSurface = Object.keys(bridge).sort();
       await refreshContext();
@@ -168,23 +171,19 @@
         });
       }
       probes = results;
-      report = JSON.stringify(
-        {
+      reportData = {
           harness: "phase0-host-capability-audit",
           generatedAt: new Date().toISOString(),
-          auditNotice: AUDIT_NOTICE,
+          auditNotice,
           host: { userAgent: navigator.userAgent, locale: bridge.locale },
           initMessage,
           bridgeSurface,
           context: liveContext,
           bridgedContext,
           probes,
-        },
-        null,
-        2,
-      );
+        };
     } catch (cause) {
-      error = cause instanceof Error ? cause.message : String(cause);
+      error = { message: cause instanceof Error ? cause.message : String(cause) };
     } finally {
       running = false;
     }
@@ -213,43 +212,42 @@
 
 <section class="panel audit-panel">
   <header class="panel-head">
-    <h2>Host Capability Audit</h2>
-    <span class="hint">Development / audit only · no plan analysis</span>
+    <h2>{t("dev.audit.title")}</h2>
+    <span class="hint">{t("dev.audit.hint")}</span>
   </header>
 
   <div class="audit-body">
-    <p class="notice">{AUDIT_NOTICE}</p>
+    <p class="notice">{auditNotice}</p>
     {#if !hasBridge}
       <p class="notice">
-        未检测到 <code>window.dbxPlugin</code>：当前不是 DBX 宿主，宿主能力审计不可用；分析视图的 fixture 模式不受影响。
+        {t("dev.audit.noHost")}
       </p>
     {/if}
     <p class="hint">
-      本页仅用于观察公开 Plugin Host API 的实际暴露面，不实现任何业务诊断逻辑，也不自行连接数据库。
-      英文方法名、参数与错误原文保持原样，以作为审计证据。
+      {t("dev.audit.description")}
     </p>
     <button type="button" class="run" onclick={runAudit} disabled={running}>
-      {running ? "Running…" : "Run capability audit"}
+      {running ? t("dev.audit.running") : t("dev.audit.run")}
     </button>
-    {#if error}<p class="error">{error}</p>{/if}
+    {#if error}<p class="error">{error.key ? t(error.key) : error.message}</p>{/if}
 
-    <h3 class="section-title">Bridge surface (window.dbxPlugin)</h3>
+    <h3 class="section-title">{t("dev.audit.bridgeSurface")}</h3>
     <code class="surface">{bridgeSurface.join(", ") || "…"}</code>
 
-    <h3 class="section-title">Host init message</h3>
-    <pre>{JSON.stringify(initMessage, null, 2) ?? "not received"}</pre>
+    <h3 class="section-title">{t("dev.audit.initMessage")}</h3>
+    <pre>{initMessage === null ? t("dev.audit.notReceived") : JSON.stringify(initMessage, null, 2)}</pre>
 
-    <h3 class="section-title">Context</h3>
-    <h4 class="label">dbxPlugin.context</h4>
+    <h3 class="section-title">{t("dev.audit.context")}</h3>
+    <h4 class="label">{t("dev.audit.bridgeContext")}</h4>
     <pre>{JSON.stringify(liveContext, null, 2) ?? "null"}</pre>
-    <h4 class="label">request("host.getContext")</h4>
+    <h4 class="label">{t("dev.audit.requestContext")}</h4>
     <pre>{JSON.stringify(bridgedContext, null, 2) ?? "null"}</pre>
 
     {#if probes.length > 0}
-      <h3 class="section-title">Host method probes</h3>
+      <h3 class="section-title">{t("dev.audit.probes")}</h3>
       <table class="probe-table">
         <thead>
-          <tr><th>Method</th><th>Status</th><th>Outcome</th><th>ms</th></tr>
+          <tr><th>{t("dev.audit.method")}</th><th>{t("dev.audit.status")}</th><th>{t("dev.audit.outcome")}</th><th>{t("dev.audit.milliseconds")}</th></tr>
         </thead>
         <tbody>
           {#each probes as entry (entry.method)}
@@ -263,7 +261,7 @@
         </tbody>
       </table>
 
-      <h3 class="section-title">Machine-readable report</h3>
+      <h3 class="section-title">{t("dev.audit.machineReport")}</h3>
       <pre data-audit-report>{report}</pre>
     {/if}
   </div>

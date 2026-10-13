@@ -23,17 +23,17 @@ import { formatNumber, formatPercent, formatRawValue } from "./format.js";
  * ranking, no re-computation.
  */
 const SUMMARY_ROWS = Object.freeze([
-  { key: "totalEstimatedCost", label: "Total Estimated Cost", hint: "根节点 total cost（planner 估算，非运行时耗时）" },
-  { key: "rootEstimatedRows", label: "Root Estimated Rows", hint: "根节点估算行数" },
-  { key: "nodeCount", label: "Node Count", hint: "operator 节点数；不计 structural 容器" },
-  { key: "maxDepth", label: "Max Depth", hint: "最长 operator root-to-leaf 路径（不计 structural 容器；单节点 = 1）" },
-  { key: "scanCount", label: "Scan Count", hint: "全部 scan 类节点" },
-  { key: "sequentialScanCount", label: "Sequential Scan Count", hint: "Seq Scan 节点" },
-  { key: "indexScanCount", label: "Index Scan Count", hint: "Index Scan + Index Only Scan" },
-  { key: "joinCount", label: "Join Count", hint: "Nested Loop / Hash Join / Merge Join" },
-  { key: "sortCount", label: "Sort Count", hint: "Sort + Incremental Sort" },
-  { key: "aggregateCount", label: "Aggregate Count", hint: "Aggregate 家族 + Group" },
-  { key: "unknownNodeTypeCount", label: "Unknown Node Type Count", hint: "normalizer 未登记的节点类型数量" },
+  { key: "totalEstimatedCost" },
+  { key: "rootEstimatedRows" },
+  { key: "nodeCount" },
+  { key: "maxDepth" },
+  { key: "scanCount" },
+  { key: "sequentialScanCount" },
+  { key: "indexScanCount" },
+  { key: "joinCount" },
+  { key: "sortCount" },
+  { key: "aggregateCount" },
+  { key: "unknownNodeTypeCount" },
 ]);
 
 /**
@@ -41,14 +41,13 @@ const SUMMARY_ROWS = Object.freeze([
  * PostgreSQL cost attribution is safe; the UI only translates the stable
  * reason code, exactly like the Hotspot panel does for `hotspots.cost`.
  */
-const COST_ATTRIBUTION_NOTES = Object.freeze({
-  NO_PLAN_COST: "计划未报告根节点 Total Cost，无法归因自代价。",
-  MISSING_NODE_COST: "计划存在缺失 Total Cost 的节点，缺失值不按 0 处理，自代价不可归因。",
-  PLAN_CONTAINS_SUBPLAN:
-    "计划包含 InitPlan / SubPlan：父节点 Total Cost 不按子节点累加，自代价不可归因。",
-  UNVERIFIED_COST_FLOW: "部分节点缺少可验证的 Parent Relationship，自代价归因不可靠。",
-  NO_ATTRIBUTABLE_COST: "该计划没有可归因的自代价节点（根节点截断了子节点代价）。",
-});
+const COST_ATTRIBUTION_NOTE_KEYS = Object.freeze([
+  "NO_PLAN_COST",
+  "MISSING_NODE_COST",
+  "PLAN_CONTAINS_SUBPLAN",
+  "UNVERIFIED_COST_FLOW",
+  "NO_ATTRIBUTABLE_COST",
+]);
 
 /**
  * @param {import("../core/metrics/compute-metrics.js").PlanMetrics} metrics
@@ -57,12 +56,18 @@ const COST_ATTRIBUTION_NOTES = Object.freeze({
  *   highlights: Array<{ key: string, label: string, value: string|null, detail: string|null, note: string|null, node: object|null }>,
  * }}
  */
-export function buildPlanSummary(metrics) {
+export function buildPlanSummary(metrics, locale = DEFAULT_LOCALE) {
+  const { t } = createTranslator(locale);
   return {
-    rows: SUMMARY_ROWS.map((row) => ({ ...row, value: formatNumber(metrics?.[row.key]) })),
+    rows: SUMMARY_ROWS.map((row) => ({
+      ...row,
+      label: t(`summary.rows.${row.key}.label`),
+      hint: t(`summary.rows.${row.key}.hint`),
+      value: formatNumber(metrics?.[row.key]),
+    })),
     highlights: [
-      buildHighlight("largestEstimatedRows", "Largest Estimated Rows", metrics?.largestEstimatedRows),
-      buildHighestIncrementalCostHighlight(metrics),
+      buildHighlight("largestEstimatedRows", t("summary.highlight.largestEstimatedRows"), metrics?.largestEstimatedRows, t),
+      buildHighestIncrementalCostHighlight(metrics, t),
     ].filter((highlight) => highlight !== null),
   };
 }
@@ -80,18 +85,20 @@ export function buildPlanSummary(metrics) {
  *
  * @param {import("../core/metrics/compute-metrics.js").PlanMetrics} metrics
  */
-function buildHighestIncrementalCostHighlight(metrics) {
+function buildHighestIncrementalCostHighlight(metrics, t) {
   const attribution = metrics?.costAttribution ?? null;
   if (attribution?.status === "not-applicable") return null;
 
-  const highlight = buildHighlight("highestIncrementalCost", "Highest Incremental Cost", metrics?.highestIncrementalCost);
+  const highlight = buildHighlight("highestIncrementalCost", t("summary.highlight.highestIncrementalCost"), metrics?.highestIncrementalCost, t);
   if (attribution?.status !== "withheld") return highlight;
 
   return {
     ...highlight,
     value: null,
     detail: null,
-    note: COST_ATTRIBUTION_NOTES[attribution.reason] ?? "该计划的 PostgreSQL 代价归因不可靠，已停用该指标。",
+    note: COST_ATTRIBUTION_NOTE_KEYS.includes(attribution.reason)
+      ? t(`summary.cost.${attribution.reason}`)
+      : t("summary.cost.unknown"),
     node: null,
   };
 }
@@ -101,14 +108,14 @@ function buildHighestIncrementalCostHighlight(metrics) {
  * @param {string} label
  * @param {Record<string, any>|null|undefined} summary
  */
-function buildHighlight(key, label, summary) {
+function buildHighlight(key, label, summary, t) {
   if (summary === null || summary === undefined || typeof summary !== "object") {
     return { key, label, value: null, detail: null, note: null, node: null };
   }
 
   const isCost = key === "highestIncrementalCost";
   const value = formatNumber(isCost ? summary.incrementalCost : summary.estimatedRows);
-  const detail = isCost ? `node total cost ${formatNumber(summary.totalCost) ?? "—"}` : null;
+  const detail = isCost ? t("summary.detail.nodeTotalCost", { value: formatNumber(summary.totalCost) ?? "—" }) : null;
 
   return {
     key,
@@ -505,8 +512,9 @@ export function countHotspotLevels(hotspots) {
  *   groups: Array<{ key: string, label: string, fields: Array<{ label: string, value: string }> }>,
  * }|null}
  */
-export function buildNodeInspector(node) {
+export function buildNodeInspector(node, locale = DEFAULT_LOCALE) {
   if (node === null || node === undefined) return null;
+  const { t } = createTranslator(locale);
 
   const engine = node.engineSpecific ?? {};
   const groups = [
@@ -570,8 +578,15 @@ export function buildNodeInspector(node) {
   return {
     id: node.id,
     title: nodeLabel(node),
-    subtitle: [node.kind, node.relation?.alias ? `alias ${node.relation.alias}` : null].filter(Boolean).join(" · "),
-    groups: groups.filter((group) => group.fields.length > 0),
+    subtitle: [node.kind, node.relation?.alias ? `${t("nodeInspector.alias")} ${node.relation.alias}` : null].filter(Boolean).join(" · "),
+    groups: groups.filter((group) => group.fields.length > 0).map((group) => ({
+      ...group,
+      label: t(`nodeInspector.group.${group.key}`),
+      fields: group.fields.map((entry) => ({
+        ...entry,
+        label: INSPECTOR_FIELD_LABELS.has(entry.label) ? t(`nodeInspector.field.${entry.label}`) : entry.label,
+      })),
+    })),
   };
 }
 
@@ -829,3 +844,22 @@ function extraFields(extra) {
 function isPlainObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+const INSPECTOR_FIELD_LABELS = new Set([
+  "Node ID", "Node Type", "Kind", "Relation", "Alias", "Index Name", "Join Type", "Estimated Rows", "Startup Cost",
+  "Total Cost", "Incremental Cost", "Plan Width", "Actual Rows", "Actual Startup Time", "Actual Total Time", "Actual Loops",
+  "Filter", "Index Condition", "Join Condition", "Sort Keys", "Group Keys", "Operator", "Properties", "Inline Properties",
+  "Condition", "Workers", "Vectorized", "Scan Direction", "Raw Node", "Operator ID (ID)", "Object Name (NAME)",
+  "Estimated Time (EST.TIME(us))", "Cost (COST)", "Output", "Operation ID (Id)", "Raw Operation", "Object Name (Name)", "Rows",
+  "Bytes", "Cost (Cost)", "CPU %", "Time", "Predicate Marker", "Predicates", "Plan Hash Value", "Bytes / Row", "Detail",
+  "Physical Op", "Logical Op", "Node ID (ShowPlanXML)", "Estimated Subtree Cost", "Estimate CPU", "Estimate IO", "Estimate Rebinds",
+  "Estimate Rewinds", "Estimate Executions", "Parallel", "Object Database", "Object Schema", "Object Table", "Object Index",
+  "Object Alias", "Index Kind", "Storage", "Lookup", "Ordered", "Distinct", "Top Row Count", "Many to Many",
+  "Partitioning Type", "Hash Keys Build", "Hash Keys Probe", "Probe Residual", "Build Residual", "Residual", "Defined Values",
+  "Statement Type", "Degree of Parallelism", "Memory Grant", "Structure", "Select ID", "Message", "Access Type", "Possible Keys",
+  "Used Key Parts", "Key Length", "Ref", "Rows Examined Per Scan", "Rows Produced Per Join", "Filtered", "Using Index",
+  "Using Index For Group By", "Using Filesort", "Using Temporary Table", "Using Join Buffer", "First Match", "Dependent", "Cacheable",
+  "Query Cost", "Read Cost", "Eval Cost", "Prefix Cost", "Data Read Per Join", "Sort Cost", "Parallel Aware", "Async Capable",
+  "Strategy", "Partial Mode", "Parent Relationship", "Subplan Name", "Hash Condition", "Merge Condition", "Join Filter",
+  "Recheck Condition", "Presorted Keys",
+]);

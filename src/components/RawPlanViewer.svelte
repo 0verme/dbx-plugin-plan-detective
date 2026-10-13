@@ -7,11 +7,17 @@
    * viewer is collapsed by default and caps only the *display* length so a
    * multi-megabyte plan cannot freeze the DOM; the note says when that happens.
    */
+  import { createTranslator } from "../lib/i18n/index.js";
+
   let {
+    locale = "zh-CN",
     hostResult = null,
     preview = null,
     warningLabels = [],
   } = $props();
+
+  const t = $derived(createTranslator(locale).t);
+  const numberLocale = $derived(locale === "en" ? "en-US" : "zh-CN");
 
   const formatLabel = $derived(
     hostResult?.format === "json" ? "JSON" : hostResult?.format === "xml" ? "ShowPlanXML" : "text",
@@ -20,17 +26,17 @@
 
 <section class="panel raw-panel">
   <header class="panel-head">
-    <h2>Raw Plan</h2>
+    <h2>{t("raw.title")}</h2>
     {#if hostResult}
       <span class="hint">
         {hostResult.dbType} · {formatLabel}
-        {#if hostResult.truncated}<span class="badge warning">truncated</span>{/if}
+        {#if hostResult.truncated}<span class="badge warning">{t("raw.truncated")}</span>{/if}
       </span>
     {/if}
   </header>
 
   {#if hostResult === null || preview === null}
-    <p class="empty">尚未获取计划。</p>
+    <p class="empty">{t("raw.empty")}</p>
   {:else}
     <div class="body">
       {#if warningLabels.length > 0}
@@ -42,11 +48,9 @@
       {/if}
 
       <details>
-        <summary>查看宿主原始计划（{preview.totalChars.toLocaleString("en-US")} 字符）</summary>
+        <summary>{t("raw.view", { count: preview.totalChars.toLocaleString(numberLocale) })}</summary>
         {#if preview.truncatedForDisplay}
-          <p class="preview-note">
-            仅显示前 {preview.text.length.toLocaleString("en-US")} 字符用于预览；宿主原始内容未被修改。
-          </p>
+          <p class="preview-note">{t("raw.previewNote", { count: preview.text.length.toLocaleString(numberLocale) })}</p>
         {/if}
         <pre class="raw mono">{preview.text}</pre>
       </details>
