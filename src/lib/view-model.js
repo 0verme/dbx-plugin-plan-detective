@@ -224,6 +224,42 @@ export function visibleTreeRows(rows, collapsedIds) {
 }
 
 /**
+ * Resolve a keyboard command for the visible rows in an ARIA tree.
+ *
+ * @param {ReturnType<typeof buildTreeRows>} rows
+ * @param {string} currentId
+ * @param {string} key
+ * @param {Set<string>} [collapsedIds]
+ * @returns {{ type: "select"|"toggle"|"handled", nodeId?: string }|null}
+ */
+export function treeKeyboardAction(rows, currentId, key, collapsedIds = new Set()) {
+  const visible = visibleTreeRows(rows, collapsedIds);
+  const index = visible.findIndex((row) => row.id === currentId);
+  if (index < 0) return null;
+
+  const row = visible[index];
+  const select = (target) => (target ? { type: "select", nodeId: target.id } : { type: "handled" });
+
+  if (key === "Enter" || key === " ") return select(row);
+  if (key === "ArrowDown") return select(visible[index + 1]);
+  if (key === "ArrowUp") return select(visible[index - 1]);
+  if (key === "Home") return select(visible[0]);
+  if (key === "End") return select(visible.at(-1));
+
+  if (key === "ArrowRight") {
+    if (row.hasChildren && collapsedIds.has(row.id)) return { type: "toggle", nodeId: row.id };
+    return select(visible.find((candidate) => candidate.parentId === row.id));
+  }
+
+  if (key === "ArrowLeft") {
+    if (row.hasChildren && !collapsedIds.has(row.id)) return { type: "toggle", nodeId: row.id };
+    return row.parentId === null ? { type: "handled" } : select(visible.find((candidate) => candidate.id === row.parentId));
+  }
+
+  return null;
+}
+
+/**
  * Toggle one node's collapse state, returning a new Set so Svelte reactivity
  * sees a changed value.
  *
