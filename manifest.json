@@ -3,7 +3,7 @@
   "manifest_version": 1,
   "id": "io.github.0verme.plan-detective",
   "name": "DBX Plan Detective",
-  "version": "0.7.0-rc.1",
+  "version": "0.7.0-rc.2",
   "publisher": "0verme",
   "description": "Analyze SQL estimated execution plans, visualize plan trees, and identify nodes worth investigating.",
   "icon": "assets/plugin.svg",
