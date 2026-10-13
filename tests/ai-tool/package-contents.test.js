@@ -43,7 +43,7 @@ test(".dbxp contains the complete sidecar/UI runtime and excludes development in
   assert.equal(entries.get("bin/universal/plan-detective-runtime").mode & 0o777, 0o755);
 
   const packagedManifest = JSON.parse(entries.get("manifest.json").data.toString("utf8"));
-  assert.equal(packagedManifest.version, "0.7.0-rc.1");
+  assert.equal(packagedManifest.version, "0.7.0");
   assert.deepEqual(JSON.parse(entries.get("package.json").data.toString("utf8")), { type: "module" });
   assert.equal(packagedManifest.entrypoints.backend.executable, "bin/universal/plan-detective-runtime");
   assert.deepEqual(packagedManifest.permissions, ["host.plans:read"]);

@@ -63,7 +63,7 @@ Locale precedence is **manual selection for this session > saved user preference
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
 - **复制 AI 分析提示词**：把当前分析上下文（Database Context / SQL / Plan Summary / Findings / Hotspots / Evidence）在本地打包成结构化 Prompt，由用户自行粘贴到外部 AI 工具；插件不调用任何 AI 服务，也不自动发送任何内容。
-- **DBX Built-in AI Tool（0.7.0-rc.1）**：新增只读 `analyze_estimated_plan` sidecar tool，将已取得的完整 Estimated Plan 交给现有 Plan Core 做确定性分析；插件不获取计划、不执行 SQL、不连接数据库。当前 DBX 上游尚不支持把此类独立插件 tool 绑定到普通原生数据库连接，故真实 Agent 链路仍待上游能力与 Desktop runtime smoke 验证。
+- **DBX Built-in AI Tool（v0.7.0）**：包含只读 `analyze_estimated_plan` sidecar tool，将已取得的完整 Estimated Plan 交给现有 Plan Core 做确定性分析；插件不获取计划、不执行 SQL、不连接数据库。当前 DBX 上游尚不支持把此类独立插件 tool 绑定到普通原生数据库连接，故真实 Agent 链路仍待上游能力与 Desktop runtime smoke 验证。
 - **Findings 确定性诊断**：针对已实现的规则提供 Finding、证据和检查方向。
 - **中文 / English Finding 解释**：将结构化诊断事实按语言呈现。
 - **Raw Plan 查看**：保留并展示 DBX Host 返回的原始执行计划。
@@ -71,7 +71,7 @@ Locale precedence is **manual selection for this session > saved user preference
 
 ## 安装
 
-Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录，可在 DBX 插件中心搜索并安装。GitHub Releases 也提供未签名候选包，供需要手动安装的用户使用。
+Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官方目录，可在 DBX 插件中心搜索并安装。GitHub Releases 也提供未签名插件包，供需要手动安装的用户使用。
 
 ### 通过 DBX Store 安装
 
@@ -80,13 +80,13 @@ Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官�
 
 ### 从 GitHub Release 手动安装
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载 `.dbxp` 包，例如预览版 `io.github.0verme.plan-detective-0.7.0-rc.2-universal.dbxp`（请确认 Release 已发布且附件存在）。
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载 v0.7.0 正式版 `.dbxp` 包：`io.github.0verme.plan-detective-0.7.0-universal.dbxp`。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
 
-GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
+GitHub Release 提供的插件包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
 
-运行要求：DBX `>=0.6.23`、支持 Host API 1.2 的宿主及系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前预览包版本为 `0.7.0-rc.2`，内含 AI Tool sidecar；其 DBX Desktop runtime smoke 尚未完成，不代表 Agent 链路已在真实宿主通过验证。
+运行要求：DBX `>=0.6.23`、Host API `^1.2` 和系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前正式版本为 `0.7.0`，内含只读 AI Tool sidecar；DBX Desktop runtime smoke 仍待用户验证，普通 DBX 原生连接上的 Agent 集成也尚未完成端到端验证。
 
 ## 使用方法
 
@@ -117,11 +117,11 @@ GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要
 
 Plan Detective 不创建数据库连接，也不读取数据库凭据；Workbench 只引用 DBX 中已经打开的连接。
 
-### DBX 内置 Agent（0.7.0-rc.1）
+### DBX 内置 Agent（v0.7.0）
 
 `analyze_estimated_plan` 只接收已取得的完整 Estimated Plan raw JSON / text / XML，以及显式 `dbType`、`mode=estimated`、`format` 和完整性元数据；不接收 SQL 或 Markdown 表格代替 raw plan，也不会自行获取计划。当前 DBX Agent `explain_query` 没有可交接的 structured raw-plan contract，因此若无法独立获得完整原始计划与来源信息，**不要调用此工具**。
 
-当前上游 DBX 只在 plugin-owned connection 上发现 / 执行 plugin tools；Agent 的 `explain_query` 只向模型提供 Markdown 表格文本，结构化 plan data 只供 UI 使用。因此本版本虽包含 sidecar 与工具 contract，**尚不能在普通 DBX 原生数据库连接上完成端到端 Agent 链路**，不得视为 runtime verified。完整审计、上游 capability gap 与 Desktop smoke checklist 见 [docs/AI_TOOL_V0.7.0.md](docs/AI_TOOL_V0.7.0.md)。
+当前上游 DBX 只在 plugin-owned connection 上发现 / 执行 plugin tools；Agent 的 `explain_query` 只向模型提供 Markdown 表格文本，结构化 plan data 只供 UI 使用。因此 v0.7.0 虽包含 sidecar 与工具 contract，**尚不能在普通 DBX 原生数据库连接上完成端到端 Agent 链路**，不得视为 runtime verified。完整审计、上游 capability gap 与 Desktop smoke checklist 见 [docs/AI_TOOL_V0.7.0.md](docs/AI_TOOL_V0.7.0.md)。
 
 ## Finding 示例
 
