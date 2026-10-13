@@ -29,7 +29,7 @@
   {/if}
 
   {#if view.items.length === 0}
-    <p class="empty">
+    <p class="empty compact">
       {t("hotspots.empty")}
     </p>
   {:else}
