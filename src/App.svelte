@@ -441,15 +441,17 @@
 
       <p class="mode-note">{t("app.mode.host")}</p>
       <div class="input-grid">
-        <ConnectionContext
-          {locale}
-          {contextView}
-          bind:manualConnectionId
-          capabilities={capabilitiesView}
-          {capabilityState}
-          {capabilityError}
-          onRefresh={refreshCapabilities}
-        />
+        <div class="connection-workspace">
+          <ConnectionContext
+            {locale}
+            {contextView}
+            bind:manualConnectionId
+            capabilities={capabilitiesView}
+            {capabilityState}
+            {capabilityError}
+            onRefresh={refreshCapabilities}
+          />
+        </div>
         <div class="sql-workspace">
           <SqlInput {locale} bind:sql={sqlText} disabled={!analysisReady} loading={session.status === "loading"} disabledReason={analyzeDisabledReason} onAnalyze={analyze} />
           <AnalysisNotice {locale} status={session.status} notice={analysisNotice} error={analysisError} onRetry={analyze} copyPrompt={copyPromptAction} />
@@ -716,15 +718,22 @@
   }
 
   .input-grid {
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
     gap: var(--pd-layout-gap);
-    align-items: start;
+    align-items: flex-start;
+  }
+
+  .connection-workspace {
+    min-width: 0;
+    flex: 1 1 280px;
   }
 
   .sql-workspace {
     display: flex;
     min-width: 0;
+    flex: 3 1 620px;
     flex-direction: column;
     gap: var(--pd-layout-gap);
   }
@@ -750,10 +759,6 @@
 
     .header-right {
       justify-content: flex-start;
-    }
-
-    .input-grid {
-      grid-template-columns: minmax(0, 1fr);
     }
   }
 </style>

@@ -176,13 +176,17 @@
   }
 
   .hotspot-node {
+    min-width: 0;
     font-weight: 650;
+    overflow-wrap: anywhere;
   }
 
   .hotspot-ref {
+    min-width: 0;
     margin-left: auto;
     color: var(--pd-muted);
     font-size: 11px;
+    overflow-wrap: anywhere;
   }
 
   .reasons {
@@ -197,30 +201,24 @@
 
   .reason-line {
     display: flex;
+    min-width: 0;
     gap: 6px;
     align-items: baseline;
   }
 
   .reason-human {
+    min-width: 0;
     font-size: 12px;
+    overflow-wrap: anywhere;
   }
 
-  .reason-text {
-    margin-top: 2px;
-    color: var(--pd-muted);
-    font-size: 11px;
-  }
-
-  .reason-caveat {
-    margin-top: 2px;
-    color: var(--pd-muted);
-    font-size: 11px;
-  }
-
+  .reason-text,
+  .reason-caveat,
   .reason-meta {
     margin-top: 2px;
     color: var(--pd-muted);
     font-size: 11px;
+    overflow-wrap: anywhere;
   }
 
   .cross-ref {
@@ -258,26 +256,22 @@
 
   .evidence-row {
     display: grid;
-    grid-template-columns: minmax(140px, max-content) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    min-width: 0;
     gap: 10px;
-    padding: 1px 0 1px calc(var(--depth) * 14px);
+    padding: 1px 0 1px calc(min(var(--depth), 6) * 12px);
     font-size: 11px;
   }
 
   .evidence-row dt {
+    min-width: 0;
     color: var(--pd-muted);
     overflow-wrap: anywhere;
   }
 
   .evidence-row dd {
+    min-width: 0;
     margin: 0;
     overflow-wrap: anywhere;
-  }
-
-  @media (max-width: 899px) {
-    .evidence-row {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 2px;
-    }
   }
 </style>

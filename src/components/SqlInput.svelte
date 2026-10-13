@@ -72,10 +72,11 @@
     font-family: var(--pd-mono);
     font-size: 12px;
     line-height: 1.5;
+    overflow-wrap: anywhere;
     resize: vertical;
   }
 
-  textarea:focus {
+  textarea:focus-visible {
     outline: 2px solid var(--pd-accent);
     outline-offset: -1px;
   }

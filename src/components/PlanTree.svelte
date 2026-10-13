@@ -1,6 +1,7 @@
 <script>
+  import { tick } from "svelte";
   import { formatNumber } from "../lib/format.js";
-  import { visibleTreeRows } from "../lib/view-model.js";
+  import { treeKeyboardAction, visibleTreeRows } from "../lib/view-model.js";
   import { createTranslator } from "../lib/i18n/index.js";
 
   /**
@@ -19,26 +20,37 @@
   } = $props();
 
   const visible = $derived(visibleTreeRows(rows, collapsed));
+  const activeTreeRowId = $derived(visible.some((row) => row.id === selectedId) ? selectedId : (visible[0]?.id ?? null));
   const t = $derived(createTranslator(locale).t);
+  let treeElement = $state(null);
 
-  /**
-   * @param {KeyboardEvent} event
-   * @param {{ id: string, hasChildren: boolean }} row
-   */
+  $effect(() => {
+    const nodeId = selectedId;
+    const tree = treeElement;
+    if (nodeId === null || tree === null) return;
+
+    void tick().then(() => {
+      const target = Array.from(tree.querySelectorAll("[data-node-id]")).find((element) => element.dataset.nodeId === nodeId);
+      target?.scrollIntoView({ block: "nearest" });
+    });
+  });
+
+  function focusTreeRow(event, nodeId) {
+    const tree = event.currentTarget.closest('[role="tree"]');
+    const target = Array.from(tree?.querySelectorAll("[data-node-id]") ?? []).find((element) => element.dataset.nodeId === nodeId);
+    onSelect(nodeId);
+    target?.focus();
+  }
+
+  /** @param {KeyboardEvent} event @param {{ id: string }} row */
   function handleKeydown(event, row) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onSelect(row.id);
-      return;
-    }
-    if (!row.hasChildren) return;
-    if (event.key === "ArrowRight" && collapsed.has(row.id)) {
-      event.preventDefault();
-      onToggle(row.id);
-    } else if (event.key === "ArrowLeft" && !collapsed.has(row.id)) {
-      event.preventDefault();
-      onToggle(row.id);
-    }
+    if (event.target !== event.currentTarget) return;
+
+    const action = treeKeyboardAction(rows, row.id, event.key, collapsed);
+    if (action === null) return;
+    event.preventDefault();
+    if (action.type === "toggle") onToggle(action.nodeId);
+    else if (action.type === "select") focusTreeRow(event, action.nodeId);
   }
 </script>
 
@@ -48,7 +60,7 @@
     <span class="hint">{t("tree.hint", { count: rows.length })}</span>
   </header>
 
-  <div class="tree" role="tree" aria-label={t("tree.ariaLabel")}>
+  <div bind:this={treeElement} class="tree" role="tree" aria-label={t("tree.ariaLabel")}>
     {#each visible as row (row.id)}
       {@const finding = findingsByNodeRef.get(row.id)}
       {@const hotspot = hotspotsByNodeRef.get(row.id)}
@@ -57,10 +69,11 @@
         class:selected={row.id === selectedId}
         style="--depth: {row.depth}"
         role="treeitem"
+        data-node-id={row.id}
         aria-selected={row.id === selectedId}
         aria-level={row.depth + 1}
         aria-expanded={row.hasChildren ? !collapsed.has(row.id) : undefined}
-        tabindex="0"
+        tabindex={row.id === activeTreeRowId ? 0 : -1}
         onclick={() => onSelect(row.id)}
         onkeydown={(event) => handleKeydown(event, row)}
       >
@@ -71,6 +84,7 @@
               class="caret"
               aria-label={collapsed.has(row.id) ? t("tree.expand") : t("tree.collapse")}
               aria-expanded={!collapsed.has(row.id)}
+              tabindex="-1"
               onclick={(event) => {
                 event.stopPropagation();
                 onToggle(row.id);
@@ -116,12 +130,12 @@
   }
 
   .tree-row {
-    display: grid;
-    grid-template-columns: 20px minmax(0, 1fr) auto auto auto;
+    display: flex;
+    flex-wrap: wrap;
     min-width: 0;
-    gap: 8px;
+    gap: 4px 8px;
     align-items: center;
-    padding: 3px 10px 3px calc(4px + var(--depth) * 15px);
+    padding: 3px 10px 3px calc(4px + min(var(--depth), 6) * 12px);
     border-left: 2px solid transparent;
     cursor: pointer;
   }
@@ -142,6 +156,7 @@
 
   .caret-cell {
     display: inline-flex;
+    flex: 0 0 20px;
     justify-content: center;
   }
 
@@ -169,7 +184,12 @@
 
   .label {
     min-width: 0;
+    flex: 1 1 120px;
     overflow-wrap: anywhere;
+  }
+
+  .tree-row > .badge {
+    flex: 0 0 auto;
   }
 
   .hotspot-marker {
@@ -190,19 +210,12 @@
   }
 
   .metric {
+    min-width: 0;
+    max-width: 100%;
+    flex: 0 1 auto;
     color: var(--pd-muted);
     font-size: 11px;
     font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  @media (max-width: 899px) {
-    .tree-row {
-      grid-template-columns: 20px minmax(0, 1fr) auto;
-    }
-
-    .metric {
-      display: none;
-    }
+    overflow-wrap: anywhere;
   }
 </style>

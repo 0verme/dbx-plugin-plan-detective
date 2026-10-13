@@ -20,6 +20,7 @@ import {
   nodeLabel,
   sortFindings,
   toggleCollapsed,
+  treeKeyboardAction,
   visibleTreeRows,
 } from "../../src/lib/view-model.js";
 import { loadFixture } from "../helpers/fixtures.js";
@@ -199,6 +200,12 @@ test("nodeLabel keeps scan target and index name visible", () => {
     nodeLabel({ nodeType: "Seq Scan", relation: { name: "t", alias: "t", indexName: null } }),
     "Seq Scan · t",
   );
+
+  const longRelation = `analytics.${"long_partition_".repeat(24)}`;
+  assert.equal(
+    nodeLabel({ nodeType: "Seq Scan", relation: { name: longRelation, alias: null, indexName: null } }),
+    `Seq Scan · ${longRelation}`,
+  );
 });
 
 test("visibleTreeRows hides descendants of collapsed nodes only", () => {
@@ -211,6 +218,48 @@ test("visibleTreeRows hides descendants of collapsed nodes only", () => {
     visibleTreeRows(nestedLoopRows, new Set(["0.0"])).map((row) => row.id),
     ["0", "0.0", "0.1"],
   );
+});
+
+test("treeKeyboardAction navigates visible rows and expands, collapses, or selects the expected node", () => {
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "ArrowDown", new Set()), { type: "select", nodeId: "0.0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0.1", "ArrowUp", new Set()), { type: "select", nodeId: "0.0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0.1", "Home", new Set()), { type: "select", nodeId: "0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "End", new Set()), { type: "select", nodeId: "0.1" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "ArrowRight", new Set()), { type: "select", nodeId: "0.0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "ArrowRight", new Set(["0"])), { type: "toggle", nodeId: "0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "ArrowLeft", new Set()), { type: "toggle", nodeId: "0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0.1", "ArrowLeft", new Set()), { type: "select", nodeId: "0" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0.1", " ", new Set()), { type: "select", nodeId: "0.1" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0.1", "ArrowDown", new Set()), { type: "handled" });
+  assert.deepEqual(treeKeyboardAction(nestedLoopRows, "0", "ArrowDown", new Set(["0"])), { type: "handled" });
+  assert.equal(treeKeyboardAction(nestedLoopRows, "missing", "ArrowDown", new Set()), null);
+});
+
+test("tree view model handles a single, mid-size, and 50+ node synthetic chain", () => {
+  for (const count of [1, 15, 55]) {
+    let root = null;
+    for (let index = count - 1; index >= 0; index -= 1) {
+      root = {
+        id: `n${index}`,
+        nodeType: "Seq Scan",
+        kind: "scan",
+        relation: null,
+        estimatedRows: null,
+        totalCost: null,
+        children: root === null ? [] : [root],
+      };
+    }
+
+    const rows = buildTreeRows(root);
+    const collapsed = new Set(count > 1 ? ["n0", `n${Math.floor(count / 2)}`] : []);
+    assert.equal(rows.length, count);
+    assert.equal(visibleTreeRows(rows, new Set()).length, count);
+    assert.equal(visibleTreeRows(rows, collapsed).length, 1);
+
+    const expanded = expandAncestors(collapsed, rows.at(-1));
+    assert.equal(visibleTreeRows(rows, expanded).length, count);
+    assert.deepEqual(treeKeyboardAction(rows, rows[0].id, "End", new Set()), { type: "select", nodeId: rows.at(-1).id });
+  }
 });
 
 test("toggleCollapsed returns a new set and never mutates the input", () => {

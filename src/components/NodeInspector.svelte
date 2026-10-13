@@ -87,7 +87,7 @@
 
   .field {
     display: grid;
-    grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
     gap: 10px;
     padding: 2px 0;
     border-bottom: 1px dashed var(--pd-border);
@@ -98,12 +98,14 @@
   }
 
   .field dt {
+    min-width: 0;
     color: var(--pd-muted);
     font-size: 11px;
     overflow-wrap: anywhere;
   }
 
   .field dd {
+    min-width: 0;
     margin: 0;
     font-size: 12px;
     overflow-wrap: anywhere;
