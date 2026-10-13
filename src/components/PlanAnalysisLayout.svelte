@@ -8,7 +8,8 @@
 
   /**
    * Page-level analysis layout. The child panels render their own content, but
-   * this component owns the shared Summary / Workspace / Inspector geometry.
+   * this component owns the shared Summary, adjacent plan / Inspector and
+   * diagnostics geometry.
    */
   let {
     locale = "zh-CN",
@@ -36,63 +37,77 @@
     <PlanSummary {locale} {summary} {selectedNodeId} onSelectNode={onSelectNode} />
   </aside>
 
-  <main class="workspace-column" aria-label={t("layout.workspace.ariaLabel")}>
-    <FindingsList {locale} views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={onSelectNode} />
-    <HotspotsList {locale} view={hotspotView} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
-    <PlanTree
-      {locale}
-      {rows}
-      {collapsed}
-      selectedId={selectedNodeId}
-      {findingsByNodeRef}
-      {hotspotsByNodeRef}
-      onSelect={onSelectNode}
-      onToggle={onToggleNode}
-    />
-  </main>
+  <main class="analysis-column" aria-label={t("layout.workspace.ariaLabel")}>
+    <div class="plan-workspace">
+      <div class="tree-column">
+        <PlanTree
+          {locale}
+          {rows}
+          {collapsed}
+          selectedId={selectedNodeId}
+          {findingsByNodeRef}
+          {hotspotsByNodeRef}
+          onSelect={onSelectNode}
+          onToggle={onToggleNode}
+        />
+      </div>
+      <aside class="inspector-column" aria-label={t("layout.inspector.ariaLabel")}>
+        <NodeInspector {locale} inspector={inspector} nodeFindings={selectedNodeFindings} />
+      </aside>
+    </div>
 
-  <aside class="inspector-column" aria-label={t("layout.inspector.ariaLabel")}>
-    <NodeInspector {locale} inspector={inspector} nodeFindings={selectedNodeFindings} />
-  </aside>
+    <div class="diagnostics-grid">
+      <div class="diagnostics-column">
+        <FindingsList {locale} views={findingViews} counts={findingCounts} selectedNodeRef={selectedNodeId} onSelectNode={onSelectNode} />
+      </div>
+      <div class="diagnostics-column">
+        <HotspotsList {locale} view={hotspotView} counts={hotspotCounts} selectedNodeId={selectedNodeId} onSelectNode={onSelectNode} />
+      </div>
+    </div>
+  </main>
 </div>
 
 <style>
   .analysis-grid {
-    display: grid;
-    grid-template-columns: 300px minmax(0, 1fr) 340px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: var(--pd-layout-gap);
-    align-items: start;
     width: 100%;
     min-width: 0;
     margin-top: var(--pd-layout-gap);
   }
 
-  .summary-column,
-  .workspace-column,
-  .inspector-column {
+  .summary-column {
+    flex: 1 1 280px;
     min-width: 0;
   }
 
-  .workspace-column {
+  .analysis-column {
     display: flex;
+    min-width: 0;
+    flex: 3 1 620px;
     flex-direction: column;
+    gap: var(--pd-layout-gap);
+  }
+
+  .plan-workspace,
+  .diagnostics-grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: var(--pd-layout-gap);
     min-width: 0;
   }
 
-  @media (min-width: 900px) and (max-width: 1279px) {
-    .analysis-grid {
-      grid-template-columns: 280px minmax(0, 1fr);
-    }
-
-    .inspector-column {
-      grid-column: 2;
-    }
+  .tree-column,
+  .inspector-column {
+    flex: 1 1 320px;
+    min-width: 0;
   }
 
-  @media (max-width: 899px) {
-    .analysis-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
+  .diagnostics-column {
+    flex: 1 1 420px;
+    min-width: 0;
   }
 </style>
