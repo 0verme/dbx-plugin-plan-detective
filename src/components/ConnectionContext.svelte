@@ -8,7 +8,10 @@
    * connection id of an already-open connection. Capability state comes from
    * `getPlanCapabilities` in the parent.
    */
+  import { createTranslator } from "../lib/i18n/index.js";
+
   let {
+    locale = "zh-CN",
     contextView = { connectionId: null, database: null, schema: null, contextSql: null, hasConnection: false, source: "none" },
     manualConnectionId = $bindable(""),
     capabilities = null,
@@ -17,19 +20,16 @@
     onRefresh = () => {},
   } = $props();
 
+  const t = $derived(createTranslator(locale).t);
   const sourceLabel = $derived(
-    contextView.source === "result-view"
-      ? "来自 DBX 查询结果上下文"
-      : contextView.source === "workbench"
-        ? "来自 DBX workbench 上下文"
-        : "当前上下文未提供连接",
+    t(contextView.source === "result-view" ? "connection.source.resultView" : contextView.source === "workbench" ? "connection.source.workbench" : "connection.source.none"),
   );
 </script>
 
 <section class="panel context-panel">
   <header class="panel-head">
-    <h2>Connection Context</h2>
-    <span class="hint">只读引用 DBX 已打开的连接</span>
+    <h2>{t("connection.title")}</h2>
+    <span class="hint">{t("connection.readOnly")}</span>
   </header>
 
   <div class="body">
@@ -38,70 +38,74 @@
     {#if contextView.hasConnection}
       <dl class="facts">
         <div class="fact">
-          <dt>Connection</dt>
+          <dt>{t("connection.connection")}</dt>
           <dd class="mono">{contextView.connectionId}</dd>
         </div>
         {#if contextView.database}
           <div class="fact">
-            <dt>Database</dt>
+            <dt>{t("connection.database")}</dt>
             <dd class="mono">{contextView.database}</dd>
           </div>
         {/if}
         {#if contextView.schema}
           <div class="fact">
-            <dt>Schema</dt>
+            <dt>{t("connection.schema")}</dt>
             <dd class="mono">{contextView.schema}</dd>
           </div>
         {/if}
       </dl>
     {:else}
       <label class="manual">
-        <span>Connection ID（仅引用已打开连接）</span>
+        <span>{t("connection.manual.label")}</span>
         <input
           type="text"
           bind:value={manualConnectionId}
-          placeholder="例如 conn-1"
+          placeholder={t("connection.manual.placeholder")}
           spellcheck="false"
           autocomplete="off"
         />
       </label>
-      <p class="manual-hint">
-        插件不创建连接、不读取凭据。若从 DBX 查询结果页打开 Plan Detective，connectionId 会自动带入。
-      </p>
+      <p class="manual-hint">{t("connection.manual.help")}</p>
     {/if}
 
     <div class="cap-head">
-      <span class="cap-title">Plan Capabilities</span>
-      <button type="button" class="refresh" onclick={onRefresh} disabled={!contextView.hasConnection && !manualConnectionId.trim()}>
-        刷新
+      <span class="cap-title">{t("connection.capabilities.title")}</span>
+      <button
+        type="button"
+        class="refresh"
+        aria-label={t("connection.refresh")}
+        onclick={onRefresh}
+        disabled={!contextView.hasConnection && !manualConnectionId.trim()}
+      >
+        {t("connection.refresh")}
       </button>
     </div>
 
     {#if capabilityState === "loading"}
-      <p class="cap-state">正在读取宿主能力…</p>
+      <p class="cap-state">{t("connection.capabilities.loading")}</p>
     {:else if capabilityState === "error"}
-      <p class="cap-state error">{capabilityError?.message ?? "读取能力失败"}</p>
+      <p class="cap-state error">{capabilityError?.message ?? t("connection.capabilities.error")}</p>
     {:else if capabilities}
       <dl class="facts">
         <div class="fact">
-          <dt>dbType</dt>
+          <dt>{t("connection.capabilities.dbType")}</dt>
           <dd class="mono">{capabilities.dbType}{capabilities.dbVersion ? ` · ${capabilities.dbVersion}` : ""}</dd>
         </div>
         <div class="fact">
-          <dt>estimatedPlan</dt>
+          <dt>{t("connection.capabilities.estimatedPlan")}</dt>
           <dd>
             <span class="badge {capabilities.estimatedPlan ? 'info' : 'warning'}">
-              {capabilities.estimatedPlan ? "supported" : "unsupported"}
+              {capabilities.estimatedPlan ? t("connection.capabilities.supported") : t("connection.capabilities.unsupported")}
             </span>
           </dd>
         </div>
         <div class="fact">
-          <dt>limits</dt>
-          <dd class="mono">timeout ≤ {capabilities.maxTimeoutMs} ms · plan ≤ {capabilities.maxPlanBytes}</dd>
+          <dt>{t("connection.capabilities.limits")}</dt>
+          <dd class="mono">{t("connection.capabilities.timeoutLimit", { value: capabilities.maxTimeoutMs })} · {t("connection.capabilities.planLimit", { value: capabilities.maxPlanBytes })}</dd>
         </div>
       </dl>
     {:else}
-      <p class="cap-state">尚未读取。输入 connectionId 后自动读取。</p>
+      <p class="cap-state">{t("connection.capabilities.notRead")}</p>
     {/if}
   </div>
 </section>

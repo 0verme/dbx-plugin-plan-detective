@@ -1,12 +1,14 @@
 <script>
   import { countByMode, filterCatalog, findCatalogEntry } from "../lib/fixture-catalog.js";
+  import { createTranslator } from "../lib/i18n/index.js";
 
   /**
    * Fixture picker for the offline / demo mode. The catalog is embedded at
    * build time from fixtures/postgres/**; provenance is shown as-is and
    * synthetic fixtures are clearly marked.
    */
-  let { catalog = [], selectedId = null, onSelect = () => {} } = $props();
+  let { locale = "zh-CN", catalog = [], selectedId = null, onSelect = () => {} } = $props();
+  const t = $derived(createTranslator(locale).t);
 
   let mode = $state("all");
   let query = $state("");
@@ -16,20 +18,20 @@
   const selected = $derived(findCatalogEntry(catalog, selectedId));
 
   const tabs = $derived([
-    { id: "all", label: `全部 ${counts.total}` },
-    { id: "estimated", label: `estimated ${counts.estimated}` },
-    { id: "actual", label: `actual ${counts.actual}` },
+    { id: "all", label: t("fixture.tab.all", { count: counts.total }) },
+    { id: "estimated", label: t("fixture.tab.estimated", { count: counts.estimated }) },
+    { id: "actual", label: t("fixture.tab.actual", { count: counts.actual }) },
   ]);
 </script>
 
 <section class="panel fixture-panel">
   <header class="panel-head">
-    <h2>Fixture</h2>
-    <span class="hint">仓库内离线样本，仅用于开发与演示</span>
+    <h2>{t("fixture.title")}</h2>
+    <span class="hint">{t("fixture.hint")}</span>
   </header>
 
   <div class="controls">
-    <div class="tabs" role="tablist" aria-label="fixture mode">
+    <div class="tabs" role="tablist" aria-label={t("fixture.ariaMode")}>
       {#each tabs as tab (tab.id)}
         <button
           type="button"
@@ -46,9 +48,9 @@
     <input
       class="search"
       type="search"
-      placeholder="搜索 fixture / SQL / feature…"
+      placeholder={t("fixture.search.placeholder")}
       bind:value={query}
-      aria-label="搜索 fixture"
+      aria-label={t("fixture.search.ariaLabel")}
     />
   </div>
 
@@ -71,36 +73,36 @@
           </button>
         </li>
       {:else}
-        <li class="empty">没有匹配的 fixture</li>
+        <li class="empty">{t("fixture.noMatch")}</li>
       {/each}
     </ul>
 
     {#if selected}
       <div class="detail">
         <div class="detail-grid">
-          <span class="key">database</span>
+          <span class="key">{t("fixture.detail.database")}</span>
           <span class="value mono">{selected.database}{selected.databaseVersion ? ` ${selected.databaseVersion}` : ""}</span>
-          <span class="key">mode</span>
+          <span class="key">{t("fixture.detail.mode")}</span>
           <span class="value mono">{selected.mode}</span>
-          <span class="key">root</span>
+          <span class="key">{t("fixture.detail.root")}</span>
           <span class="value">{selected.rootNodeType}</span>
-          <span class="key">provenance</span>
+          <span class="key">{t("fixture.detail.provenance")}</span>
           <span class="value">
             <span class="badge {selected.provenance.kind}">{selected.provenance.kind}</span>
           </span>
-          <span class="key">capturedAt</span>
+          <span class="key">{t("fixture.detail.capturedAt")}</span>
           <span class="value mono">{selected.capturedAt ?? "—"}</span>
         </div>
 
         {#if selected.captureCommand}
           <p class="source-row">
-            <span class="key">captureCommand</span>
+            <span class="key">{t("fixture.detail.captureCommand")}</span>
             <code>{selected.captureCommand}</code>
           </p>
         {/if}
         {#if selected.sql}
           <p class="source-row">
-            <span class="key">SQL</span>
+            <span class="key">{t("fixture.detail.sql")}</span>
             <code>{selected.sql}</code>
           </p>
         {/if}

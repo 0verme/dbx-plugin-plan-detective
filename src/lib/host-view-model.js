@@ -73,126 +73,58 @@ export function describeCapabilities(capabilities) {
  *   message: string | null,
  * }}
  */
-export function describeHostGate(api) {
+export function describeHostGate(api, locale = DEFAULT_LOCALE) {
+  const { t } = createTranslator(locale);
   if (api?.state === "initializing") {
     return {
       state: "initializing",
-      badgeLabel: "正在初始化 DBX Host 能力…",
+      badgeLabel: t("host.gate.initializing"),
       tone: "warning",
-      message: "已发现 DBX 插件桥，正在等待宿主 init message 与 capabilities.planApi 声明；初始化完成前不会调用任何 Host Plan API。",
+      message: t("app.host.initializingHint"),
     };
   }
 
   if (api?.state === "available" && api?.available === true) {
-    return { state: "available", badgeLabel: "DBX Host Mode · Estimated Plan", tone: "info", message: null };
+    return { state: "available", badgeLabel: t("host.gate.available"), tone: "info", message: null };
+  }
+
+  let message = api?.reason ?? null;
+  if (api?.advertised === true && Array.isArray(api?.missing) && api.missing.length > 0) {
+    message = t("host.gate.missingMethods", { methods: api.missing.join(", ") });
+  } else if (typeof api?.reason === "string" && api.reason.includes("window.dbxPlugin")) {
+    message = t("host.gate.noBridge");
+  } else if (api?.advertised === false && typeof api?.reason === "string" && api.reason.includes("capabilities.planApi")) {
+    message = t("host.gate.notDeclared");
   }
 
   return {
     state: "unavailable",
-    badgeLabel: "Host API unavailable",
+    badgeLabel: t("host.gate.unavailable"),
     tone: "warning",
-    message: api?.reason ?? null,
+    message,
   };
 }
 
 /**
- * Stable Chinese copy for every failure code the host boundary can produce.
- * The host message is always kept as a separate detail line; this table is the
- * part the plugin owns.
+ * Localized plugin-owned copy for every failure code the host boundary can
+ * produce. The original Host message stays separate and is never rewritten.
  *
  * @param {string} code
  * @returns {{ title: string, hint: string }}
  */
-export function describeAnalysisError(code) {
-  return ERROR_COPY[code] ?? ERROR_COPY.HOST_ERROR;
+export function describeAnalysisError(code, locale = DEFAULT_LOCALE) {
+  const { t } = createTranslator(locale);
+  const key = ERROR_CODES.has(code) ? code : "HOST_ERROR";
+  return { title: t(`error.${key}.title`), hint: t(`error.${key}.hint`) };
 }
 
-const ERROR_COPY = Object.freeze({
-  PLAN_API_UNAVAILABLE: {
-    title: "宿主 Plan API 不可用",
-    hint: "当前 DBX 版本不提供 Estimated Plan Host API（需要 Host API 1.2 / t8y2/dbx#9692 及以上）。请升级 DBX 后重试。",
-  },
-  PERMISSION_NOT_DECLARED: {
-    title: "缺少 host.plans:read 权限",
-    hint: "插件 manifest 未声明 host.plans:read，宿主拒绝了两处计划调用。请更新插件到最新版本。",
-  },
-  CONNECTION_NOT_OPEN: {
-    title: "连接未打开",
-    hint: "DBX 不会代替插件建立连接。请先在 DBX 中打开该数据库连接，再执行 Analyze Plan。",
-  },
-  CONNECTION_NOT_FOUND: {
-    title: "连接不存在",
-    hint: "宿主找不到该 connectionId。请从已打开连接的查询结果页打开 Plan Detective，或核对 connectionId。",
-  },
-  UNSUPPORTED_DIALECT: {
-    title: "该方言不支持 Estimated Plan",
-    hint: "DBX 没有为该连接方言提供 Estimated Plan 路径。可改用支持的方向（PostgreSQL / MySQL / SQL Server / Oracle / Dameng / Doris / QuestDB / OceanBase Oracle）。",
-  },
-  UNSUPPORTED_MODE: {
-    title: "不支持的计划模式",
-    hint: "Host API 只服务 mode: \"estimated\"。Actual Plan / EXPLAIN ANALYZE 不在本插件范围内。",
-  },
-  EMPTY_SQL: {
-    title: "SQL 为空",
-    hint: "请输入要分析的 SQL 语句。",
-  },
-  SQL_TOO_LARGE: {
-    title: "SQL 过大",
-    hint: "宿主限制单条 SQL 最多 200,000 字符，请缩短后重试。",
-  },
-  UNSAFE_SQL: {
-    title: "SQL 未通过宿主只读检查",
-    hint: "DBX 会拒绝多语句、DDL、DML 与危险关键字。请提交单条只读查询。",
-  },
-  PLAN_TOO_LARGE: {
-    title: "计划超出宿主大小上限",
-    hint: "宿主限制计划载荷最大 4 MiB。请缩小查询范围（例如减少 UNION / CTE 分支）后重试。",
-  },
-  EMPTY_PLAN: {
-    title: "数据库返回空计划",
-    hint: "服务器没有返回可解析的计划内容。可尝试更换 SQL 或确认连接目标是否正确。",
-  },
-  TIMEOUT: {
-    title: "计划获取超时",
-    hint: "宿主在超时时间内没有返回计划。可降低查询复杂度，或在连接配置中调整 query timeout 后重试。",
-  },
-  INVALID_REQUEST: {
-    title: "请求参数无效",
-    hint: "插件构造的计划请求未通过宿主校验。请刷新插件后重试；若持续出现请提交 Issue。",
-  },
-  INVALID_RESPONSE: {
-    title: "宿主返回了无法识别的响应",
-    hint: "Plan API 响应结构不符合 Host API 1.2 契约，插件已拒绝解析以避免误导。",
-  },
-  UNSUPPORTED_DB_TYPE: {
-    title: "未知的数据库类型",
-    hint: "宿主返回了插件尚未映射的 dbType。请提交 Issue 并附上该 dbType。",
-  },
-  UNSUPPORTED_PLAN_FORMAT: {
-    title: "未知的计划格式",
-    hint: "宿主返回了 json / xml / text 之外的格式，插件无法展示。",
-  },
-  INVALID_DBX_PLAN_RESPONSE: {
-    title: "宿主响应结构不完整",
-    hint: "计划响应缺少契约字段或字段类型不符，插件已拒绝解析。",
-  },
-  PLAN_TRUNCATED: {
-    title: "计划被截断",
-    hint: "宿主返回的计划不完整，结构化解析会得出不可信的结论；此处仅展示 Raw Plan。",
-  },
-  INVALID_RAW_PLAN_INPUT: {
-    title: "计划无法进入分析内核",
-    hint: "适配后的 RawPlanInput 未通过内核校验。请提交 Issue。",
-  },
-  PLAN_PARSE_FAILED: {
-    title: "计划解析失败",
-    hint: "原始计划结构与声明不符。可展开 Raw Plan 核对，并提交 Issue 附上样例。",
-  },
-  HOST_ERROR: {
-    title: "计划获取失败",
-    hint: "宿主返回了未分类错误。详情见下方宿主消息；可重试或提交 Issue。",
-  },
-});
+const ERROR_CODES = new Set([
+  "PLAN_API_UNAVAILABLE", "PERMISSION_NOT_DECLARED", "CONNECTION_NOT_OPEN", "CONNECTION_NOT_FOUND",
+  "UNSUPPORTED_DIALECT", "UNSUPPORTED_MODE", "EMPTY_SQL", "SQL_TOO_LARGE", "UNSAFE_SQL", "PLAN_TOO_LARGE",
+  "EMPTY_PLAN", "TIMEOUT", "INVALID_REQUEST", "INVALID_RESPONSE", "UNSUPPORTED_DB_TYPE",
+  "UNSUPPORTED_PLAN_FORMAT", "INVALID_DBX_PLAN_RESPONSE", "PLAN_TRUNCATED", "INVALID_RAW_PLAN_INPUT",
+  "PLAN_PARSE_FAILED", "HOST_ERROR",
+]);
 
 /**
  * Status banner copy for the non-error session states.
@@ -200,28 +132,37 @@ const ERROR_COPY = Object.freeze({
  * @param {{ status: string, analysis?: { reason?: string | null } | null, capabilities?: { dbType?: string } | null }} session
  * @returns {{ tone: "info" | "warning" | "success", title: string, detail: string | null } | null}
  */
-export function describeAnalysisNotice(session) {
+export function describeAnalysisNotice(session, locale = DEFAULT_LOCALE) {
   if (session === null || session === undefined) return null;
+  const { t } = createTranslator(locale);
 
   switch (session.status) {
     case "loading":
-      return { tone: "info", title: "正在通过 DBX Host API 获取 Estimated Plan…", detail: null };
+      return { tone: "info", title: t("analysis.notice.loading"), detail: null };
     case "unsupported":
       return {
         tone: "warning",
-        title: "该连接不支持 Estimated Plan",
-        detail: session.message ?? null,
+        title: t("analysis.notice.unsupported"),
+        detail: session.capabilities?.dbType ? t("analysis.notice.unsupportedDetail", { database: session.capabilities.dbType }) : session.message ?? null,
       };
     case "truncated":
-      return { tone: "warning", title: "计划被截断，仅展示 Raw Plan", detail: session.message ?? null };
-    case "raw-only":
-      return {
-        tone: "info",
-        title: "已获取真实计划，但该方言的结构化解析尚未实现",
-        detail: session.analysis?.reason ?? null,
-      };
+      return { tone: "warning", title: t("analysis.notice.truncated"), detail: t("analysis.notice.truncatedDetail") };
+    case "raw-only": {
+      const analysis = session.analysis;
+      const reasonKey = analysis?.reasonCode === "UNSUPPORTED_FORMAT"
+        ? "analysis.rawOnly.unsupportedFormat"
+        : analysis?.reasonCode === "UNKNOWN_DATABASE"
+          ? "analysis.rawOnly.unknownDatabase"
+          : analysis?.reasonCode
+            ? "analysis.rawOnly.noParser"
+            : null;
+      const detail = reasonKey
+        ? t(reasonKey, { database: session.rawInput?.database ?? "unknown", format: session.rawInput?.format ?? "unknown" })
+        : analysis?.reason ?? null;
+      return { tone: "info", title: t("analysis.notice.rawOnly"), detail };
+    }
     case "structured":
-      return { tone: "success", title: "已获取并解析 Estimated Plan", detail: null };
+      return { tone: "success", title: t("analysis.notice.structured"), detail: null };
     default:
       return null;
   }
@@ -316,15 +257,12 @@ export function formatBytes(bytes) {
  * @param {string} warning
  * @returns {string}
  */
-export function describePlanWarning(warning) {
-  return PLAN_WARNING_COPY[warning] ?? warning;
+export function describePlanWarning(warning, locale = DEFAULT_LOCALE) {
+  const { t } = createTranslator(locale);
+  return PLAN_WARNING_CODES.has(warning) ? t(`host.warning.${warning}`) : warning;
 }
 
-const PLAN_WARNING_COPY = Object.freeze({
-  plan_not_json: "服务器返回的内容不是 JSON，宿主已按 text 处理。",
-  plan_truncated: "宿主为遵守 maxPlanBytes 截断了计划。",
-  plan_rows_truncated: "驱动在收集计划行时达到行数上限。",
-});
+const PLAN_WARNING_CODES = new Set(["plan_not_json", "plan_truncated", "plan_rows_truncated"]);
 
 /** @param {unknown} value */
 function isPlainObject(value) {

@@ -4,17 +4,20 @@
    * values were already dropped by the view model, so the panel never shows
    * `undefined` / `null` placeholders.
    */
-  let { inspector = null, nodeFindings = [] } = $props();
+  import { createTranslator } from "../lib/i18n/index.js";
+
+  let { locale = "zh-CN", inspector = null, nodeFindings = [] } = $props();
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 <section class="panel inspector-panel">
   <header class="panel-head">
-    <h2>Node Inspector</h2>
+    <h2>{t("nodeInspector.title")}</h2>
     {#if inspector}<span class="hint mono">{inspector.id}</span>{/if}
   </header>
 
   {#if !inspector}
-    <p class="empty">点击计划树中的节点，查看该节点由 plan 实际报告的字段。</p>
+    <p class="empty">{t("nodeInspector.empty")}</p>
   {:else}
     <div class="node-head">
       <span class="node-title">{inspector.title}</span>
@@ -34,11 +37,11 @@
     {/each}
 
     {#if nodeFindings.length > 0}
-      <h3 class="group-title">Findings on this node</h3>
+      <h3 class="group-title">{t("nodeInspector.findings")}</h3>
       <ul class="node-findings">
         {#each nodeFindings as finding (finding.id)}
           <li>
-            <span class="badge {finding.severity}">{finding.severity}</span>
+            <span class="badge {finding.severity}">{t(`severity.${finding.severity}`)}</span>
             <span class="mono">{finding.ruleId}</span>
           </li>
         {/each}

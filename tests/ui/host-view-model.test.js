@@ -107,7 +107,7 @@ test("describeHostGate keeps initializing distinct from unavailable", () => {
 
   assert.deepEqual(describeHostGate({ state: "unavailable", available: false, reason: "宿主未声明 capabilities.planApi。" }), {
     state: "unavailable",
-    badgeLabel: "Host API unavailable",
+    badgeLabel: "Host API 不可用",
     tone: "warning",
     message: "宿主未声明 capabilities.planApi。",
   });
@@ -116,6 +116,52 @@ test("describeHostGate keeps initializing distinct from unavailable", () => {
   assert.equal(describeHostGate({ available: false, reason: null }).state, "unavailable");
   assert.equal(describeHostGate({ state: "available", available: false }).state, "unavailable");
   assert.equal(describeHostGate(null).state, "unavailable");
+});
+
+test("host-owned error explanations and status messages follow the effective locale", () => {
+  const enError = describeAnalysisError("PLAN_PARSE_FAILED", "en");
+  const zhError = describeAnalysisError("PLAN_PARSE_FAILED", "zh-CN");
+  assert.match(enError.title, /parsing failed/i);
+  assert.match(enError.hint, /Raw Plan/);
+  assert.notEqual(enError.title, zhError.title);
+
+  assert.match(describeAnalysisNotice({ status: "loading" }, "en").title, /Requesting an Estimated Plan/);
+  assert.match(describeAnalysisNotice({ status: "loading" }, "zh-CN").title, /正在通过 DBX Host API/);
+  const truncated = describeAnalysisNotice({ status: "truncated", message: "旧版中文状态文案" }, "en");
+  assert.match(truncated.detail, /incomplete plan/);
+  assert.doesNotMatch(truncated.detail, /中文/);
+
+  const rawOnly = describeAnalysisNotice({
+    status: "raw-only",
+    rawInput: { database: "oracle", format: "json" },
+    analysis: { reasonCode: "UNSUPPORTED_FORMAT", reason: "legacy copy" },
+  }, "en");
+  assert.match(rawOnly.detail, /oracle/);
+  assert.match(rawOnly.detail, /json/);
+  assert.match(rawOnly.detail, /structured parser/);
+
+  assert.match(describePlanWarning("plan_truncated", "en"), /truncated the plan/);
+  assert.match(describePlanWarning("plan_truncated", "zh-CN"), /截断了计划/);
+});
+
+test("Host gate explanations localize plugin-owned states without translating raw method names", () => {
+  const en = describeHostGate({
+    state: "unavailable",
+    available: false,
+    advertised: true,
+    missing: ["explainPlan"],
+    reason: "plugin copy",
+  }, "en");
+  assert.match(en.message, /missing methods: explainPlan/);
+
+  const zh = describeHostGate({
+    state: "unavailable",
+    available: false,
+    advertised: false,
+    missing: ["getPlanCapabilities", "explainPlan"],
+    reason: "window.dbxPlugin is unavailable",
+  }, "zh-CN");
+  assert.match(zh.message, /window.dbxPlugin/);
 });
 
 test("every host error code has its own copy", () => {

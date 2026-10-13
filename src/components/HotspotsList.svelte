@@ -6,19 +6,22 @@
    * first". This component only renders the core's reasons and evidence, adds
    * the finding cross-reference as a lookup and never ranks or advises.
    */
-  let { view = { items: [], costNote: null }, counts = { total: 0 }, selectedNodeId = null, onSelectNode = () => {} } = $props();
+  import { createTranslator } from "../lib/i18n/index.js";
+
+  let { locale = "zh-CN", view = { items: [], costNote: null }, counts = { total: 0 }, selectedNodeId = null, onSelectNode = () => {} } = $props();
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 <section class="panel hotspots-panel">
   <header class="panel-head">
-    <h2>Hotspots</h2>
+    <h2>{t("hotspots.title")}</h2>
     <span class="total mono">{counts.total}</span>
     <span class="severity-summary">
-      {#if counts.high}<span class="badge high">high {counts.high}</span>{/if}
-      {#if counts.warning}<span class="badge warning">warning {counts.warning}</span>{/if}
-      {#if counts.info}<span class="badge info">info {counts.info}</span>{/if}
+      {#if counts.high}<span class="badge high">{t("severity.high")} {counts.high}</span>{/if}
+      {#if counts.warning}<span class="badge warning">{t("severity.warning")} {counts.warning}</span>{/if}
+      {#if counts.info}<span class="badge info">{t("severity.info")} {counts.info}</span>{/if}
     </span>
-    <span class="hint">确定性信号聚合的注意力顺序，不是性能评分，也不等于 Finding</span>
+    <span class="hint">{t("hotspots.hint")}</span>
   </header>
 
   {#if view.costNote}
@@ -27,15 +30,20 @@
 
   {#if view.items.length === 0}
     <p class="empty">
-      当前计划没有达到阈值的 hotspot 节点。Hotspot 只聚合确定性信号；空结果不代表计划没有问题。
+      {t("hotspots.empty")}
     </p>
   {:else}
     <ol class="hotspot-list">
       {#each view.items as item (item.id)}
         <li class="hotspot" class:active={item.nodeId === selectedNodeId}>
-          <button type="button" class="hotspot-head" onclick={() => onSelectNode(item.nodeId)}>
+          <button
+            type="button"
+            class="hotspot-head"
+            aria-label={t("hotspots.openNode", { node: item.nodeLabel })}
+            onclick={() => onSelectNode(item.nodeId)}
+          >
             <span class="rank mono">#{item.rank}</span>
-            <span class="badge {item.level}">{item.level}</span>
+            <span class="badge {item.level}">{t(`severity.${item.level}`)}</span>
             <span class="hotspot-node">{item.nodeLabel}</span>
             <span class="hotspot-ref mono">{item.nodeId}</span>
           </button>
@@ -44,7 +52,7 @@
             {#each item.reasons as reason (reason.code)}
               <li class="reason">
                 <div class="reason-line">
-                  <span class="badge {reason.level}">{reason.level}</span>
+                  <span class="badge {reason.level}">{t(`severity.${reason.level}`)}</span>
                   <span class="reason-human">{reason.summary ?? reason.statement}</span>
                 </div>
                 {#if reason.summary}
@@ -60,13 +68,13 @@
 
           {#if item.findingRuleIds.length > 0}
             <p class="cross-ref">
-              同时命中 Finding 规则：
+              {t("hotspots.findingsCrossReference")}
               {#each item.findingRuleIds as ruleId (ruleId)}<span class="mono chip">{ruleId}</span>{/each}
             </p>
           {/if}
 
           <details class="evidence">
-            <summary>Evidence · {item.evidence.length} 项{item.estimateOnly ? " · Estimated Plan（非 runtime truth）" : ""}</summary>
+            <summary>{t("diagnosis.section.evidence", { count: item.evidence.length })}{item.estimateOnly ? ` · ${t("hotspots.tooltip.estimateOnly")}` : ""}</summary>
             <dl class="evidence-list">
               {#each item.evidence as row (row.path)}
                 <div class="evidence-row" style="--depth: {row.depth}">

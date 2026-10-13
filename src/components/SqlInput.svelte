@@ -6,13 +6,18 @@
    * the statement. The host builds the EXPLAIN statement and only plans it.
    * No IDE features (multi-tab, history, rewrite, formatting) belong here.
    */
+  import { createTranslator } from "../lib/i18n/index.js";
+
   let {
+    locale = "zh-CN",
     sql = $bindable(""),
     disabled = true,
     loading = false,
     disabledReason = null,
     onAnalyze = () => {},
   } = $props();
+
+  const t = $derived(createTranslator(locale).t);
 
   function handleKeydown(event) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -24,8 +29,8 @@
 
 <section class="panel sql-panel">
   <header class="panel-head">
-    <h2>SQL Input</h2>
-    <span class="hint">只提交给宿主生成 Estimated Plan，不执行 SQL</span>
+    <h2>{t("sql.title")}</h2>
+    <span class="hint">{t("sql.hint")}</span>
   </header>
 
   <div class="body">
@@ -35,14 +40,14 @@
       spellcheck="false"
       rows="7"
       placeholder="SELECT ..."
-      aria-label="要分析执行计划的 SQL"
+      aria-label={t("sql.ariaLabel")}
     ></textarea>
 
     <div class="actions">
       <button type="button" class="analyze" onclick={onAnalyze} disabled={disabled || loading}>
-        {loading ? "Analyzing…" : "Analyze Plan / 分析执行计划"}
+        {loading ? t("sql.loading") : t("sql.button")}
       </button>
-      <span class="shortcut hint">Ctrl/Cmd + Enter</span>
+      <span class="shortcut hint" title={t("sql.shortcut")}>{t("sql.shortcut")}</span>
       {#if disabled && disabledReason}
         <span class="reason">{disabledReason}</span>
       {/if}

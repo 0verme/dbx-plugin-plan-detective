@@ -52,7 +52,7 @@ test("buildTreeRows renders the SQL Server tree with relation and index labels",
 
 test("buildNodeInspector renders SQL Server engine-specific fields and no PostgreSQL vocabulary", () => {
   const nodes = indexNodesById(tableScanAnalysis.normalized.root);
-  const inspector = buildNodeInspector(nodes.get("0"));
+  const inspector = buildNodeInspector(nodes.get("0"), "en");
   const fields = inspectorFields(inspector);
 
   assert.equal(inspector.title, "Table Scan · Customers [c]");
@@ -84,12 +84,12 @@ test("buildNodeInspector renders SQL Server engine-specific fields and no Postgr
 
 test("buildNodeInspector shows SQL Server sort keys, seek predicates and lookup flags", () => {
   const nodes = indexNodesById(sortAnalysis.normalized.root);
-  const sortFields = inspectorFields(buildNodeInspector(nodes.get("0")));
+  const sortFields = inspectorFields(buildNodeInspector(nodes.get("0"), "en"));
   assert.equal(sortFields.get("Sort Keys"), "[o].OrderDate ASC, [o].TotalDue DESC");
   assert.equal(sortFields.get("Distinct"), undefined, "false flags stay hidden");
 
   const lookupNodes = indexNodesById(keyLookupAnalysis.normalized.root);
-  const lookupFields = inspectorFields(buildNodeInspector(lookupNodes.get("0")));
+  const lookupFields = inspectorFields(buildNodeInspector(lookupNodes.get("0"), "en"));
   assert.equal(lookupFields.get("Lookup"), "true");
   assert.equal(lookupFields.get("Index Condition"), "Prefix(EQ) [o].OrderID = [Sales].[dbo].[Orders].[OrderID] as [o].[OrderID]");
 });

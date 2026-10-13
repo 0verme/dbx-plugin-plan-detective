@@ -5,31 +5,39 @@
    * Evidence remains available as technical detail and the UI never changes
    * severity or re-runs rule logic.
    */
-  let { views = [], counts = { total: 0 }, selectedNodeRef = null, onSelectNode = () => {} } = $props();
+  import { createTranslator } from "../lib/i18n/index.js";
+
+  let { locale = "zh-CN", views = [], counts = { total: 0 }, selectedNodeRef = null, onSelectNode = () => {} } = $props();
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 <section class="panel findings-panel">
   <header class="panel-head">
-    <h2>Findings</h2>
+    <h2>{t("findings.title")}</h2>
     <span class="total mono">{counts.total}</span>
     <span class="severity-summary">
-      {#if counts.high}<span class="badge high">high {counts.high}</span>{/if}
-      {#if counts.warning}<span class="badge warning">warning {counts.warning}</span>{/if}
-      {#if counts.info}<span class="badge info">info {counts.info}</span>{/if}
+      {#if counts.high}<span class="badge high">{t("severity.high")} {counts.high}</span>{/if}
+      {#if counts.warning}<span class="badge warning">{t("severity.warning")} {counts.warning}</span>{/if}
+      {#if counts.info}<span class="badge info">{t("severity.info")} {counts.info}</span>{/if}
     </span>
-    <span class="hint">规则观察，不等于优化建议；Estimated Plan 不代表 runtime truth</span>
+    <span class="hint">{t("findings.hint")}</span>
   </header>
 
   {#if views.length === 0}
     <p class="empty">
-      当前 fixture 没有触发任何规则。规则引擎只报告达到阈值的观察，空结果不代表计划没有问题。
+      {t("findings.empty")}
     </p>
   {:else}
     <ul class="finding-list">
       {#each views as view (view.id)}
         <li class="finding" class:active={view.nodeRef === selectedNodeRef}>
-          <button type="button" class="finding-head" onclick={() => onSelectNode(view.nodeRef)}>
-            <span class="badge {view.severity}">{view.severity}</span>
+          <button
+            type="button"
+            class="finding-head"
+            aria-label={t("findings.openNode", { node: view.nodeLabel })}
+            onclick={() => onSelectNode(view.nodeRef)}
+          >
+            <span class="badge {view.severity}">{t(`severity.${view.severity}`)}</span>
             <span class="finding-title">{view.title}</span>
             <span class="finding-rule mono">{view.ruleId}</span>
             <span class="finding-node mono">{view.nodeLabel}</span>

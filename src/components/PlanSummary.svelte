@@ -3,13 +3,16 @@
    * Plan Summary: renders the metrics the offline core already computed.
    * It does not score, rank or re-derive anything.
    */
-  let { summary = null, selectedNodeId = null, onSelectNode = () => {} } = $props();
+  import { createTranslator } from "../lib/i18n/index.js";
+
+  let { locale = "zh-CN", summary = null, selectedNodeId = null, onSelectNode = () => {} } = $props();
+  const t = $derived(createTranslator(locale).t);
 </script>
 
 <section class="panel summary-panel">
   <header class="panel-head">
-    <h2>Plan Summary</h2>
-    <span class="hint">来自 Core Metrics</span>
+    <h2>{t("summary.title")}</h2>
+    <span class="hint">{t("summary.source")}</span>
   </header>
 
   {#if summary}
@@ -22,7 +25,7 @@
       {/each}
     </dl>
 
-    <h3 class="subhead">Highlights</h3>
+    <h3 class="subhead">{t("summary.highlights")}</h3>
     <ul class="highlights">
       {#each summary.highlights as highlight (highlight.key)}
         <li>
@@ -51,7 +54,7 @@
       {/each}
     </ul>
   {:else}
-    <p class="empty">尚无分析结果。</p>
+    <p class="empty">{t("summary.empty")}</p>
   {/if}
 </section>
 

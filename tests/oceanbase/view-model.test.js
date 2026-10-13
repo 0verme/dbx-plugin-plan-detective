@@ -49,7 +49,7 @@ test("buildTreeRows renders the OceanBase Oracle tree with engine labels and rel
 
 test("buildNodeInspector renders OceanBase engine-specific fields and no PostgreSQL vocabulary", () => {
   const nodes = indexNodesById(tableScanAnalysis.normalized.root);
-  const inspector = buildNodeInspector(nodes.get("0"));
+  const inspector = buildNodeInspector(nodes.get("0"), "en");
   const fields = inspectorFields(inspector);
 
   assert.equal(inspector.title, "TABLE FULL SCAN · T_ORDERS");
@@ -82,7 +82,7 @@ test("buildNodeInspector renders OceanBase engine-specific fields and no Postgre
 
 test("an unverified extended key is displayed as a native field, not as a predicate", () => {
   const nodes = indexNodesById(tableGetAnalysis.normalized.root);
-  const fields = inspectorFields(buildNodeInspector(nodes.get("0")));
+  const fields = inspectorFields(buildNodeInspector(nodes.get("0"), "en"));
 
   assert.equal(fields.get("Filter"), undefined, "the extended filter member is not promoted to a neutral predicate");
   assert.equal(fields.get("filter"), "filter([T_ORDERS.ID = 42])", "it is still visible as a native field");

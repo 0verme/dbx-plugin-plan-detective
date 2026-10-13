@@ -28,7 +28,7 @@ test("buildTreeRows renders Dameng operator labels and relations", () => {
 
 test("Node Inspector shows Dameng-native tuple and predicate fields", () => {
   const nodes = indexNodesById(analysis.normalized.root);
-  const inspector = buildNodeInspector(nodes.get("0.0.0"));
+  const inspector = buildNodeInspector(nodes.get("0.0.0"), "en");
   const fields = inspectorFields(inspector);
 
   assert.equal(fields.get("Operation ID (Id)"), "3");
