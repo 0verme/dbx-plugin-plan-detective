@@ -56,10 +56,11 @@
   const isDev = import.meta.env.DEV;
 
   let planApi = $state(describePlanApi(bridge));
-  let storedLocale = $state(readLocalePreference());
+  const storedLocale = readLocalePreference();
   let manualLocale = $state(null);
-  let hostLocale = $state(bridge?.locale ?? null);
-  let locale = $state(resolveLocalePreference({ storedLocale, hostLocale }));
+  const initialHostLocale = bridge?.locale ?? null;
+  let hostLocale = $state(initialHostLocale);
+  let locale = $state(resolveLocalePreference({ storedLocale, hostLocale: initialHostLocale }));
   const t = $derived(createTranslator(locale).t);
 
   /* ------------------------------------------------------------- fixtures -- */
@@ -541,14 +542,6 @@
     border-radius: 6px;
     background: var(--pd-surface);
     color: var(--pd-muted);
-  }
-
-  .mode-note strong {
-    color: var(--pd-text);
-  }
-
-  .mode-note code {
-    font-size: 12px;
   }
 
   .input-grid {
