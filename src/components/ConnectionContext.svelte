@@ -86,11 +86,7 @@
     {:else if capabilityState === "error"}
       <p class="cap-state error">{capabilityError?.message ?? t("connection.capabilities.error")}</p>
     {:else if capabilities}
-      <dl class="facts">
-        <div class="fact">
-          <dt>{t("connection.capabilities.dbType")}</dt>
-          <dd class="mono">{capabilities.dbType}{capabilities.dbVersion ? ` · ${capabilities.dbVersion}` : ""}</dd>
-        </div>
+      <dl class="facts capability-summary">
         <div class="fact">
           <dt>{t("connection.capabilities.estimatedPlan")}</dt>
           <dd>
@@ -99,11 +95,20 @@
             </span>
           </dd>
         </div>
-        <div class="fact">
-          <dt>{t("connection.capabilities.limits")}</dt>
-          <dd class="mono">{t("connection.capabilities.timeoutLimit", { value: capabilities.maxTimeoutMs })} · {t("connection.capabilities.planLimit", { value: capabilities.maxPlanBytes })}</dd>
-        </div>
       </dl>
+      <details class="capability-details">
+        <summary>{t("connection.capabilities.technicalDetails")}</summary>
+        <dl class="facts">
+          <div class="fact">
+            <dt>{t("connection.capabilities.dbType")}</dt>
+            <dd class="mono">{capabilities.dbType}{capabilities.dbVersion ? ` · ${capabilities.dbVersion}` : ""}</dd>
+          </div>
+          <div class="fact">
+            <dt>{t("connection.capabilities.limits")}</dt>
+            <dd class="mono">{t("connection.capabilities.timeoutLimit", { value: capabilities.maxTimeoutMs })} · {t("connection.capabilities.planLimit", { value: capabilities.maxPlanBytes })}</dd>
+          </div>
+        </dl>
+      </details>
     {:else}
       <p class="cap-state">{t("connection.capabilities.notRead")}</p>
     {/if}
@@ -188,6 +193,18 @@
     margin: 12px 0 6px;
     padding-top: 8px;
     border-top: 1px solid var(--pd-border);
+  }
+
+  .capability-details > summary {
+    margin-top: 6px;
+    color: var(--pd-muted);
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .capability-details .facts {
+    margin-top: 6px;
   }
 
   .cap-title {

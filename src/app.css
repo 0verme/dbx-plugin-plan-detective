@@ -109,6 +109,12 @@ pre,
   color: var(--pd-muted);
 }
 
+.empty.compact {
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .muted {
   color: var(--pd-muted);
 }

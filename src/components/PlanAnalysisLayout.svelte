@@ -34,7 +34,7 @@
 
 <div class="analysis-grid">
   <aside class="summary-column" aria-label={t("layout.summary.ariaLabel")}>
-    <PlanSummary {locale} {summary} {selectedNodeId} onSelectNode={onSelectNode} />
+    <PlanSummary {locale} {summary} findingCount={findingCounts.total} {selectedNodeId} onSelectNode={onSelectNode} />
   </aside>
 
   <main class="analysis-column" aria-label={t("layout.workspace.ariaLabel")}>

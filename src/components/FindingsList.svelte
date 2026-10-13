@@ -24,7 +24,7 @@
   </header>
 
   {#if views.length === 0}
-    <p class="empty">
+    <p class="empty compact">
       {t("findings.empty")}
     </p>
   {:else}
