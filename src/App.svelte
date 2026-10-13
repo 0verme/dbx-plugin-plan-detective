@@ -11,6 +11,7 @@
   import { describePlanApi, resolvePlanBridge } from "./host/index.js";
   import { buildAiAnalysisPrompt } from "./lib/ai-analysis-prompt.js";
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
+  import { describeHostEntryState } from "./lib/host-entry-state.js";
   import { copyTextToClipboard } from "./lib/clipboard-copy.js";
   import { analyzeFixture, countByMode, findCatalogEntry, pickDefaultFixture } from "./lib/fixture-catalog.js";
   import { createTranslator, normalizeLocale } from "./lib/i18n/index.js";
@@ -52,10 +53,11 @@
    */
 
   const bridge = resolvePlanBridge();
+  const initialPlanApi = describePlanApi(bridge);
   /** Fixtures / host audit are development tools and stay out of production UI. */
   const isDev = import.meta.env.DEV;
 
-  let planApi = $state(describePlanApi(bridge));
+  let planApi = $state(initialPlanApi);
   const storedLocale = readLocalePreference();
   let manualLocale = $state(null);
   const initialHostLocale = bridge?.locale ?? null;
@@ -72,9 +74,11 @@
   /* ---------------------------------------------------------------- state -- */
 
   let view = $state("host");
-  let hostContext = $state(null);
+  let hostContext = $state(bridge?.context ?? null);
+  let hostContextReady = $state(bridge === null || initialPlanApi.state === "unavailable");
+  let manualMode = $state(false);
   let manualConnectionId = $state("");
-  let sqlText = $state("");
+  let sqlText = $state(typeof bridge?.context?.sql === "string" ? bridge.context.sql : "");
   let capabilities = $state(null);
   let capabilitiesConnectionId = $state(null);
   let capabilityState = $state("idle");
@@ -105,6 +109,7 @@
       if (sqlText.length === 0 && typeof contextSql === "string" && contextSql.trim().length > 0) {
         sqlText = contextSql;
       }
+      hostContextReady = true;
     };
 
     // `window.dbxPlugin` exists before the host init message fills
@@ -133,6 +138,15 @@
   const contextView = $derived(describeConnectionContext(hostContext));
   const hostGate = $derived(describeHostGate(planApi, locale));
   const effectiveConnectionId = $derived(contextView.connectionId ?? (manualConnectionId.trim().length > 0 ? manualConnectionId.trim() : null));
+  const hostEntryState = $derived(describeHostEntryState({
+    contextReady: hostContextReady,
+    planApiState: planApi.state,
+    planApiAvailable: planApi.available,
+    hasContext: contextView.hasConnection || contextView.contextSql !== null,
+    manualMode,
+    connectionId: effectiveConnectionId,
+    sql: sqlText,
+  }));
   const capabilitiesView = $derived(describeCapabilities(capabilities));
   const capabilityMatches = $derived(capabilitiesConnectionId !== null && capabilitiesConnectionId === effectiveConnectionId);
 
@@ -313,9 +327,9 @@
       <h1>{t("app.header.title")}</h1>
     </div>
     <div class="header-right">
-      {#if view === "host"}
+      {#if view === "host" && hostEntryState !== "empty" && hostEntryState !== "loading"}
         <span class="badge {hostGate.tone}">{hostGate.badgeLabel}</span>
-      {:else if isDev}
+      {:else if isDev && view !== "host"}
         <span class="badge offline">{t("app.badge.offline")}</span>
       {/if}
       <nav class="view-switch" aria-label={t("app.a11y.viewSwitcher")}>
@@ -373,22 +387,59 @@
       <p class="panel empty">{t("app.fixture.empty", { count: catalogCounts.total })}</p>
     {/if}
   {:else}
-    <p class="mode-note">{t("app.mode.host")}</p>
-
-    {#if hostGate.state === "initializing"}
-      <section class="panel" aria-live="polite">
-        <strong>{hostGate.badgeLabel}</strong>
-        <p>{hostGate.message}</p>
+    {#if hostEntryState === "loading"}
+      <section class="panel context-loading" role="status" aria-live="polite">
+        <p>{t("app.context.loading")}</p>
       </section>
-    {:else if !planApi.available}
+    {:else if hostEntryState === "unavailable"}
       <section class="panel error-panel" role="alert">
         <strong>{describeAnalysisError("PLAN_API_UNAVAILABLE", locale).title}</strong>
         <p>{hostGate.message ?? t("host.gate.unavailable")}</p>
+        {#if bridge !== null}
+          <p class="hint">{describeAnalysisError("PLAN_API_UNAVAILABLE", locale).hint}</p>
+        {/if}
         {#if isDev}
           <p class="hint">{t("app.host.offlineHint")}</p>
         {/if}
       </section>
+    {:else if hostEntryState === "empty"}
+      <section class="empty-state" aria-labelledby="empty-state-title">
+        <div class="empty-state-card">
+          <svg class="empty-state-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <ellipse cx="24" cy="10" rx="15" ry="6"></ellipse>
+            <path d="M9 10v28c0 3.3 6.7 6 15 6s15-2.7 15-6V10"></path>
+            <path d="M9 19c0 3.3 6.7 6 15 6s15-2.7 15-6M9 28c0 3.3 6.7 6 15 6s15-2.7 15-6"></path>
+          </svg>
+          <h2 id="empty-state-title">{t("app.empty.title")}</h2>
+          <p class="empty-state-description">{t("app.empty.description")}</p>
+          <ol class="empty-state-path" aria-label={t("app.empty.path.ariaLabel")}>
+            <li>{t("app.empty.path.connection")}<span aria-hidden="true">→</span></li>
+            <li>{t("app.empty.path.execute")}<span aria-hidden="true">→</span></li>
+            <li>{t("app.empty.path.results")}<span aria-hidden="true">→</span></li>
+            <li>{t("app.empty.path.plugin")}</li>
+          </ol>
+          <p class="empty-state-helper">{t("app.empty.helper")}</p>
+          <button type="button" class="secondary-link" onclick={() => (manualMode = true)}>
+            {t("app.empty.manual")}
+          </button>
+        </div>
+      </section>
     {:else}
+      {#if hostEntryState === "needs-sql"}
+        <p class="entry-guidance" role="status" aria-live="polite">{t("app.context.needsSql")}</p>
+      {:else if hostEntryState === "needs-connection"}
+        <p class="entry-guidance" role="status" aria-live="polite">{t("app.context.needsConnection")}</p>
+      {/if}
+
+      {#if manualMode && !contextView.hasConnection && contextView.contextSql === null}
+        <div class="manual-mode-actions">
+          <button type="button" class="secondary-link" onclick={() => (manualMode = false)}>
+            {t("app.entry.returnToGuide")}
+          </button>
+        </div>
+      {/if}
+
+      <p class="mode-note">{t("app.mode.host")}</p>
       <div class="input-grid">
         <ConnectionContext
           {locale}
@@ -542,6 +593,126 @@
     border-radius: 6px;
     background: var(--pd-surface);
     color: var(--pd-muted);
+  }
+
+  .empty-state {
+    display: grid;
+    min-height: min(62vh, 520px);
+    place-items: center;
+    padding: 16px 0;
+  }
+
+  .empty-state-card {
+    width: min(100%, 720px);
+    padding: clamp(16px, 4vw, 32px);
+    border: 1px solid var(--pd-border);
+    border-radius: var(--pd-radius);
+    background: var(--pd-surface);
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 9px;
+    fill: none;
+    stroke: var(--pd-accent);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.1;
+  }
+
+  .empty-state-card h2 {
+    margin: 0;
+    font-size: clamp(18px, 2.4vw, 21px);
+    font-weight: 650;
+  }
+
+  .empty-state-description {
+    max-width: 580px;
+    margin: 10px auto 0;
+    color: var(--pd-muted);
+  }
+
+  .empty-state-path {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 12px;
+    max-width: 660px;
+    margin: 20px auto 14px;
+    padding: 11px 12px;
+    border: 1px solid var(--pd-border);
+    border-radius: var(--pd-radius);
+    background: var(--pd-accent-soft);
+    list-style: none;
+  }
+
+  .empty-state-path li {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+  }
+
+  .empty-state-path li span {
+    color: var(--pd-accent);
+    font-weight: 700;
+  }
+
+  .empty-state-helper {
+    margin: 0 auto;
+    color: var(--pd-muted);
+    font-size: 12px;
+  }
+
+  .secondary-link {
+    min-height: 40px;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--pd-muted);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .secondary-link:hover {
+    color: var(--pd-accent);
+  }
+
+  .secondary-link:focus-visible {
+    outline: 2px solid var(--pd-accent);
+    outline-offset: 2px;
+  }
+
+  .context-loading {
+    max-width: 720px;
+    margin: 24px auto;
+    padding: 20px;
+    color: var(--pd-muted);
+    text-align: center;
+  }
+
+  .context-loading p {
+    margin: 0;
+  }
+
+  .entry-guidance {
+    margin: 0 0 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--pd-border);
+    border-left: 3px solid var(--pd-accent);
+    border-radius: 6px;
+    background: var(--pd-surface);
+    color: var(--pd-muted);
+  }
+
+  .manual-mode-actions {
+    margin: 0 0 6px;
   }
 
   .input-grid {
