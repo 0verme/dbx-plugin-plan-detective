@@ -7,6 +7,7 @@
    * No IDE features (multi-tab, history, rewrite, formatting) belong here.
    */
   import { createTranslator } from "../lib/i18n/index.js";
+  import { handleAnalyzeShortcut } from "../lib/sql-input-shortcut.js";
 
   let {
     locale = "zh-CN",
@@ -20,10 +21,7 @@
   const t = $derived(createTranslator(locale).t);
 
   function handleKeydown(event) {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-      event.preventDefault();
-      if (!disabled && !loading) onAnalyze();
-    }
+    handleAnalyzeShortcut(event, { disabled, loading, onAnalyze });
   }
 </script>
 
