@@ -80,13 +80,13 @@ Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官�
 
 ### 从 GitHub Release 手动安装
 
-1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载 `.dbxp` 包，例如 `io.github.0verme.plan-detective-0.6.7-universal.dbxp`。
+1. 从 [Releases](https://github.com/0verme/dbx-plugin-plan-detective/releases) 下载 `.dbxp` 包，例如预览版 `io.github.0verme.plan-detective-0.7.0-rc.2-universal.dbxp`（请确认 Release 已发布且附件存在）。
 2. 打开 DBX → **插件中心** → **第三方与开发者选项**，开启「允许安装未签名开发包」。
 3. 在插件中心选择并安装下载的 `.dbxp` 文件。
 
 GitHub Release 提供的候选包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
 
-运行要求：DBX `>=0.6.23`、支持 Host API 1.2 的宿主及系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前 AI Tool 版本为 `0.7.0-rc.1`，尚未通过 DBX Desktop runtime smoke，不代表运行时已验证。
+运行要求：DBX `>=0.6.23`、支持 Host API 1.2 的宿主及系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前预览包版本为 `0.7.0-rc.2`，内含 AI Tool sidecar；其 DBX Desktop runtime smoke 尚未完成，不代表 Agent 链路已在真实宿主通过验证。
 
 ## 使用方法
 
