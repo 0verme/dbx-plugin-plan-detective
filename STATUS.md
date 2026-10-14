@@ -3,8 +3,8 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-10-14 |
-| 当前阶段 | **v0.7.1 正式版 Release Preparation（基于最新 `origin/main`；本次发布门禁已通过）** |
-| 插件版本 | 发布目标 `0.7.1`；DBX `>=0.6.23`、Host API `^1.2`、插件 ID `io.github.0verme.plan-detective`、权限 `host.plans:read` 保持不变 |
+| 当前阶段 | **v0.7.1 正式版已发布；Release PR、Tag、GitHub Release 与 workflow 均完成** |
+| 插件版本 | 当前已发布 `0.7.1`；DBX `>=0.6.23`、Host API `^1.2`、插件 ID `io.github.0verme.plan-detective`、权限 `host.plans:read` 保持不变 |
 | 本次范围 | 汇总 v0.7.0 之后已合并的 UI/中英文体验优化，并移除正式安装包对系统 Node.js 的运行时依赖；AI Tool sidecar 仍属实验能力，不注册、不打包、不宣称可用 |
 | 验收边界 | 用户已报告近期合并 PR 在真实 DBX 环境完成测试；离线 CI / 打包结果与真实宿主验证分开记录。`#66` 的 Agent Tool 端到端链路仍受 DBX 上游限制，不属于本次发布能力 |
 | 当前不做 | 不改变 DBX Host API、插件 ID、权限或数据库分析范围；不修改 DBX Store / 上游 DBX；不恢复未通过 gate 的 AI Tool sidecar |
@@ -13,12 +13,13 @@
 
 - Project: `dbx-plugin-plan-detective`；Repository: `https://github.com/0verme/dbx-plugin-plan-detective`。
 - Control Plane Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`；Worktree Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees`。
-- Main baseline: fetched `origin/main` `1895d94ea678fb8eba0a62639e6b2014bc0b3d52`；v0.7.0 tag commit `e6fe3811ee44e23269e390464ab73a68aa37f02d`。本地 Main Workspace 保持未修改，发布工作在独立 Worktree。
-- Release branch: `chore/release-v0.7.1`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/release-v0.7.1`。
+- Main baseline: 发布工作基于 `origin/main` `1895d94ea678fb8eba0a62639e6b2014bc0b3d52`；Release PR [#84](https://github.com/0verme/dbx-plugin-plan-detective/pull/84) 的 merge commit 与 `v0.7.1` tag 均为 `522bce8850d2e9de888d849ed32658eef5197404`，该 commit 已进入 `main`。v0.7.0 tag commit 为 `e6fe3811ee44e23269e390464ab73a68aa37f02d`。本地 Main Workspace 保持未修改，发布工作在独立 Worktree。
+- Release branch: `chore/release-v0.7.1`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/release-v0.7.1`；PR [#84](https://github.com/0verme/dbx-plugin-plan-detective/pull/84) 于 2026-10-14 合并。
 - Merged scope: PR [#75](https://github.com/0verme/dbx-plugin-plan-detective/pull/75)（插件中心首次进入引导）；PR [#76](https://github.com/0verme/dbx-plugin-plan-detective/pull/76)–[#80](https://github.com/0verme/dbx-plugin-plan-detective/pull/80)（Issue [#74](https://github.com/0verme/dbx-plugin-plan-detective/issues/74) 的布局审计、Tree/Inspector 信息组织、摘要密度、窄容器/键盘导航与回归覆盖）；PR [#81](https://github.com/0verme/dbx-plugin-plan-detective/pull/81)（精简 UI 文案）；PR [#83](https://github.com/0verme/dbx-plugin-plan-detective/pull/83)（关闭 Issue [#82](https://github.com/0verme/dbx-plugin-plan-detective/issues/82)，取消正式包 Node runtime 注册）。
 - Open scope check（创建本 Release PR 前）：未发现其他 targeting `main` 的开放 PR；Issue #74 仍开放作为 UI/UX 总控，Issue #66 仍开放且 AI Tool 因上游 connection binding / structured plan handoff 限制暂不发布。Issues #72 / #73 是独立的 Plan History / Diff 后续能力。
 - Release gates: `npm ci` PASS（本机因 esbuild binary 执行权限限制，使用同版本 `ESBUILD_BINARY_PATH` workaround 后干净安装成功）；`npm test` PASS（1296/1296）；`npm run build` PASS；`npm run package` PASS。独立包检查确认 manifest `0.7.1`、target `universal`、插件 ID / Host API / 权限不变；包中 6 项（manifest、checksums、1 个 asset、3 个 UI 文件），无 Node launcher、sidecar、`node_modules` 或开发目录。tracked `ui/` 已含 PR #75–#81 的构建产物，重建没有产生额外差异。
-- Local package preflight: `io.github.0verme.plan-detective-0.7.1-universal.dbxp`，107352 bytes，SHA-256 `a4168ac3d11221f2116b1701c0aebe9d5729ccf5b64358b686fec118d1baafd2`；这只是本地候选，不等同 GitHub Release 上传资产。真实 DBX 验收依据用户报告；AI Tool E2E 仍因上游限制未验证。
+- GitHub Release: [v0.7.1](https://github.com/0verme/dbx-plugin-plan-detective/releases/tag/v0.7.1)，非 Draft / 非 Prerelease；release workflow [#38506438728](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/38506438728) 的 `Build universal` 与 `Publish plugin release assets` 均 SUCCESS，`head_sha` 与 tag commit 一致。
+- Final asset: [io.github.0verme.plan-detective-0.7.1-universal.dbxp](https://github.com/0verme/dbx-plugin-plan-detective/releases/download/v0.7.1/io.github.0verme.plan-detective-0.7.1-universal.dbxp)，107352 bytes，SHA-256 `701635897fd4e2b2ac943a00083dfb141bf02fe94688596ba1e023a85f31d413`；Release metadata `release-candidates.json` 与包内 manifest/checksums、实际源码 UI/asset 均匹配。下载后的官方包不含 Node runtime / launcher / sidecar。真实 DBX 验收依据用户报告；AI Tool E2E 仍因上游限制未验证。
 - DBX Store / signing: 不在本次范围；无 Store 或上游仓库修改。
 
 ## 历史实现记录
