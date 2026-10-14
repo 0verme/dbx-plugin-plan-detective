@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 const fileUrl = (path) => new URL(`../../${path}`, import.meta.url);
-const [app, sharedCss, layout, tree, inspector, findings, hotspots, sqlInput] = await Promise.all([
+const [app, sharedCss, layout, tree, inspector, findings, hotspots, sqlInput, connection, summary, messages] = await Promise.all([
   "src/App.svelte",
   "src/app.css",
   "src/components/PlanAnalysisLayout.svelte",
@@ -12,6 +12,9 @@ const [app, sharedCss, layout, tree, inspector, findings, hotspots, sqlInput] = 
   "src/components/FindingsList.svelte",
   "src/components/HotspotsList.svelte",
   "src/components/SqlInput.svelte",
+  "src/components/ConnectionContext.svelte",
+  "src/components/PlanSummary.svelte",
+  "src/lib/i18n/messages.js",
 ].map((path) => readFile(fileUrl(path), "utf8")));
 
 test("analysis and input columns wrap from available content width, not viewport-only breakpoints", () => {
@@ -47,6 +50,34 @@ test("keyboard focus is visible and tree navigation uses one roving tab stop", (
   assert.match(tree, /treeKeyboardAction\(rows, row\.id, event\.key, collapsed\)/);
   assert.match(tree, /target\?\.scrollIntoView\(\{ block: "nearest" \}\)/);
   assert.match(tree, /target\?\.focus\(\)/);
+});
+
+test("redundant panel subtitles are absent in both locales while essential controls remain", () => {
+  const assertTitleOnlyHeader = (component, key) => {
+    const header = `<header class="panel-head">\n    <h2>{t("${key}")}</h2>\n  </header>`;
+    assert.ok(component.includes(header), `${key} header contains only its title`);
+  };
+
+  assert.equal(app.includes('t("app.mode.host")'), false);
+  assert.ok(app.includes('<span class="badge {hostGate.tone}">{hostGate.badgeLabel}</span>'));
+  assert.ok(app.includes('class="language-switch"'));
+  assertTitleOnlyHeader(connection, "connection.title");
+  assertTitleOnlyHeader(sqlInput, "sql.title");
+  assertTitleOnlyHeader(summary, "summary.title");
+  assertTitleOnlyHeader(tree, "tree.title");
+  assertTitleOnlyHeader(inspector, "nodeInspector.title");
+  assert.equal(inspector.includes("inspector.id"), false);
+  assert.ok(inspector.includes("{#each inspector.groups as group (group.key)}"));
+  assert.ok(inspector.includes("{field.value}"));
+  for (const key of ["app.mode.host", "connection.readOnly", "sql.hint", "summary.source", "tree.hint"]) {
+    assert.equal(messages.includes(`"${key}":`), false, `${key} is removed from both locales`);
+  }
+  assert.ok(messages.includes('"host.gate.available":'));
+  assert.ok(sqlInput.includes('t("sql.shortcut")'));
+  assert.ok(sqlInput.includes('t("sql.button")'));
+  assert.ok(app.includes("status={session.status}"));
+  assert.ok(app.includes("copyPrompt={copyPromptAction}"));
+  assert.match(sharedCss, /\.panel-head\s*\{[^}]*flex-wrap: wrap/s);
 });
 
 test("switching locale changes presentation only and does not reset SQL or plan navigation state", () => {

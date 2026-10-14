@@ -19,7 +19,6 @@
 <section class="panel summary-panel">
   <header class="panel-head">
     <h2>{t("summary.title")}</h2>
-    <span class="hint">{t("summary.source")}</span>
   </header>
 
   {#if summary}

@@ -29,7 +29,6 @@
 <section class="panel context-panel">
   <header class="panel-head">
     <h2>{t("connection.title")}</h2>
-    <span class="hint">{t("connection.readOnly")}</span>
   </header>
 
   <div class="body">

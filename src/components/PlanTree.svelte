@@ -57,7 +57,6 @@
 <section class="panel tree-panel">
   <header class="panel-head">
     <h2>{t("tree.title")}</h2>
-    <span class="hint">{t("tree.hint", { count: rows.length })}</span>
   </header>
 
   <div bind:this={treeElement} class="tree" role="tree" aria-label={t("tree.ariaLabel")}>
