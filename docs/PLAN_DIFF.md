@@ -39,7 +39,7 @@ Node changes 只记录明确字段的前后值：operator kind / label、relatio
 
 1. **Relation scan**：先按 relation name + alias + 可用 schema evidence 的精确组合匹配，要求两侧均唯一；PostgreSQL `Schema` 从 `engineSpecific.extra` 读取，MySQL V2 `schema_name` 从 `engineSpecific.mysql.schemaName` 读取。schema 不同或仅一侧提供 schema 时不会跨 schema 配对；schema 相同且 alias 不同时，只在两侧剩余该 schema 下的 relation occurrence 均恰好一个时 fallback。不把 operator kind 或 index name 当身份，因此 Seq Scan → Index Scan、Index → 另一索引可以继续匹配。
 2. **Repeated table / self-join**：稳定且唯一的 alias 可区分 occurrence；重复且相同的 relation identity 或多个 alias 同时变化时输出 `ambiguous`。不会按数组顺序、路径、cost 或 rows 拆分。
-3. **Operators**：按 operator family + 已匹配、带 relation identity 的 descendant scans 无序集合匹配，集合对 Join child reorder 稳定，并允许 Nested Loop / Hash Join / Merge Join 算法变化；Sort / Incremental Sort 也共享一个 family。像 PostgreSQL `Bitmap Index Scan` 这样没有独立 relation identity 的支持 scan，不会阻断由已匹配 relation 锚定的 lineage；若 subtree 没有任何可识别 relation scan，仍不猜测匹配。该 subtree identity 必须唯一，才建立一对一匹配。
+3. **Operators**：按 operator family + 已匹配、带 relation identity 的 descendant scans 无序集合匹配，集合对 Join child reorder 稳定，并允许 Nested Loop / Hash Join / Merge Join 算法变化；Sort / Incremental Sort 也共享一个 family。PostgreSQL `Bitmap Index Scan` 没有独立 relation identity；仅当它在两侧各自是同一个已匹配 `Bitmap Heap Scan` 下唯一的此类后代时，才借父 heap relation 配对并报告 index / condition 变化。只有这些已锚定的 bitmap 支持 scan 不会阻断 lineage；独立的匿名 scan（如 Function Scan）仍会使祖先 identity fail closed。该 subtree identity 必须唯一，才建立一对一匹配。
 4. **No-scan subtree**：只有当 subtree 中没有 scan 时，才可用精确语义 subtree fingerprint；排除 node id、rows、cost、index name 和其他 engine-specific evidence，但纳入 available relation schema，保留 child order。重复 fingerprint 不按兄弟顺序配对。
 5. 没有可识别 relation scan 锚定、descendant relation scan 未匹配、重复候选或不完整结构会留下 `unmatched` / `ambiguous`；不会猜测一对多或多对一关系。
 
@@ -49,4 +49,4 @@ Node changes 只记录明确字段的前后值：operator kind / label、relatio
 
 `fixtures/diff/` 有 PostgreSQL 与 Native MySQL 各一组修改前 / 修改后 synthetic JSON plan 与 metadata sidecar：都描述假设性新增索引，**不是**真实 capture、真实数据库验证或真实性能提升证据。普通 parser golden corpus 未被改写。
 
-覆盖同计划确定性与 JSON round-trip、扫描方式变化、Sort 插入 / 删除、Join 算法和子节点顺序变化、self-join / 重复表歧义、rows/cost 不作 identity、缺失与零值、输入资格拒绝及 PG/MySQL fixture pair。Node tests 不等同于真实 Desktop 验收。Issue #73 的后续阶段仍需完成比较 UI、版本 / 来源可比性提示、diagnostic association、历史工作流和实际 Desktop 验收；不得将本 Core 单独描述为完整 Plan Diff 功能。
+覆盖同计划确定性与 JSON round-trip、扫描方式变化、Sort 插入 / 删除、Join 算法和子节点顺序变化、self-join / 重复表歧义及无对侧候选时作为 unmatched、Bitmap Heap 下唯一 Bitmap Index Scan 的索引 / condition 变化、独立匿名 scan 的 lineage 阻断、rows/cost 不作 identity、缺失与零值、输入资格拒绝及 PG/MySQL fixture pair。Node tests 不等同于真实 Desktop 验收。Issue #73 的后续阶段仍需完成比较 UI、版本 / 来源可比性提示、diagnostic association、历史工作流和实际 Desktop 验收；不得将本 Core 单独描述为完整 Plan Diff 功能。

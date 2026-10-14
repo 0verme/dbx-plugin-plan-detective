@@ -91,6 +91,27 @@ test("PostgreSQL scan schema participates in identity, preventing cross-schema f
   assert.deepEqual(differentSchemas.unmatched.current, [{ id: "0", reasonCode: "NO_UNIQUE_COUNTERPART" }]);
 });
 
+test("an independent scan without relation identity blocks anchored operator lineage", () => {
+  const before = analysis(node("0", {
+    kind: "nested_loop",
+    nodeType: "Nested Loop",
+    children: [
+      node("0.0", { relation: relation("orders", "o") }),
+      node("0.1", { kind: "function_scan", nodeType: "Function Scan" }),
+    ],
+  }));
+  const after = analysis(node("0", {
+    kind: "nested_loop",
+    nodeType: "Nested Loop",
+    children: [node("0.0", { relation: relation("orders", "o") })],
+  }));
+
+  const result = diffEstimatedPlans(before, after);
+  assert.deepEqual(result.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [["0.0", "0.0"]]);
+  assert.ok(result.unmatched.baseline.some(({ id, reasonCode }) => id === "0.1" && reasonCode === "NO_STABLE_RELATION"));
+  assert.ok(result.unmatched.baseline.some(({ id, reasonCode }) => id === "0" && reasonCode === "DESCENDANT_NOT_MATCHED"));
+});
+
 test("rows and costs never define identity; missing rows remain distinct from zero", () => {
   const before = analysis(node("0", {
     kind: "result",
@@ -226,6 +247,16 @@ test("self-join aliases distinguish repeated relations, but identical or renamed
   );
   assert.equal(changedAliases.matches.length, 0);
   assert.equal(changedAliases.ambiguous.length, 1);
+
+  const removedSelfJoin = diffEstimatedPlans(
+    selfJoin(null, null),
+    analysis(node("0", { kind: "result", nodeType: "Result" })),
+  );
+  assert.equal(removedSelfJoin.ambiguous.length, 0, "no opposite-side candidates means removal, not ambiguity");
+  assert.deepEqual(removedSelfJoin.unmatched.baseline.filter(({ id }) => id !== "0"), [
+    { id: "0.0", reasonCode: "NO_UNIQUE_COUNTERPART" },
+    { id: "0.1", reasonCode: "NO_UNIQUE_COUNTERPART" },
+  ]);
 });
 
 test("duplicate operators over the same sources are reported as ambiguous, never paired by order", () => {

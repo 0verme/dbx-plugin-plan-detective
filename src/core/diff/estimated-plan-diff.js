@@ -78,6 +78,7 @@ export function diffEstimatedPlans(baseline, current) {
   const beforeScanTokens = new Map();
   const afterScanTokens = new Map();
   const ambiguities = [];
+  const scanMatches = [];
 
   matchRelationScans({
     database: beforePlan.database,
@@ -91,10 +92,24 @@ export function diffEstimatedPlans(baseline, current) {
     ambiguousAfter,
     matches,
     ambiguities,
+    scanMatches,
   });
 
-  const beforeLineage = collectLineage(beforePlan.root, beforeScanTokens, ambiguousBefore);
-  const afterLineage = collectLineage(afterPlan.root, afterScanTokens, ambiguousAfter);
+  const bitmapIndexSupport = matchBitmapIndexScans({
+    scanMatches,
+    beforeScanTokens,
+    afterScanTokens,
+    matchedBefore,
+    matchedAfter,
+    ambiguousBefore,
+    ambiguousAfter,
+    matches,
+    ambiguities,
+    database: beforePlan.database,
+  });
+
+  const beforeLineage = collectLineage(beforePlan.root, beforeScanTokens, ambiguousBefore, bitmapIndexSupport.baseline);
+  const afterLineage = collectLineage(afterPlan.root, afterScanTokens, ambiguousAfter, bitmapIndexSupport.current);
   matchNonScanNodes({
     beforeNodes,
     afterNodes,
@@ -296,7 +311,7 @@ function matchRelationScans(context) {
     const after = afterByIdentity.get(identity) ?? [];
     if (before.length === 1 && after.length === 1) {
       addScanMatch(before[0], after[0], "unique-qualified-relation-name", context);
-    } else if (before.length > 1 || after.length > 1) {
+    } else if (before.length > 0 && after.length > 0 && (before.length > 1 || after.length > 1)) {
       addAmbiguity(before, after, "REPEATED_RELATION_IDENTITY", "qualified-relation-name", context);
     }
   }
@@ -319,12 +334,65 @@ function addScanMatch(before, after, method, context) {
   const token = JSON.stringify(["matched-relation", name, schema, before.relation.alias ?? null, after.relation.alias ?? null]);
   context.beforeScanTokens.set(before, token);
   context.afterScanTokens.set(after, token);
+  context.scanMatches.push({ before, after });
   addMatch(before, after, {
     method,
     reason: method === "qualified-relation-name-and-alias"
       ? "Relation name, alias, and available schema evidence uniquely identify this scan in both plans."
       : "This relation and available schema evidence occur once among the remaining scan candidates in both plans.",
   }, context);
+}
+
+function matchBitmapIndexScans(context) {
+  const baseline = new Set();
+  const current = new Set();
+  const heapPairs = context.scanMatches.filter(({ before, after }) =>
+    before.kind === "bitmap_heap_scan" && after.kind === "bitmap_heap_scan");
+
+  for (const { before: beforeHeap, after: afterHeap } of heapPairs) {
+    const beforeIndexes = descendantBitmapIndexScans(beforeHeap)
+      .filter((node) => !hasRelationIdentity(node) && !baseline.has(node));
+    const afterIndexes = descendantBitmapIndexScans(afterHeap)
+      .filter((node) => !hasRelationIdentity(node) && !current.has(node));
+    for (const node of beforeIndexes) baseline.add(node);
+    for (const node of afterIndexes) current.add(node);
+
+    if (beforeIndexes.length === 1 && afterIndexes.length === 1) {
+      const parentToken = context.beforeScanTokens.get(beforeHeap);
+      const token = JSON.stringify(["bitmap-index-under-matched-heap", parentToken]);
+      context.beforeScanTokens.set(beforeIndexes[0], token);
+      context.afterScanTokens.set(afterIndexes[0], token);
+      addMatch(beforeIndexes[0], afterIndexes[0], {
+        method: "matched-bitmap-heap-descendant",
+        reason: "A unique Bitmap Index Scan descendant is paired through the same uniquely matched Bitmap Heap Scan relation.",
+      }, context);
+    } else if (
+      beforeIndexes.length > 0 && afterIndexes.length > 0 &&
+      (beforeIndexes.length > 1 || afterIndexes.length > 1)
+    ) {
+      addAmbiguity(
+        beforeIndexes,
+        afterIndexes,
+        "NON_UNIQUE_STRUCTURAL_IDENTITY",
+        "matched-bitmap-heap-descendant",
+        context,
+      );
+    }
+  }
+
+  return { baseline, current };
+}
+
+function descendantBitmapIndexScans(heapScan) {
+  const scans = [];
+  function visit(node) {
+    for (const child of node.children) {
+      if (child.kind === "bitmap_index_scan") scans.push(child);
+      visit(child);
+    }
+  }
+  visit(heapScan);
+  return scans;
 }
 
 function matchNonScanNodes(context) {
@@ -384,29 +452,30 @@ function groupNonScanCandidates(nodes, lineage, alreadyMatched, database) {
   return groups;
 }
 
-function collectLineage(root, scanTokens, ambiguousScans) {
+function collectLineage(root, scanTokens, ambiguousScans, bitmapIndexSupportScans) {
   const lineage = new Map();
   function visit(node) {
     const childInfo = node.children.map(visit);
     const ownScan = isScan(node);
     const ownIdentityScan = ownScan && hasRelationIdentity(node);
-    const ownToken = ownIdentityScan ? scanTokens.get(node) : undefined;
+    const ownToken = ownScan ? scanTokens.get(node) : undefined;
+    const ownUnanchoredScan = ownScan && !ownIdentityScan && !bitmapIndexSupportScans.has(node);
     const scanCount = (ownScan ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.scanCount, 0);
     const identityScanCount = (ownIdentityScan ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.identityScanCount, 0);
-    const matchedIdentityScanCount = (ownToken === undefined ? 0 : 1) + childInfo.reduce((sum, child) => sum + child.matchedIdentityScanCount, 0);
+    const matchedIdentityScanCount = (ownIdentityScan && ownToken !== undefined ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.matchedIdentityScanCount, 0);
+    const unanchoredScanCount = (ownUnanchoredScan ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.unanchoredScanCount, 0);
     const tokens = [
       ...(ownToken === undefined ? [] : [ownToken]),
       ...childInfo.flatMap((child) => child.tokens),
     ];
-    // Scans without a relation identity (for example PostgreSQL Bitmap Index
-    // Scan) cannot be matched independently. Ignore them as blockers only when
-    // this subtree has at least one identity-bearing scan to anchor its lineage;
-    // an all-unidentified scan subtree remains incomplete.
+    // Anonymous scans may be ignored only when they are a Bitmap Index Scan
+    // beneath a uniquely matched Bitmap Heap Scan. Independent anonymous scans
+    // (such as Function Scan) keep the entire ancestor lineage incomplete.
     const complete = identityScanCount > 0
-      ? matchedIdentityScanCount === identityScanCount
+      ? matchedIdentityScanCount === identityScanCount && unanchoredScanCount === 0
       : scanCount === 0;
-    const ambiguous = (ownIdentityScan && ambiguousScans.has(node)) || childInfo.some((child) => child.ambiguous);
-    const info = { scanCount, identityScanCount, matchedIdentityScanCount, tokens, complete, ambiguous };
+    const ambiguous = (ownScan && ambiguousScans.has(node)) || childInfo.some((child) => child.ambiguous);
+    const info = { scanCount, identityScanCount, matchedIdentityScanCount, unanchoredScanCount, tokens, complete, ambiguous };
     lineage.set(node, info);
     return info;
   }
