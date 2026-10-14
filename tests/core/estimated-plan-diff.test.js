@@ -112,6 +112,58 @@ test("an independent scan without relation identity blocks anchored operator lin
   assert.ok(result.unmatched.baseline.some(({ id, reasonCode }) => id === "0" && reasonCode === "DESCENDANT_NOT_MATCHED"));
 });
 
+test("an unpaired Bitmap Index Scan keeps ancestor lineage incomplete", () => {
+  const bitmapPlan = (includeIndex) => analysis(node("0", {
+    kind: "sort",
+    nodeType: "Sort",
+    children: [node("0.0", {
+      kind: "bitmap_heap_scan",
+      nodeType: "Bitmap Heap Scan",
+      relation: relation("orders", "o"),
+      children: includeIndex ? [node("0.0.0", {
+        kind: "bitmap_index_scan",
+        nodeType: "Bitmap Index Scan",
+        indexCondition: "(status = 'open')",
+      })] : [],
+    })],
+  }));
+
+  for (const [before, after, unpairedSide] of [
+    [bitmapPlan(true), bitmapPlan(false), "baseline"],
+    [bitmapPlan(false), bitmapPlan(true), "current"],
+  ]) {
+    const result = diffEstimatedPlans(before, after);
+    assert.ok(result.matches.some(({ beforeId, afterId }) => beforeId === "0.0" && afterId === "0.0"));
+    assert.equal(result.matches.some(({ beforeId, afterId }) => beforeId === "0" && afterId === "0"), false);
+    assert.equal(result.ambiguous.length, 0);
+    assert.ok(result.unmatched.baseline.some(({ id }) => id === "0"));
+    assert.ok(result.unmatched.current.some(({ id }) => id === "0"));
+    assert.ok(result.unmatched[unpairedSide].some(({ id, reasonCode }) =>
+      id === "0.0.0" && reasonCode === "NO_STABLE_RELATION"));
+  }
+});
+
+test("one-sided duplicate operator candidates remain unmatched, not ambiguous", () => {
+  const before = analysis(node("0", {
+    kind: "sort",
+    nodeType: "Sort",
+    children: [node("0.0", {
+      kind: "sort",
+      nodeType: "Sort",
+      children: [node("0.0.0", { relation: relation("orders", "o") })],
+    })],
+  }));
+  const after = analysis(node("0", { relation: relation("orders", "o") }));
+
+  const result = diffEstimatedPlans(before, after);
+  assert.deepEqual(result.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [["0.0.0", "0"]]);
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched.baseline, [
+    { id: "0", reasonCode: "NO_UNIQUE_COUNTERPART" },
+    { id: "0.0", reasonCode: "NO_UNIQUE_COUNTERPART" },
+  ]);
+});
+
 test("rows and costs never define identity; missing rows remain distinct from zero", () => {
   const before = analysis(node("0", {
     kind: "result",

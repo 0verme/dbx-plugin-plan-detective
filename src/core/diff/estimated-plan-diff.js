@@ -354,18 +354,21 @@ function matchBitmapIndexScans(context) {
       .filter((node) => !hasRelationIdentity(node) && !baseline.has(node));
     const afterIndexes = descendantBitmapIndexScans(afterHeap)
       .filter((node) => !hasRelationIdentity(node) && !current.has(node));
-    for (const node of beforeIndexes) baseline.add(node);
-    for (const node of afterIndexes) current.add(node);
-
     if (beforeIndexes.length === 1 && afterIndexes.length === 1) {
+      const beforeIndex = beforeIndexes[0];
+      const afterIndex = afterIndexes[0];
       const parentToken = context.beforeScanTokens.get(beforeHeap);
       const token = JSON.stringify(["bitmap-index-under-matched-heap", parentToken]);
-      context.beforeScanTokens.set(beforeIndexes[0], token);
-      context.afterScanTokens.set(afterIndexes[0], token);
-      addMatch(beforeIndexes[0], afterIndexes[0], {
+      context.beforeScanTokens.set(beforeIndex, token);
+      context.afterScanTokens.set(afterIndex, token);
+      addMatch(beforeIndex, afterIndex, {
         method: "matched-bitmap-heap-descendant",
         reason: "A unique Bitmap Index Scan descendant is paired through the same uniquely matched Bitmap Heap Scan relation.",
       }, context);
+      if (context.matchedBefore.has(beforeIndex) && context.matchedAfter.has(afterIndex)) {
+        baseline.add(beforeIndex);
+        current.add(afterIndex);
+      }
     } else if (
       beforeIndexes.length > 0 && afterIndexes.length > 0 &&
       (beforeIndexes.length > 1 || afterIndexes.length > 1)
@@ -419,8 +422,8 @@ function matchNonScanNodes(context) {
             reason: "The semantic subtree, including available relation schema, excluding ids, estimated rows, and costs is identical and unique.",
           };
       addMatch(before[0], after[0], evidence, context);
-    } else if (before.length > 1 || after.length > 1) {
-      const info = before.length > 0 ? beforeLineage.get(before[0]) : afterLineage.get(after[0]);
+    } else if (before.length > 0 && after.length > 0 && (before.length > 1 || after.length > 1)) {
+      const info = beforeLineage.get(before[0]);
       addAmbiguity(
         before,
         after,
