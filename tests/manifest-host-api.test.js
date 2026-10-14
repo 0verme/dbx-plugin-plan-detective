@@ -36,10 +36,11 @@ test("manifest keeps the plan permission as its only privileged host permission"
   assert.deepEqual(hostPermissions, ["host.plans:read"]);
 });
 
-test("manifest keeps the UI entrypoint and the workbench contribution", async () => {
+test("manifest is frontend-only and keeps both existing UI contributions", async () => {
   const manifest = await readManifest();
-  assert.equal(manifest.entrypoints.ui.root, "ui");
-  assert.equal(manifest.entrypoints.ui.entry, "ui/index.html");
+  assert.deepEqual(manifest.entrypoints, { ui: { root: "ui", entry: "ui/index.html" } });
+  assert.equal(manifest.engines.dbx, ">=0.6.23");
+  assert.deepEqual(manifest.permissions, ["host.plans:read"]);
 
   const types = manifest.contributions.map((contribution) => contribution.type).sort();
   assert.deepEqual(types, ["result-view", "workbench"]);

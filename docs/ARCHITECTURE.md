@@ -58,6 +58,8 @@ Metrics Engine
 未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff / History / Plan Canvas、AI 接入（模型 API / API Key / 聊天窗口 / 自动发送；本地的 AI prompt packaging 不在此列）
 ```
 
+v0.7.0 曾加入实验性 Node AI Tool sidecar；由于 DBX 当前无法把 plugin tool 绑定普通原生 Agent 连接，也未提供 structured Estimated Plan handoff，frontend-only 正式候选暂停其 manifest 注册和打包。AI Tool 源码 / contract / 单元测试保留在仓库，不影响 UI Host Plan API 与本地 AI Prompt 复制。复核证据及恢复 gate 见 [AI Tool 状态说明](./AI_TOOL_V0.7.0.md)。
+
 ### 真实 Host 数据链路
 
 ```text

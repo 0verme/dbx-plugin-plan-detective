@@ -63,7 +63,7 @@ Locale precedence is **manual selection for this session > saved user preference
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
 - **复制 AI 分析提示词**：把当前分析上下文（Database Context / SQL / Plan Summary / Findings / Hotspots / Evidence）在本地打包成结构化 Prompt，由用户自行粘贴到外部 AI 工具；插件不调用任何 AI 服务，也不自动发送任何内容。
-- **DBX Built-in AI Tool（v0.7.0）**：包含只读 `analyze_estimated_plan` sidecar tool，将已取得的完整 Estimated Plan 交给现有 Plan Core 做确定性分析；插件不获取计划、不执行 SQL、不连接数据库。当前 DBX 上游尚不支持把此类独立插件 tool 绑定到普通原生数据库连接，故真实 Agent 链路仍待上游能力与 Desktop runtime smoke 验证。
+- **DBX Built-in AI Tool（实验实现，暂不可用）**：v0.7.0 曾加入只读 `analyze_estimated_plan` sidecar 源码，但 DBX 上游目前既不能将其绑定到普通原生 Agent 连接，也没有可交接的 structured `explain_query` Estimated Plan contract；真实 Desktop 链路从未验证。本 frontend-only 修复不再在发布 manifest 注册 / 打包该 sidecar，源码、contract 与单元测试保留供上游能力补齐后恢复。此限制不影响 UI 内的「复制 AI 分析提示词」。
 - **Findings 确定性诊断**：针对已实现的规则提供 Finding、证据和检查方向。
 - **中文 / English Finding 解释**：将结构化诊断事实按语言呈现。
 - **Raw Plan 查看**：保留并展示 DBX Host 返回的原始执行计划。
@@ -86,7 +86,7 @@ Plan Detective 已收录到 [DBX Store](https://github.com/t8y2/dbx-store) 官�
 
 GitHub Release 提供的插件包未签名；通过 DBX Store 安装时不需要开启未签名开发包选项。
 
-运行要求：DBX `>=0.6.23`、Host API `^1.2` 和系统 Node.js 22+（用于 Node sidecar）。当前权限仍只有 `host.plans:read`；AI Tool 不读取业务数据，也不需要 `host.data:read`。当前正式版本为 `0.7.0`，内含只读 AI Tool sidecar；DBX Desktop runtime smoke 仍待用户验证，普通 DBX 原生连接上的 Agent 集成也尚未完成端到端验证。
+普通插件 UI 的运行要求为 DBX `>=0.6.23` 与 Host API `^1.2`；安装后不需要系统 Node.js 或额外 PATH 配置。权限保持为 `host.plans:read`，不新增 `host.data:read`。Node.js 22+ 仅用于开发、测试与 CI 构建。注意：已发布的 v0.7.0 `.dbxp` 仍含 Node sidecar，打开 / 调用该版本的 Built-in AI Tool 会受系统 Node.js 22+ 要求影响；本修复仅改变后续构建候选包，本轮不修改现有 Release / Store。
 
 ## 使用方法
 
@@ -117,11 +117,9 @@ GitHub Release 提供的插件包未签名；通过 DBX Store 安装时不需要
 
 Plan Detective 不创建数据库连接，也不读取数据库凭据；Workbench 只引用 DBX 中已经打开的连接。
 
-### DBX 内置 Agent（v0.7.0）
+### DBX Built-in AI Tool 状态
 
-`analyze_estimated_plan` 只接收已取得的完整 Estimated Plan raw JSON / text / XML，以及显式 `dbType`、`mode=estimated`、`format` 和完整性元数据；不接收 SQL 或 Markdown 表格代替 raw plan，也不会自行获取计划。当前 DBX Agent `explain_query` 没有可交接的 structured raw-plan contract，因此若无法独立获得完整原始计划与来源信息，**不要调用此工具**。
-
-当前上游 DBX 只在 plugin-owned connection 上发现 / 执行 plugin tools；Agent 的 `explain_query` 只向模型提供 Markdown 表格文本，结构化 plan data 只供 UI 使用。因此 v0.7.0 虽包含 sidecar 与工具 contract，**尚不能在普通 DBX 原生数据库连接上完成端到端 Agent 链路**，不得视为 runtime verified。完整审计、上游 capability gap 与 Desktop smoke checklist 见 [docs/AI_TOOL_V0.7.0.md](docs/AI_TOOL_V0.7.0.md)。
+`analyze_estimated_plan` 当前不是正式插件的可用功能。上游 DBX 仍只在 plugin-owned connection 上发现 / 执行 plugin tools，而 `explain_query` 给模型的仍是 Markdown 文本；结构化 `explain_data` 只供前端展示。Plan Detective 不提供 plugin-owned 数据库连接，也不会重跑 EXPLAIN 绕过限制。因此 frontend-only 发布候选不注册 backend entrypoint，AI Tool 源码与 contract 仅保留在仓库中；待上游支持普通原生连接绑定与 structured Estimated Plan handoff，并完成真实 Desktop smoke 后再评估恢复。详见 [docs/AI_TOOL_V0.7.0.md](docs/AI_TOOL_V0.7.0.md)。
 
 ## Finding 示例
 
@@ -204,23 +202,23 @@ DBX Connection
 
 ## 开发
 
-需要 Node.js 22+：
+开发、测试与构建使用 Node.js 22+：
 
 ```bash
-npm install
+npm ci
 npm test
 npm run build
 dbx-plugin dev --path . --port 5190
 npm run package
 ```
 
-`npm run package` 会构建 UI 并调用自有 Node sidecar packager；DBX CLI package 当前只从 `[backend]` 编译 Rust/Go sidecar，不适用于本插件的 Node runtime。`ui/` 是必须入库的发布产物。`dist/` 是本地生成的候选包目录，不入库。
+Node.js 仅作为开发 / CI 工具，不随插件包提供，也不是普通用户的安装后运行时依赖。`npm run package` 先构建静态 UI，再调用项目锁定版本的 DBX 官方 CLI 将 `assets/` 与 `ui/` 打成 universal frontend-only `.dbxp`；官方 CLI 能直接打包无 backend entrypoint 的插件，因此不再使用自有 ZIP packager。`ui/` 是必须入库的发布产物；`dist/` 是本地候选包目录，不入库。
 
 ## 项目结构
 
 ```text
 assets/          插件图标等静态资源
-backend/         Node JSONL sidecar 与平台 launcher
+backend/         保留的实验性 Node AI Tool 源码（不进入正式插件包）
 src/             Svelte UI、AI Tool adapter、Plan Core 源码
 ui/              已构建、需要入库的 DBX UI 发布产物
 docs/            架构、契约、计划与截图资源
