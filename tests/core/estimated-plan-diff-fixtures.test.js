@@ -9,9 +9,9 @@ import { REPO_ROOT, validateFixtureMeta } from "../helpers/fixtures.js";
 
 const DIFF_FIXTURES = path.join(REPO_ROOT, "fixtures", "diff");
 
-async function loadPair(database) {
+async function loadPair(database, scenario = "index") {
   const load = async (side) => {
-    const base = path.join(DIFF_FIXTURES, database, `index-${side}.synthetic`);
+    const base = path.join(DIFF_FIXTURES, database, `${scenario}-${side}.synthetic`);
     const [planText, metaText] = await Promise.all([
       readFile(`${base}.plan.json`, "utf8"),
       readFile(`${base}.meta.json`, "utf8"),
@@ -55,6 +55,22 @@ test("synthetic PostgreSQL before/after fixture matches the relation across Seq 
   otherSchema.normalized.root.engineSpecific.extra.Schema = "tenant_b";
   const crossSchema = diffEstimatedPlans(before.analysis, otherSchema);
   assert.equal(crossSchema.matches.length, 0, "schema evidence prevents matching a same-named table in another schema");
+});
+
+test("PostgreSQL mixed scan and no-scan InitPlan/SubPlan fixture keeps the scan but fails closed on its ancestor", async () => {
+  const { before, after } = await loadPair("postgresql", "mixed-subplan");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "postgresql", name: "mixed-subplan-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "postgresql", name: "mixed-subplan-after.synthetic" }), []);
+  assert.equal(before.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "InitPlan");
+  assert.equal(after.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "SubPlan");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [["0.1", "0.1"]]);
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === "0"));
+  assert.ok(result.unmatched.current.some(({ id }) => id === "0"));
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === "0.0"));
+  assert.ok(result.unmatched.current.some(({ id }) => id === "0.0"));
+  assert.equal(result.matches.some(({ beforeId, changes }) => beforeId === "0" && changes.length === 0), false);
 });
 
 test("PostgreSQL Bitmap Index Scan without relation identity does not block an anchored ancestor", async () => {

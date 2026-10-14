@@ -72,6 +72,12 @@ export function diffEstimatedPlans(baseline, current) {
   const afterNodes = flatten(afterPlan.root);
   const beforeSubplanContexts = collectSubplanContexts(beforePlan.root, beforePlan.database);
   const afterSubplanContexts = collectSubplanContexts(afterPlan.root, afterPlan.database);
+  const beforeSubplanIdentityTokens = collectSubplanIdentityTokens(
+    beforePlan.root, beforePlan.database, beforeSubplanContexts,
+  );
+  const afterSubplanIdentityTokens = collectSubplanIdentityTokens(
+    afterPlan.root, afterPlan.database, afterSubplanContexts,
+  );
   const matches = [];
   const matchedBefore = new Set();
   const matchedAfter = new Set();
@@ -120,6 +126,8 @@ export function diffEstimatedPlans(baseline, current) {
     database: beforePlan.database,
     beforeSubplanContexts,
     afterSubplanContexts,
+    beforeSubplanIdentityTokens,
+    afterSubplanIdentityTokens,
     beforeLineage,
     afterLineage,
     matchedBefore,
@@ -268,6 +276,32 @@ function collectSubplanContexts(root, database) {
   }
   visit(root, []);
   return contexts;
+}
+
+/**
+ * Collect each independent subplan's identity evidence for its ancestors.
+ * Relation-scan lineage alone cannot see no-scan InitPlan/SubPlan branches.
+ * @param {object} root
+ * @param {string} database
+ * @param {Map<object, string>} subplanContexts
+ */
+function collectSubplanIdentityTokens(root, database, subplanContexts) {
+  const identities = new Map();
+  function visit(node) {
+    const descendants = node.children.flatMap(visit);
+    const relationship = database === "postgresql" ? node.engineSpecific?.parentRelationship : null;
+    const ownIdentity = relationship === "InitPlan" || relationship === "SubPlan"
+      ? JSON.stringify([
+          subplanContexts.get(node) ?? "[]",
+          semanticFingerprint(node, database, subplanContexts),
+        ])
+      : null;
+    const tokens = [...descendants, ...(ownIdentity === null ? [] : [ownIdentity])].sort();
+    identities.set(node, tokens);
+    return tokens;
+  }
+  visit(root);
+  return identities;
 }
 
 /** @param {object} node */
@@ -448,14 +482,17 @@ function descendantBitmapIndexScans(heapScan) {
 function matchNonScanNodes(context) {
   const {
     database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
+    beforeSubplanIdentityTokens, afterSubplanIdentityTokens,
     beforeLineage, afterLineage, matchedBefore, matchedAfter,
     ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
   const beforeGroups = groupNonScanCandidates(
-    beforeNodes, beforeLineage, matchedBefore, database, beforeSubplanContexts,
+    beforeNodes, beforeLineage, matchedBefore, database,
+    beforeSubplanContexts, beforeSubplanIdentityTokens,
   );
   const afterGroups = groupNonScanCandidates(
-    afterNodes, afterLineage, matchedAfter, database, afterSubplanContexts,
+    afterNodes, afterLineage, matchedAfter, database,
+    afterSubplanContexts, afterSubplanIdentityTokens,
   );
   const keys = [...new Set([...beforeGroups.keys(), ...afterGroups.keys()])].sort();
 
@@ -487,7 +524,9 @@ function matchNonScanNodes(context) {
   }
 }
 
-function groupNonScanCandidates(nodes, lineage, alreadyMatched, database, subplanContexts) {
+function groupNonScanCandidates(
+  nodes, lineage, alreadyMatched, database, subplanContexts, subplanIdentityTokens,
+) {
   const groups = new Map();
   for (const node of nodes) {
     if (isScan(node) || alreadyMatched.has(node)) continue;
@@ -497,7 +536,12 @@ function groupNonScanCandidates(nodes, lineage, alreadyMatched, database, subpla
     let key;
     if (info.scanCount > 0) {
       const tokens = [...info.tokens].sort();
-      key = JSON.stringify(["descendant-scans", identityFamily(node), tokens]);
+      key = JSON.stringify([
+        "descendant-scans",
+        identityFamily(node),
+        tokens,
+        subplanIdentityTokens.get(node) ?? [],
+      ]);
     } else {
       key = JSON.stringify([
         "semantic-subtree",

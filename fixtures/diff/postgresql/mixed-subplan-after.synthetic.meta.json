@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic hand-assembled PostgreSQL EXPLAIN JSON used only to exercise mixed relation-scan and no-scan subplan identity. Not captured from a live server and not evidence of performance.",
+    "reference": null
+  },
+  "features": ["mixed relation scan and constant SubPlan", "estimated mode", "synthetic parser regression"],
+  "expect": {
+    "rootNodeType": "Result",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "scenario": "same main relation scan with a differently typed constant subplan",
+    "sql": "SELECT * FROM orders AS o WHERE (SELECT 1) > 0 AND o.status = 'open';",
+    "operation": "change the constant subplan role from InitPlan to SubPlan",
+    "expectedChanges": ["the main relation scan remains matchable", "the mixed Result ancestor fails closed"]
+  }
+}
