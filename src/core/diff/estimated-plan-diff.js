@@ -118,6 +118,8 @@ export function diffEstimatedPlans(baseline, current) {
     beforeNodes,
     afterNodes,
     database: beforePlan.database,
+    beforeSubplanContexts,
+    afterSubplanContexts,
     beforeLineage,
     afterLineage,
     matchedBefore,
@@ -445,11 +447,16 @@ function descendantBitmapIndexScans(heapScan) {
 
 function matchNonScanNodes(context) {
   const {
-    database, beforeNodes, afterNodes, beforeLineage, afterLineage,
-    matchedBefore, matchedAfter, ambiguousBefore, ambiguousAfter, matches, ambiguities,
+    database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
+    beforeLineage, afterLineage, matchedBefore, matchedAfter,
+    ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
-  const beforeGroups = groupNonScanCandidates(beforeNodes, beforeLineage, matchedBefore, database);
-  const afterGroups = groupNonScanCandidates(afterNodes, afterLineage, matchedAfter, database);
+  const beforeGroups = groupNonScanCandidates(
+    beforeNodes, beforeLineage, matchedBefore, database, beforeSubplanContexts,
+  );
+  const afterGroups = groupNonScanCandidates(
+    afterNodes, afterLineage, matchedAfter, database, afterSubplanContexts,
+  );
   const keys = [...new Set([...beforeGroups.keys(), ...afterGroups.keys()])].sort();
 
   for (const key of keys) {
@@ -480,7 +487,7 @@ function matchNonScanNodes(context) {
   }
 }
 
-function groupNonScanCandidates(nodes, lineage, alreadyMatched, database) {
+function groupNonScanCandidates(nodes, lineage, alreadyMatched, database, subplanContexts) {
   const groups = new Map();
   for (const node of nodes) {
     if (isScan(node) || alreadyMatched.has(node)) continue;
@@ -492,7 +499,10 @@ function groupNonScanCandidates(nodes, lineage, alreadyMatched, database) {
       const tokens = [...info.tokens].sort();
       key = JSON.stringify(["descendant-scans", identityFamily(node), tokens]);
     } else {
-      key = JSON.stringify(["semantic-subtree", semanticFingerprint(node, database)]);
+      key = JSON.stringify([
+        "semantic-subtree",
+        semanticFingerprint(node, database, subplanContexts),
+      ]);
     }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
@@ -533,14 +543,19 @@ function collectLineage(root, scanTokens, ambiguousScans, bitmapIndexSupportScan
 
 /**
  * Stable semantic fingerprint for subtrees that contain no relation scans.
- * Estimates, costs, ids, index names, and engine-specific evidence are omitted.
+ * Estimates, costs, ids, index names, and unrelated engine-specific evidence
+ * are omitted. PostgreSQL independent-subplan context is retained per node so
+ * role/name changes also invalidate every enclosing no-scan fingerprint.
  * Child order is retained as structural evidence, but never used to pair siblings.
  * @param {object} node
+ * @param {string} database
+ * @param {Map<object, string>} subplanContexts
  */
-function semanticFingerprint(node, database) {
+function semanticFingerprint(node, database, subplanContexts) {
   return [
     node.kind,
     node.nodeType,
+    subplanContexts.get(node) ?? "[]",
     node.relation === null ? null : [node.relation.name, relationSchema(node, database), node.relation.alias],
     node.filter,
     node.joinType,
@@ -548,7 +563,7 @@ function semanticFingerprint(node, database) {
     node.indexCondition,
     node.sortKeys,
     node.groupKeys,
-    node.children.map((child) => semanticFingerprint(child, database)),
+    node.children.map((child) => semanticFingerprint(child, database, subplanContexts)),
   ];
 }
 

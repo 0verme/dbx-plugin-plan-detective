@@ -137,6 +137,43 @@ test("PostgreSQL independent InitPlan and SubPlan boundaries are part of scan id
   assert.equal(sameSubplan.ambiguous.length, 0);
 });
 
+test("PostgreSQL subplan role and name participate recursively in no-scan identity", () => {
+  const noScanSubplan = (rootId, parentRelationship, subplanName) => analysis(node(rootId, {
+    kind: "result",
+    nodeType: "Result",
+    children: [node(`${rootId}.0`, {
+      kind: "result",
+      nodeType: "Result",
+      engineSpecific: { database: "postgresql", parentRelationship, subplanName },
+    })],
+  }));
+
+  const ordinary = noScanSubplan("0", null, null);
+  const initPlan = noScanSubplan("4", "InitPlan", "InitPlan 1 (returns $0)");
+  const subPlan = noScanSubplan("7", "SubPlan", "SubPlan 1");
+  const renamedInitPlan = noScanSubplan("9", "InitPlan", "InitPlan 2 (returns $1)");
+
+  for (const [before, after] of [
+    [initPlan, subPlan],
+    [initPlan, ordinary],
+    [subPlan, ordinary],
+    [initPlan, renamedInitPlan],
+  ]) {
+    const result = diffEstimatedPlans(before, after);
+    assert.deepEqual(result.matches, [], "changed nested subplan context must fail closed for nodes and ancestors");
+    assert.deepEqual(result.ambiguous, []);
+    assert.equal(result.unmatched.baseline.length, 2);
+    assert.equal(result.unmatched.current.length, 2);
+  }
+
+  const sameContext = diffEstimatedPlans(initPlan, noScanSubplan("12", "InitPlan", "InitPlan 1 (returns $0)"));
+  assert.deepEqual(sameContext.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [
+    ["4", "12"],
+    ["4.0", "12.0"],
+  ]);
+  assert.ok(sameContext.matches.every(({ changes }) => changes.length === 0));
+});
+
 test("an independent scan without relation identity blocks anchored operator lineage", () => {
   const before = analysis(node("0", {
     kind: "nested_loop",
