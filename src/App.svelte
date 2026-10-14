@@ -439,7 +439,6 @@
         </div>
       {/if}
 
-      <p class="mode-note">{t("app.mode.host")}</p>
       <div class="input-grid">
         <div class="connection-workspace">
           <ConnectionContext

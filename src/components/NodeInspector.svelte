@@ -13,7 +13,6 @@
 <section class="panel inspector-panel">
   <header class="panel-head">
     <h2>{t("nodeInspector.title")}</h2>
-    {#if inspector}<span class="hint mono">{inspector.id}</span>{/if}
   </header>
 
   {#if !inspector}

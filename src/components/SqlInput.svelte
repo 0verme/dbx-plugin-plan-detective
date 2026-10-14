@@ -28,7 +28,6 @@
 <section class="panel sql-panel">
   <header class="panel-head">
     <h2>{t("sql.title")}</h2>
-    <span class="hint">{t("sql.hint")}</span>
   </header>
 
   <div class="body">
