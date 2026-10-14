@@ -94,6 +94,8 @@ export function diffEstimatedPlans(baseline, current) {
     afterNodes,
     beforeSubplanContexts,
     afterSubplanContexts,
+    beforeSubplanIdentityTokens,
+    afterSubplanIdentityTokens,
     beforeScanTokens,
     afterScanTokens,
     matchedBefore,
@@ -331,7 +333,7 @@ function relationSchema(node, database) {
 }
 
 /** @param {object[]} nodes */
-function groupRelationScans(nodes, database, subplanContexts) {
+function groupRelationScans(nodes, database, subplanContexts, subplanIdentityTokens) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || !hasRelationIdentity(node)) continue;
@@ -340,6 +342,7 @@ function groupRelationScans(nodes, database, subplanContexts) {
       node.relation.alias ?? null,
       relationSchema(node, database),
       subplanContexts.get(node) ?? "[]",
+      subplanIdentityTokens.get(node) ?? [],
     ]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
@@ -350,11 +353,16 @@ function groupRelationScans(nodes, database, subplanContexts) {
 function matchRelationScans(context) {
   const {
     database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
+    beforeSubplanIdentityTokens, afterSubplanIdentityTokens,
     beforeScanTokens, afterScanTokens, matchedBefore, matchedAfter,
     ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
-  const beforeGroups = groupRelationScans(beforeNodes, database, beforeSubplanContexts);
-  const afterGroups = groupRelationScans(afterNodes, database, afterSubplanContexts);
+  const beforeGroups = groupRelationScans(
+    beforeNodes, database, beforeSubplanContexts, beforeSubplanIdentityTokens,
+  );
+  const afterGroups = groupRelationScans(
+    afterNodes, database, afterSubplanContexts, afterSubplanIdentityTokens,
+  );
 
   // First use the strongest key: exact relation name, alias, and available schema.
   // Operator kind (so Seq -> Index remains matchable) and index are not identity.
@@ -370,8 +378,12 @@ function matchRelationScans(context) {
   // If aliases changed, relation name is a safe fallback only when exactly one
   // unmatched occurrence remains on each side. Repeated/self-join occurrences
   // are never disambiguated by child order, path, rows, or cost.
-  const beforeByIdentity = remainingScansByIdentity(beforeNodes, matchedBefore, database, beforeSubplanContexts);
-  const afterByIdentity = remainingScansByIdentity(afterNodes, matchedAfter, database, afterSubplanContexts);
+  const beforeByIdentity = remainingScansByIdentity(
+    beforeNodes, matchedBefore, database, beforeSubplanContexts, beforeSubplanIdentityTokens,
+  );
+  const afterByIdentity = remainingScansByIdentity(
+    afterNodes, matchedAfter, database, afterSubplanContexts, afterSubplanIdentityTokens,
+  );
   const identities = [...new Set([...beforeByIdentity.keys(), ...afterByIdentity.keys()])].sort();
   for (const identity of identities) {
     const before = beforeByIdentity.get(identity) ?? [];
@@ -384,7 +396,7 @@ function matchRelationScans(context) {
   }
 }
 
-function remainingScansByIdentity(nodes, matched, database, subplanContexts) {
+function remainingScansByIdentity(nodes, matched, database, subplanContexts, subplanIdentityTokens) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || matched.has(node) || !hasRelationIdentity(node)) continue;
@@ -392,6 +404,7 @@ function remainingScansByIdentity(nodes, matched, database, subplanContexts) {
       node.relation.name,
       relationSchema(node, database),
       subplanContexts.get(node) ?? "[]",
+      subplanIdentityTokens.get(node) ?? [],
     ]);
     if (!groups.has(identity)) groups.set(identity, []);
     groups.get(identity).push(node);

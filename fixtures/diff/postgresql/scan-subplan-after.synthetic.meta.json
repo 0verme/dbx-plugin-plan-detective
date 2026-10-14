@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic hand-assembled PostgreSQL EXPLAIN JSON used only to exercise relation-scan roots with direct no-scan subplan children. Not captured from a live server and not evidence of performance.",
+    "reference": null
+  },
+  "features": ["Seq Scan root with direct SubPlan child", "estimated mode", "synthetic parser regression"],
+  "expect": {
+    "rootNodeType": "Seq Scan",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "scenario": "relation scan root with a differently typed no-scan child",
+    "sql": "SELECT * FROM orders AS o WHERE (SELECT 1) > 0 AND o.status = 'open';",
+    "operation": "change the direct child subplan role from InitPlan to SubPlan",
+    "expectedChanges": ["the scan root does not match across subplan role changes"]
+  }
+}

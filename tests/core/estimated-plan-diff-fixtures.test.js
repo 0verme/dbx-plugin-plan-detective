@@ -73,6 +73,22 @@ test("PostgreSQL mixed scan and no-scan InitPlan/SubPlan fixture keeps the scan 
   assert.equal(result.matches.some(({ beforeId, changes }) => beforeId === "0" && changes.length === 0), false);
 });
 
+test("PostgreSQL relation-scan root fails closed when a direct no-scan subplan child changes role", async () => {
+  const { before, after } = await loadPair("postgresql", "scan-subplan");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "postgresql", name: "scan-subplan-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "postgresql", name: "scan-subplan-after.synthetic" }), []);
+  assert.equal(before.analysis.normalized.root.kind, "seq_scan");
+  assert.equal(after.analysis.normalized.root.kind, "seq_scan");
+  assert.equal(before.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "InitPlan");
+  assert.equal(after.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "SubPlan");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched.baseline.map(({ id }) => id), ["0", "0.0"]);
+  assert.deepEqual(result.unmatched.current.map(({ id }) => id), ["0", "0.0"]);
+});
+
 test("PostgreSQL Bitmap Index Scan without relation identity does not block an anchored ancestor", async () => {
   const fixturePath = path.join(REPO_ROOT, "fixtures", "postgres", "estimated", "bitmap-scan.plan.json");
   const plan = JSON.parse(await readFile(fixturePath, "utf8"));
