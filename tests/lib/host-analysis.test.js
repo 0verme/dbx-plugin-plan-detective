@@ -119,6 +119,15 @@ test("runHostAnalysis acquires capabilities first and sends one estimated plan",
   );
 });
 
+test("existing plan analysis still works when the Host does not advertise Storage", async () => {
+  const bridge = fakeBridge();
+  assert.equal(bridge.capabilities.storage, undefined);
+  assert.equal(bridge.storage, undefined);
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "structured");
+});
+
 test("successful analysis records capture time and display-safe source context in its own session", async () => {
   const session = await runHostAnalysis({
     ...REQUEST,

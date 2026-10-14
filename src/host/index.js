@@ -13,6 +13,21 @@ export {
 } from "./host-plan-errors.js";
 
 export {
+  HostStorageError,
+  PLUGIN_STORAGE_PERMISSION,
+  PLUGIN_STORAGE_MAX_VALUE_BYTES,
+  PLUGIN_STORAGE_MAX_TOTAL_BYTES,
+  PLUGIN_STORAGE_MAX_KEYS,
+  PLUGIN_STORAGE_MAX_KEY_CHARS,
+  PLUGIN_STORAGE_STATES,
+  resolvePluginStorageBridge,
+  describePluginStorage,
+  getPluginStorageValue,
+  setPluginStorageValue,
+  deletePluginStorageValue,
+} from "./dbx-plugin-storage.js";
+
+export {
   MAX_PLUGIN_PLAN_TIMEOUT_MS,
   MAX_PLUGIN_PLAN_BYTES,
   MAX_PLUGIN_PLAN_SQL_CHARS,

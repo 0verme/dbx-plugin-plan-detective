@@ -32,7 +32,7 @@ test("official .dbxp is frontend-only, complete, and integrity-checked", async (
 
   assert.equal(packagedManifest.id, "io.github.0verme.plan-detective");
   assert.equal(packagedManifest.version, sourceManifest.version);
-  assert.deepEqual(packagedManifest.permissions, ["host.plans:read"]);
+  assert.deepEqual(packagedManifest.permissions, ["host.plans:read", "host.storage"]);
   assert.deepEqual(packagedManifest.engines, { dbx: ">=0.6.23", host_api: "^1.2" });
   assert.deepEqual(packagedManifest.entrypoints, { ui: { root: "ui", entry: "ui/index.html" } });
   assert.deepEqual(packagedManifest.contributions, sourceManifest.contributions);
