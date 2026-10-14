@@ -1,0 +1,14 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Seq Scan",
+      "Relation Name": "orders",
+      "Alias": "o",
+      "Startup Cost": 0,
+      "Total Cost": 90,
+      "Plan Rows": 1000,
+      "Plan Width": 32,
+      "Filter": "(status = 'open'::text)"
+    }
+  }
+]

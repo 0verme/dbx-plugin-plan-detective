@@ -1,0 +1,23 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "table": {
+      "table_name": "orders",
+      "access_type": "ref",
+      "possible_keys": ["idx_orders_status"],
+      "key": "idx_orders_status",
+      "used_key_parts": ["status"],
+      "ref": ["const"],
+      "rows_examined_per_scan": 35,
+      "rows_produced_per_join": 35,
+      "filtered": "100.00",
+      "attached_condition": "(`orders`.`status` = 'OPEN')",
+      "cost_info": {
+        "read_cost": "4.20",
+        "eval_cost": "0.10",
+        "prefix_cost": "4.30",
+        "data_read_per_join": "4K"
+      }
+    }
+  }
+}

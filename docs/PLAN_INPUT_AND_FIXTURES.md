@@ -974,9 +974,9 @@ SQL Server `EstimateRows` 行数信号与成本 not-applicable / OceanBase Oracl
 
 ## 11. 明确不在本轮范围
 
-本轮不实现：Execution Plan 扩展点集成、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
+本 Core 契约本轮不实现：Execution Plan 扩展点集成、数据库 Driver / 连接池 / 凭据、Actual Plan 获取、
 Doris parser、MariaDB / ADB MySQL 等其他 MySQL 兼容方言的自动兼容（OceanBase MySQL 仅在 DBX `dbVersion` 有可靠 evidence 时识别）、
-其他未声明方言的文本计划 parser、Plan Diff、History、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。
+其他未声明方言的文本计划 parser、Plan Diff UI / 历史诊断关联、Plan Canvas、AI / LLM、SQL Rewrite、自动建索引、性能评分。Issue #73 Phase 73.1 的纯 Estimated Diff Core 契约见 [PLAN_DIFF.md](PLAN_DIFF.md)。
 
 以上均按独立 Issue 推进；Host Plan API 已由 [t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692) 实现，
 Plan Detective 通过第 2.1 节的 Adapter 将 Host 返回的 `rawPlan` 映射为本文第 2 节的 `RawPlanInput`。
@@ -1040,3 +1040,6 @@ Plan Detective 通过第 2.1 节的 Adapter 将 Host 返回的 `rawPlan` 映射�
 > PageFrame / Row / Frame 为可视化 pipeline，但只把 Frame / Interval access 计为 relation scan。
 > QuestDB 未提供共享 estimated rows / PostgreSQL cost，Metrics 保持这些值为 `null`，不产生 row / cost Finding 或 Hotspot。
 > 新增 3 个 official documentation transcription + 3 个 synthetic fixture、golden 与 tokenizer / parser / normalizer / metrics / registry / Host adapter / UI 测试；本机无 QuestDB 实例，不声称真实 capture 或 Host smoke。
+
+> 更新（2026-10-14，Issue #73 Phase 73.1 · Pure Estimated Plan Diff Core）：
+> 新增 `src/core/diff/estimated-plan-diff.js`，只比较同一当前 Core 产出的 PostgreSQL ↔ PostgreSQL 或 Native MySQL ↔ Native MySQL 完整 JSON Estimated structured analysis；输出 JSON 可序列化的一对一 matches、字段前后值、unmatched / ambiguous 与稳定 incompatibility reason code。关系匹配不使用 path / 数组顺序 / rows / cost 作 identity；MySQL 原生 cost 不映射或计算。新增 `fixtures/diff/` 两组显式标记 synthetic 的假设性索引变更样本与回归测试；不代表真实调优效果。比较 UI、诊断关联、环境可比性提示与真实 Desktop 验收仍未完成；见 [PLAN_DIFF.md](PLAN_DIFF.md)。

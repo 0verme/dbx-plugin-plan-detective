@@ -56,7 +56,7 @@ Plan Detective 将全部快照和索引保存为**一个版本化 value / 一个
 - `deserializePlanSnapshot` 遇到损坏的序列化快照返回 `CORRUPT_SNAPSHOT`；持久化仓库遇到损坏的 store envelope/记录返回 `CORRUPT_SNAPSHOT_STORE`。未知快照/store 版本分别返回 `UNSUPPORTED_SNAPSHOT_VERSION` / `UNSUPPORTED_STORE_VERSION`。读取端不会静默覆盖、丢弃或按 v1 解码未知版本。
 - 当前只支持 v1，不自动迁移未知版本。任何未来迁移必须显式、可测试，并保留旧记录直到迁移成功。
 - 打开历史快照时，使用快照中的完整 `RawPlanInput` 由当前 Plan Core 本地重新计算 Findings / Hotspots；不调用 `explainPlan`、不要求连接仍打开。UI 显示保存时插件版本与当前 analyzer 版本，并明确重新计算结果不代表保存时的诊断判断；当当前 Core 无 parser 或解析失败时仍保留并展示 Raw Plan。
-- 「选作基线」状态当前只保存在插件窗口内，不修改快照，不跨重启持久化；Issue #73 会消费该选择并定义 diff 交互。
+- 「选作基线」状态当前只保存在插件窗口内，不修改快照，不跨重启持久化；Issue #73 Phase 73.1 已实现纯 Estimated Plan Diff Core，但尚未接入该选择、比较 UI 或诊断关联。
 
 ## 当前验证边界
 
