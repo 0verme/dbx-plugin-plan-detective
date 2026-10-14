@@ -70,6 +70,8 @@ export function diffEstimatedPlans(baseline, current) {
 
   const beforeNodes = flatten(beforePlan.root);
   const afterNodes = flatten(afterPlan.root);
+  const beforeSubplanContexts = collectSubplanContexts(beforePlan.root, beforePlan.database);
+  const afterSubplanContexts = collectSubplanContexts(afterPlan.root, afterPlan.database);
   const matches = [];
   const matchedBefore = new Set();
   const matchedAfter = new Set();
@@ -84,6 +86,8 @@ export function diffEstimatedPlans(baseline, current) {
     database: beforePlan.database,
     beforeNodes,
     afterNodes,
+    beforeSubplanContexts,
+    afterSubplanContexts,
     beforeScanTokens,
     afterScanTokens,
     matchedBefore,
@@ -243,6 +247,27 @@ function flatten(root) {
   return nodes;
 }
 
+/**
+ * Preserve PostgreSQL's independent InitPlan / SubPlan boundaries as identity
+ * context for every descendant. Ordinary Outer / Inner relationships are
+ * intentionally excluded because join inputs may be reordered.
+ * @param {object} root
+ * @param {string} database
+ */
+function collectSubplanContexts(root, database) {
+  const contexts = new Map();
+  function visit(node, inherited) {
+    const relationship = database === "postgresql" ? node.engineSpecific?.parentRelationship : null;
+    const context = relationship === "InitPlan" || relationship === "SubPlan"
+      ? [...inherited, [relationship, typeof node.engineSpecific?.subplanName === "string" ? node.engineSpecific.subplanName : null]]
+      : inherited;
+    contexts.set(node, JSON.stringify(context));
+    for (const child of node.children) visit(child, context);
+  }
+  visit(root, []);
+  return contexts;
+}
+
 /** @param {object} node */
 function isScan(node) {
   return SCAN_KINDS.has(node.kind);
@@ -270,11 +295,16 @@ function relationSchema(node, database) {
 }
 
 /** @param {object[]} nodes */
-function groupRelationScans(nodes, database) {
+function groupRelationScans(nodes, database, subplanContexts) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || !hasRelationIdentity(node)) continue;
-    const key = JSON.stringify([node.relation.name, node.relation.alias ?? null, relationSchema(node, database)]);
+    const key = JSON.stringify([
+      node.relation.name,
+      node.relation.alias ?? null,
+      relationSchema(node, database),
+      subplanContexts.get(node) ?? "[]",
+    ]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
   }
@@ -283,11 +313,12 @@ function groupRelationScans(nodes, database) {
 
 function matchRelationScans(context) {
   const {
-    database, beforeNodes, afterNodes, beforeScanTokens, afterScanTokens,
-    matchedBefore, matchedAfter, ambiguousBefore, ambiguousAfter, matches, ambiguities,
+    database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
+    beforeScanTokens, afterScanTokens, matchedBefore, matchedAfter,
+    ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
-  const beforeGroups = groupRelationScans(beforeNodes, database);
-  const afterGroups = groupRelationScans(afterNodes, database);
+  const beforeGroups = groupRelationScans(beforeNodes, database, beforeSubplanContexts);
+  const afterGroups = groupRelationScans(afterNodes, database, afterSubplanContexts);
 
   // First use the strongest key: exact relation name, alias, and available schema.
   // Operator kind (so Seq -> Index remains matchable) and index are not identity.
@@ -303,8 +334,8 @@ function matchRelationScans(context) {
   // If aliases changed, relation name is a safe fallback only when exactly one
   // unmatched occurrence remains on each side. Repeated/self-join occurrences
   // are never disambiguated by child order, path, rows, or cost.
-  const beforeByIdentity = remainingScansByIdentity(beforeNodes, matchedBefore, database);
-  const afterByIdentity = remainingScansByIdentity(afterNodes, matchedAfter, database);
+  const beforeByIdentity = remainingScansByIdentity(beforeNodes, matchedBefore, database, beforeSubplanContexts);
+  const afterByIdentity = remainingScansByIdentity(afterNodes, matchedAfter, database, afterSubplanContexts);
   const identities = [...new Set([...beforeByIdentity.keys(), ...afterByIdentity.keys()])].sort();
   for (const identity of identities) {
     const before = beforeByIdentity.get(identity) ?? [];
@@ -317,11 +348,15 @@ function matchRelationScans(context) {
   }
 }
 
-function remainingScansByIdentity(nodes, matched, database) {
+function remainingScansByIdentity(nodes, matched, database, subplanContexts) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || matched.has(node) || !hasRelationIdentity(node)) continue;
-    const identity = JSON.stringify([node.relation.name, relationSchema(node, database)]);
+    const identity = JSON.stringify([
+      node.relation.name,
+      relationSchema(node, database),
+      subplanContexts.get(node) ?? "[]",
+    ]);
     if (!groups.has(identity)) groups.set(identity, []);
     groups.get(identity).push(node);
   }
@@ -331,7 +366,17 @@ function remainingScansByIdentity(nodes, matched, database) {
 function addScanMatch(before, after, method, context) {
   const name = before.relation.name;
   const schema = relationSchema(before, context.database);
-  const token = JSON.stringify(["matched-relation", name, schema, before.relation.alias ?? null, after.relation.alias ?? null]);
+  const beforeSubplanContext = context.beforeSubplanContexts.get(before) ?? "[]";
+  const afterSubplanContext = context.afterSubplanContexts.get(after) ?? "[]";
+  const token = JSON.stringify([
+    "matched-relation",
+    name,
+    schema,
+    before.relation.alias ?? null,
+    after.relation.alias ?? null,
+    beforeSubplanContext,
+    afterSubplanContext,
+  ]);
   context.beforeScanTokens.set(before, token);
   context.afterScanTokens.set(after, token);
   context.scanMatches.push({ before, after });

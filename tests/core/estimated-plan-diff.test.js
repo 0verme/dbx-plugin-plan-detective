@@ -91,6 +91,52 @@ test("PostgreSQL scan schema participates in identity, preventing cross-schema f
   assert.deepEqual(differentSchemas.unmatched.current, [{ id: "0", reasonCode: "NO_UNIQUE_COUNTERPART" }]);
 });
 
+test("PostgreSQL independent InitPlan and SubPlan boundaries are part of scan identity", () => {
+  const ordinaryPlan = analysis(node("0", {
+    kind: "sort",
+    nodeType: "Sort",
+    children: [node("0.0", {
+      relation: relation("orders", "o"),
+      engineSpecific: { database: "postgresql", parentRelationship: "Outer", subplanName: null },
+    })],
+  }));
+  const independentPlan = (parentRelationship, subplanName) => analysis(node("0", {
+    kind: "sort",
+    nodeType: "Sort",
+    children: [node("0.0", {
+      kind: "result",
+      nodeType: "Result",
+      engineSpecific: { database: "postgresql", parentRelationship, subplanName },
+      children: [node("0.0.0", {
+        relation: relation("orders", "o"),
+        engineSpecific: { database: "postgresql", parentRelationship: "Outer", subplanName: null },
+      })],
+    })],
+  }));
+
+  for (const [relationship, name] of [
+    ["InitPlan", "InitPlan 1 (returns $0)"],
+    ["SubPlan", "SubPlan 1"],
+  ]) {
+    const independent = independentPlan(relationship, name);
+    for (const [before, after] of [[ordinaryPlan, independent], [independent, ordinaryPlan]]) {
+      const result = diffEstimatedPlans(before, after);
+      assert.deepEqual(result.matches, [], `${relationship} movement must not preserve scan or Sort lineage`);
+      assert.deepEqual(result.ambiguous, []);
+      assert.ok(result.unmatched.baseline.some(({ id }) => id.endsWith("0")));
+      assert.ok(result.unmatched.current.some(({ id }) => id.endsWith("0")));
+      assert.doesNotMatch(JSON.stringify(result), /\"changes\":\[\]/);
+    }
+  }
+
+  const sameSubplan = diffEstimatedPlans(
+    independentPlan("InitPlan", "InitPlan 1 (returns $0)"),
+    independentPlan("InitPlan", "InitPlan 1 (returns $0)"),
+  );
+  assert.equal(sameSubplan.matches.length, 3, "the same independent subplan remains comparable");
+  assert.equal(sameSubplan.ambiguous.length, 0);
+});
+
 test("an independent scan without relation identity blocks anchored operator lineage", () => {
   const before = analysis(node("0", {
     kind: "nested_loop",
@@ -238,8 +284,14 @@ test("Join algorithm changes and child reorder use matched descendant relations,
     joinType: "Inner",
     joinCondition: "(o.customer_id = c.id)",
     children: [
-      node("0.0", { relation: relation("orders", "o") }),
-      node("0.1", { relation: relation("customers", "c") }),
+      node("0.0", {
+        relation: relation("orders", "o"),
+        engineSpecific: { database: "postgresql", parentRelationship: "Outer", subplanName: null },
+      }),
+      node("0.1", {
+        relation: relation("customers", "c"),
+        engineSpecific: { database: "postgresql", parentRelationship: "Inner", subplanName: null },
+      }),
     ],
   }));
   const after = analysis(node("0", {
@@ -248,8 +300,14 @@ test("Join algorithm changes and child reorder use matched descendant relations,
     joinType: "Inner",
     joinCondition: "(o.id = c.id)",
     children: [
-      node("0.0", { relation: relation("customers", "c") }),
-      node("0.1", { relation: relation("orders", "o") }),
+      node("0.0", {
+        relation: relation("customers", "c"),
+        engineSpecific: { database: "postgresql", parentRelationship: "Outer", subplanName: null },
+      }),
+      node("0.1", {
+        relation: relation("orders", "o"),
+        engineSpecific: { database: "postgresql", parentRelationship: "Inner", subplanName: null },
+      }),
     ],
   }));
 
