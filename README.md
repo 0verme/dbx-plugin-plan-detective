@@ -178,7 +178,7 @@ Plan Detective 不调用 LLM 或 AI SDK。`analyze_estimated_plan` 只接受已�
 - Dameng parser 只接受 Estimated 原生文本；`[cost, rows, bytes-per-row]` 的 `cost` 只保留在 `engineSpecific.dameng`，不伪装为 PostgreSQL `startupCost` / `totalCost`，热点与规则只使用可靠的行数信号。
 - QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。
 - Doris parser 只接受 Estimated `format: "text"`；保留 Distributed Plan / PLAN FRAGMENT / fragment-local operator tree，Sink→Exchange link 只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；`cardinality` 映射 `estimatedRows`，scan 使用中性 `scan`，Doris cost 与 `avgRowSize` 不映射 PostgreSQL cost / shared width。官方文档转录与 synthetic fixtures 不是真实 Doris capture。
-- 尚未实现 Plan Diff、Plan History、AI SQL Rewrite 或自动调优。
+- Plan Diff 尚无用户可用的比较视图：Issue #73 Phase 73.1 仅新增 PostgreSQL / Native MySQL 的纯 Estimated Plan Diff Core；比较 UI、可比性提示、诊断关联与真实 Desktop 验收仍未完成。计划快照历史已实现，但 Issue #72 的真实 DBX Desktop Storage 验收仍 **NOT VERIFIED**。AI SQL Rewrite 与自动调优未实现。
 - 当前 DBX 0.6.26 上游只从打开的 plugin-owned connection 发现 plugin tools；Plan Detective 没有数据库 connection provider，因而 `analyze_estimated_plan` 暂不能绑定普通 DBX 原生 Agent 连接。DBX `explain_query` 给模型的是 Markdown 表格文本，结构化 `explain_data` 只供 UI 使用；端到端交接需要上游提供普通 Agent connection tool binding 和可供后续 tool 消费的结构化 Estimated Plan 结果。插件不会用 Host API 重跑 EXPLAIN 绕过此限制。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 
@@ -232,6 +232,7 @@ manifest.json    DBX 插件清单
 - [v0.7.1 Release Notes](docs/RELEASE_NOTES_v0.7.1.md)：本版本变更、兼容性与验证边界。
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：架构边界、Host API 职责与数据链路。
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)：RawPlanInput、parser、NormalizedPlan、Metrics、Rules、Findings、Hotspots 与 fixture 约定。
+- [docs/PLAN_DIFF.md](docs/PLAN_DIFF.md)：Issue #73 Phase 73.1 纯 Diff Core 契约、保守匹配、限制与验证边界。
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)：已确认决策、阶段划分与 Future 能力边界。
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)：历史 Host 能力审计记录。
 - [DBX 插件开发指南](https://dbxio.com/en/docs/plugin-development)。

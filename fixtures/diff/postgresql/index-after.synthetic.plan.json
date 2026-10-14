@@ -1,0 +1,16 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Index Scan",
+      "Schema": "public",
+      "Relation Name": "orders",
+      "Alias": "o",
+      "Index Name": "orders_status_idx",
+      "Startup Cost": 0.3,
+      "Total Cost": 8.4,
+      "Plan Rows": 40,
+      "Plan Width": 32,
+      "Index Cond": "(status = 'open'::text)"
+    }
+  }
+]

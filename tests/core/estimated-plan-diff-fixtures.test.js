@@ -1,0 +1,277 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { analyzeRawPlan, createRawPlanInput } from "../../src/core/index.js";
+import { diffEstimatedPlans } from "../../src/core/diff/estimated-plan-diff.js";
+import { normalizedNode } from "../helpers/plan-builders.js";
+import { REPO_ROOT, validateFixtureMeta } from "../helpers/fixtures.js";
+
+const DIFF_FIXTURES = path.join(REPO_ROOT, "fixtures", "diff");
+
+async function loadPair(database, scenario = "index") {
+  const load = async (side) => {
+    const base = path.join(DIFF_FIXTURES, database, `${scenario}-${side}.synthetic`);
+    const [planText, metaText] = await Promise.all([
+      readFile(`${base}.plan.json`, "utf8"),
+      readFile(`${base}.meta.json`, "utf8"),
+    ]);
+    const plan = JSON.parse(planText);
+    const meta = JSON.parse(metaText);
+    assert.equal(meta.database, database);
+    assert.equal(meta.mode, "estimated");
+    assert.equal(meta.format, "json");
+    assert.equal(meta.source.kind, "synthetic");
+    assert.deepEqual(validateFixtureMeta(meta, { name: `index-${side}.synthetic` }), []);
+    assert.equal(meta.databaseVersion, null);
+    const rawInput = createRawPlanInput({
+      database: meta.database,
+      mode: meta.mode,
+      format: meta.format,
+      plan,
+      sql: meta.expect.sql,
+    });
+    return { meta, analysis: analyzeRawPlan(rawInput) };
+  };
+  return { before: await load("before"), after: await load("after") };
+}
+
+test("synthetic PostgreSQL before/after fixture matches the relation across Seq Scan to Index Scan", async () => {
+  const { before, after } = await loadPair("postgresql");
+  assert.equal(before.meta.expect.rootNodeType, "Seq Scan");
+  assert.equal(after.meta.expect.rootNodeType, "Index Scan");
+  assert.equal(before.analysis.normalized.root.engineSpecific.extra.Schema, "public");
+  assert.equal(after.analysis.normalized.root.engineSpecific.extra.Schema, "public");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.equal(result.status, "comparable");
+  assert.equal(result.database, "postgresql");
+  assert.deepEqual(result.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [["0", "0"]]);
+  assert.ok(result.matches[0].changes.some(({ field, before: oldValue, after: newValue }) =>
+    field === "operator.nodeType" && oldValue === "Seq Scan" && newValue === "Index Scan"));
+  assert.ok(result.matches[0].changes.some(({ field, after: value }) => field === "relation.indexName" && value === "orders_status_idx"));
+
+  const otherSchema = structuredClone(after.analysis);
+  otherSchema.normalized.root.engineSpecific.extra.Schema = "tenant_b";
+  const crossSchema = diffEstimatedPlans(before.analysis, otherSchema);
+  assert.equal(crossSchema.matches.length, 0, "schema evidence prevents matching a same-named table in another schema");
+});
+
+test("PostgreSQL mixed scan and no-scan InitPlan/SubPlan fixture keeps the scan but fails closed on its ancestor", async () => {
+  const { before, after } = await loadPair("postgresql", "mixed-subplan");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "postgresql", name: "mixed-subplan-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "postgresql", name: "mixed-subplan-after.synthetic" }), []);
+  assert.equal(before.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "InitPlan");
+  assert.equal(after.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "SubPlan");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches.map(({ beforeId, afterId }) => [beforeId, afterId]), [["0.1", "0.1"]]);
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === "0"));
+  assert.ok(result.unmatched.current.some(({ id }) => id === "0"));
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === "0.0"));
+  assert.ok(result.unmatched.current.some(({ id }) => id === "0.0"));
+  assert.equal(result.matches.some(({ beforeId, changes }) => beforeId === "0" && changes.length === 0), false);
+});
+
+test("PostgreSQL relation-scan root fails closed when a direct no-scan subplan child changes role", async () => {
+  const { before, after } = await loadPair("postgresql", "scan-subplan");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "postgresql", name: "scan-subplan-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "postgresql", name: "scan-subplan-after.synthetic" }), []);
+  assert.equal(before.analysis.normalized.root.kind, "seq_scan");
+  assert.equal(after.analysis.normalized.root.kind, "seq_scan");
+  assert.equal(before.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "InitPlan");
+  assert.equal(after.analysis.normalized.root.children[0].engineSpecific.parentRelationship, "SubPlan");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched.baseline.map(({ id }) => id), ["0", "0.0"]);
+  assert.deepEqual(result.unmatched.current.map(({ id }) => id), ["0", "0.0"]);
+});
+
+test("PostgreSQL Bitmap Index Scan without relation identity does not block an anchored ancestor", async () => {
+  const fixturePath = path.join(REPO_ROOT, "fixtures", "postgres", "estimated", "bitmap-scan.plan.json");
+  const plan = JSON.parse(await readFile(fixturePath, "utf8"));
+  const analysis = analyzeRawPlan(createRawPlanInput({
+    database: "postgresql",
+    mode: "estimated",
+    format: "json",
+    plan,
+    sql: "SELECT * FROM pd_fix_events WHERE customer_id BETWEEN 100 AND 115",
+  }));
+  const heapScan = analysis.normalized.root;
+  const bitmapIndexScan = heapScan.children[0];
+  assert.equal(heapScan.kind, "bitmap_heap_scan");
+  assert.equal(bitmapIndexScan.kind, "bitmap_index_scan");
+  assert.equal(bitmapIndexScan.relation?.name ?? null, null);
+
+  const changedPlan = structuredClone(plan);
+  const changedRawIndex = changedPlan[0].Plan.Plans[0];
+  changedRawIndex["Index Name"] = "pd_fix_events_customer_alt_idx";
+  changedRawIndex["Index Cond"] = "(customer_id > 105)";
+  const changedAnalysis = analyzeRawPlan(createRawPlanInput({
+    database: "postgresql",
+    mode: "estimated",
+    format: "json",
+    plan: changedPlan,
+    sql: "SELECT * FROM pd_fix_events WHERE customer_id > 105",
+  }));
+  const changedIndexScan = changedAnalysis.normalized.root.children[0];
+
+  const withSort = (source, sortKeys) => {
+    const wrapped = structuredClone(source);
+    wrapped.normalized.root = normalizedNode({
+      id: "synthetic-sort",
+      kind: "sort",
+      nodeType: "Sort",
+      sortKeys,
+      children: [wrapped.normalized.root],
+    });
+    return wrapped;
+  };
+  const result = diffEstimatedPlans(
+    withSort(analysis, ["pd_fix_events.customer_id"]),
+    withSort(changedAnalysis, ["pd_fix_events.customer_id DESC"]),
+  );
+
+  const sortMatch = result.matches.find(({ beforeId }) => beforeId === "synthetic-sort");
+  assert.ok(sortMatch, "the matched heap relation anchors lineage through its Bitmap Index Scan child");
+  assert.deepEqual(sortMatch.changes.find(({ field }) => field === "sortKeys"), {
+    field: "sortKeys",
+    before: ["pd_fix_events.customer_id"],
+    after: ["pd_fix_events.customer_id DESC"],
+  });
+  assert.ok(result.matches.some(({ beforeId }) => beforeId === heapScan.id));
+  const bitmapIndexMatch = result.matches.find(({ beforeId }) => beforeId === bitmapIndexScan.id);
+  assert.ok(bitmapIndexMatch, "the unique Bitmap Index Scan is matched under its matched heap relation");
+  assert.equal(bitmapIndexMatch.afterId, changedIndexScan.id);
+  assert.equal(bitmapIndexMatch.evidence.method, "matched-bitmap-heap-descendant");
+  assert.deepEqual(bitmapIndexMatch.changes.find(({ field }) => field === "relation.indexName"), {
+    field: "relation.indexName",
+    before: "pd_fix_events_customer_idx",
+    after: "pd_fix_events_customer_alt_idx",
+  });
+  assert.deepEqual(bitmapIndexMatch.changes.find(({ field }) => field === "indexCondition"), {
+    field: "indexCondition",
+    before: "((customer_id >= 100) AND (customer_id <= 115))",
+    after: "(customer_id > 105)",
+  });
+  assert.deepEqual(result.unmatched, { baseline: [], current: [] });
+});
+
+test("synthetic MySQL before/after fixture matches the table while keeping native cost unmapped", async () => {
+  const { before, after } = await loadPair("mysql");
+  assert.equal(before.meta.expect.rootNodeType, "Query Block");
+  assert.equal(after.meta.expect.rootNodeType, "Query Block");
+
+  const beforeScan = before.analysis.normalized.root.children[0];
+  const afterScan = after.analysis.normalized.root.children[0];
+  assert.equal(beforeScan.nodeType, "Table Scan");
+  assert.equal(afterScan.nodeType, "Index Lookup");
+  assert.equal(beforeScan.engineSpecific.mysql.possibleKeys, null, "the hypothetical index is unavailable before the change");
+  assert.deepEqual(afterScan.engineSpecific.mysql.possibleKeys, ["idx_orders_status"]);
+  assert.equal(beforeScan.totalCost, null);
+  assert.equal(afterScan.totalCost, null);
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.equal(result.status, "comparable");
+  assert.equal(result.database, "mysql");
+  const scanMatch = result.matches.find(({ beforeId }) => beforeId === beforeScan.id);
+  assert.ok(scanMatch, "the table access remains matched across access-type change");
+  assert.equal(scanMatch.afterId, afterScan.id);
+  assert.ok(scanMatch.changes.some(({ field }) => field === "operator.nodeType"));
+  assert.ok(scanMatch.changes.some(({ field }) => field === "estimatedRows"));
+  assert.equal(scanMatch.changes.some(({ field }) => field === "totalCost"), false);
+});
+
+test("MySQL relation scan moved into an attached subquery fails closed across query scopes", async () => {
+  const { before, after } = await loadPair("mysql", "subquery");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "mysql", name: "subquery-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "mysql", name: "subquery-after.synthetic" }), []);
+  const beforeScan = before.analysis.normalized.root.children[0];
+  const afterWrapper = after.analysis.normalized.root.children[0];
+  const afterBlock = afterWrapper.children[0];
+  const afterScan = afterBlock.children[0];
+  assert.equal(beforeScan.nodeType, "Table Scan");
+  assert.equal(beforeScan.engineSpecific.mysql.structure, "table");
+  assert.equal(afterWrapper.engineSpecific.mysql.structure, "attached_subqueries");
+  assert.equal(afterBlock.engineSpecific.mysql.structure, "query_block");
+  assert.equal(afterBlock.engineSpecific.mysql.selectId, 2);
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched.baseline.find(({ id }) => id === beforeScan.id), {
+    id: beforeScan.id,
+    reasonCode: "NO_UNIQUE_COUNTERPART",
+  });
+  assert.deepEqual(result.unmatched.current.find(({ id }) => id === afterScan.id), {
+    id: afterScan.id,
+    reasonCode: "NO_UNIQUE_COUNTERPART",
+  });
+
+  // The same inherited scope in both plans still matches, so the guard fails
+  // closed only when query-scope evidence differs.
+  const stable = diffEstimatedPlans(after.analysis, after.analysis);
+  const stableMatch = stable.matches.find(({ beforeId }) => beforeId === afterScan.id);
+  assert.ok(stableMatch, "an identical attached-subquery plan keeps its scan matchable");
+  assert.deepEqual(stableMatch.changes, []);
+});
+
+test("MySQL subquery branch role changes fail closed for an ancestor that still has a matched scan", async () => {
+  const plan = JSON.parse(await readFile(path.join(DIFF_FIXTURES, "mysql", "subquery-after.synthetic.plan.json"), "utf8"));
+  const withScan = structuredClone(plan);
+  withScan.query_block.table = {
+    table_name: "orders",
+    access_type: "ALL",
+    rows_examined_per_scan: 1000,
+    filtered: "50.00",
+  };
+  const analyze = (raw) => analyzeRawPlan(createRawPlanInput({
+    database: "mysql",
+    mode: "estimated",
+    format: "json",
+    plan: raw,
+    sql: "SELECT * FROM orders WHERE status = 'OPEN';",
+  }));
+  const baseline = analyze(withScan);
+  const moved = structuredClone(withScan);
+  moved.query_block.optimized_away_subqueries = moved.query_block.attached_subqueries;
+  delete moved.query_block.attached_subqueries;
+  const current = analyze(moved);
+  assert.equal(current.normalized.root.children[1].engineSpecific.mysql.structure, "optimized_away_subqueries");
+
+  const result = diffEstimatedPlans(baseline, current);
+  const baselineRoot = baseline.normalized.root;
+  const baselineScan = baselineRoot.children[0];
+  const scanMatch = result.matches.find(({ beforeId }) => beforeId === baselineScan.id);
+  assert.ok(scanMatch, "the top-level scan is unaffected by the sibling subquery role change");
+  assert.deepEqual(scanMatch.changes, []);
+  assert.equal(
+    result.matches.some(({ beforeId, changes }) => beforeId === baselineRoot.id && changes.length === 0),
+    false,
+    "the root does not match while its independent subquery branch changed role",
+  );
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === baselineRoot.id));
+  assert.ok(result.unmatched.current.some(({ id }) => id === current.normalized.root.id));
+});
+
+test("MySQL scan-free query block reports a changed optimizer message instead of an empty diff", async () => {
+  const { before, after } = await loadPair("mysql", "message");
+  assert.equal(before.analysis.normalized.root.engineSpecific.mysql.message, "Impossible WHERE");
+  assert.equal(after.analysis.normalized.root.engineSpecific.mysql.message, "Select tables optimized away");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.equal(result.status, "comparable");
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched, { baseline: [], current: [] });
+  assert.deepEqual(
+    result.matches.map(({ beforeId, afterId, evidence }) => [beforeId, afterId, evidence.method]),
+    [["0", "0", "exact-semantic-subtree"]],
+  );
+  assert.deepEqual(result.matches[0].changes, [{
+    field: "engineSpecific.mysql.message",
+    before: "Impossible WHERE",
+    after: "Select tables optimized away",
+  }]);
+});

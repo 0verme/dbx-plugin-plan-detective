@@ -1,0 +1,32 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Result",
+      "Startup Cost": 0,
+      "Total Cost": 18,
+      "Plan Rows": 100,
+      "One-Time Filter": "($0 > 0)",
+      "Plans": [
+        {
+          "Node Type": "Result",
+          "Parent Relationship": "SubPlan",
+          "Subplan Name": "SubPlan 1",
+          "Startup Cost": 0,
+          "Total Cost": 0,
+          "Plan Rows": 1
+        },
+        {
+          "Node Type": "Seq Scan",
+          "Parent Relationship": "Outer",
+          "Schema": "public",
+          "Relation Name": "orders",
+          "Alias": "o",
+          "Startup Cost": 0,
+          "Total Cost": 18,
+          "Plan Rows": 100,
+          "Filter": "(status = 'open'::text)"
+        }
+      ]
+    }
+  }
+]

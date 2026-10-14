@@ -1,0 +1,24 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Seq Scan",
+      "Schema": "public",
+      "Relation Name": "orders",
+      "Alias": "o",
+      "Startup Cost": 0,
+      "Total Cost": 18,
+      "Plan Rows": 100,
+      "Filter": "(status = 'open'::text)",
+      "Plans": [
+        {
+          "Node Type": "Result",
+          "Parent Relationship": "SubPlan",
+          "Subplan Name": "SubPlan 1",
+          "Startup Cost": 0,
+          "Total Cost": 0,
+          "Plan Rows": 1
+        }
+      ]
+    }
+  }
+]

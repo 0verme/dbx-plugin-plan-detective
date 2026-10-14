@@ -1,0 +1,25 @@
+{
+  "database": "postgresql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic hand-assembled PostgreSQL EXPLAIN JSON used only to exercise the Plan Diff Core. Not captured from a live server and not evidence of performance.",
+    "reference": null
+  },
+  "features": ["before adding a hypothetical index", "sequential scan", "estimated mode"],
+  "expect": {
+    "rootNodeType": "Seq Scan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [],
+    "scenario": "orders status index before change",
+    "sql": "SELECT * FROM orders AS o WHERE o.status = 'open';",
+    "operation": "hypothetically add orders_status_idx",
+    "expectedChanges": ["Seq Scan to Index Scan", "index name appears", "estimated rows differ"]
+  }
+}
