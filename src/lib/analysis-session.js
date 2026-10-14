@@ -119,6 +119,13 @@ export async function runHostAnalysis(input) {
       },
       { guardMs: input.guardMs },
     );
+    const capturedAt = new Date().toISOString();
+    // Retain only display-safe database/schema labels. Never persist connection
+    // ids, the bridge, credentials, or a Host lifecycle object in a session.
+    const source = {
+      ...(typeof input.database === "string" && input.database.length > 0 ? { databaseName: input.database } : {}),
+      ...(typeof input.schema === "string" && input.schema.length > 0 ? { schema: input.schema } : {}),
+    };
 
     // 3. A truncated payload is shown raw; parsing it would fabricate findings.
     if (hostResult.truncated) {
@@ -164,6 +171,8 @@ export async function runHostAnalysis(input) {
       hostResult,
       rawInput,
       analysis,
+      capturedAt,
+      source,
       message: null,
     };
   } catch (error) {
