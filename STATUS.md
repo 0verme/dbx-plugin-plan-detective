@@ -2,30 +2,28 @@
 
 | 项 | 值 |
 | --- | --- |
-| 最后更新 | 2026-09-23 |
-| 当前阶段 | **Phase 1–3.6 已合并；v0.6.6 已发布（Doris structured + OceanBase MySQL parser fix）** |
-| 插件版本 | 当前已发布 `0.6.6`（`engines.dbx: >=0.6.18`，`engines.host_api: ^1.2`，权限 `host.plans:read` 不变） |
-| 阶段结论 | Phase 3.6 Doris parser（PR #59）与 Issue #60 OceanBase MySQL parser（PR #62，merge `939d152`）均已合并并随 v0.6.6 发布；`npm test` 1253/1253、`npm run build`、DBX CLI package preflight 通过。真实 OceanBase 回放与 Doris / DBX Desktop Host Smoke 均 `NOT RUN`，OceanBase 内网验证待用户执行 |
-| 当前不做 | 本轮已发布 GitHub Release；不建立数据库连接、不读取 credential、不执行用户 SQL、不请求 Actual / ANALYZE / PROFILE Plan、不接 AI、不构造完整 Doris DAG、不修改 DBX upstream / Doris server；DBX Store / 签名流程独立处理 |
+| 最后更新 | 2026-10-14 |
+| 当前阶段 | **v0.7.1 正式版 Release Preparation（基于最新 `origin/main`；本次发布门禁已通过）** |
+| 插件版本 | 发布目标 `0.7.1`；DBX `>=0.6.23`、Host API `^1.2`、插件 ID `io.github.0verme.plan-detective`、权限 `host.plans:read` 保持不变 |
+| 本次范围 | 汇总 v0.7.0 之后已合并的 UI/中英文体验优化，并移除正式安装包对系统 Node.js 的运行时依赖；AI Tool sidecar 仍属实验能力，不注册、不打包、不宣称可用 |
+| 验收边界 | 用户已报告近期合并 PR 在真实 DBX 环境完成测试；离线 CI / 打包结果与真实宿主验证分开记录。`#66` 的 Agent Tool 端到端链路仍受 DBX 上游限制，不属于本次发布能力 |
+| 当前不做 | 不改变 DBX Host API、插件 ID、权限或数据库分析范围；不修改 DBX Store / 上游 DBX；不恢复未通过 gate 的 AI Tool sidecar |
 
-## 当前任务快照（v0.6.6 Release Verification）
+## 当前任务快照（v0.7.1 Release）
 
-- Project: `dbx-plugin-plan-detective`
-- Bootstrap Root: `/vol5/1000/ai-workspace`
-- Workspace Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`
-- Current Main: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective`；branch `main`，本地 HEAD `57e4730`（未推送且保留），远端 `origin/main` `939d152`；本地 worktree `CLEAN`，ahead 1 / behind 32。Release / docs 工作均在独立 worktree 完成。
-- Active Tasks:
-  - Issue / Task: Plan Detective v0.6.6 Release；Branch: `chore/prepare-v0.6.6-release`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/prepare-v0.6.6-release`；State: `RELEASED`；Conflict Risk: `MEDIUM`；PR: [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) merged / verification [#64](https://github.com/0verme/dbx-plugin-plan-detective/pull/64) OPEN；Notes: tag `v0.6.6` 指向 `939d152`；GitHub Release / workflow / universal artifact 已验证；真实 OceanBase 回放 `NOT RUN`，用户将内网测试。
-- Integration Baseline: `origin/main` / release tag `v0.6.6` 均指向 `939d152cb72a9d12e205a87079948ade0ed2fd46`；PR #61 与 PR #62 merge commit 均可达。
-- Hotspot Files: `manifest.json`、`README.md`、`STATUS.md`；本轮不修改 Doris feature source / fixtures / goldens；Conflict Risk `MEDIUM`。
-- Blocked: 真实 OceanBase 4.2.5.7 replay `NOT RUN`（用户安排内网测试）；真实 Doris / DBX Desktop Host Smoke `NOT RUN`。上述不影响 GitHub Release；发布包为 unsigned，DBX Store / signing 未处理。
-- Cleanup Queue: 无；release worktree 的 `dist/` package 是 ignored 本地 preflight 产物，依赖安装缓存位于 `/tmp`。
-- Merge Queue: release verification PR [#64](https://github.com/0verme/dbx-plugin-plan-detective/pull/64) OPEN（docs-only）；release prep PR [#61](https://github.com/0verme/dbx-plugin-plan-detective/pull/61) 已合并。
-- Recently Merged: PR #62 OceanBase MySQL parser（merge `939d152`）；PR #61 v0.6.6 release prep（merge `c43e7aa`）；PR #59 Doris structured（merge `5bb3115`）；v0.6.6 已发布。
+- Project: `dbx-plugin-plan-detective`；Repository: `https://github.com/0verme/dbx-plugin-plan-detective`。
+- Control Plane Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base`；Worktree Root: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees`。
+- Main baseline: fetched `origin/main` `1895d94ea678fb8eba0a62639e6b2014bc0b3d52`；v0.7.0 tag commit `e6fe3811ee44e23269e390464ab73a68aa37f02d`。本地 Main Workspace 保持未修改，发布工作在独立 Worktree。
+- Release branch: `chore/release-v0.7.1`；Worktree: `/vol5/1000/ai-workspace/dbx-plugin-plan-detective_base/worktrees/release-v0.7.1`。
+- Merged scope: PR [#75](https://github.com/0verme/dbx-plugin-plan-detective/pull/75)（插件中心首次进入引导）；PR [#76](https://github.com/0verme/dbx-plugin-plan-detective/pull/76)–[#80](https://github.com/0verme/dbx-plugin-plan-detective/pull/80)（Issue [#74](https://github.com/0verme/dbx-plugin-plan-detective/issues/74) 的布局审计、Tree/Inspector 信息组织、摘要密度、窄容器/键盘导航与回归覆盖）；PR [#81](https://github.com/0verme/dbx-plugin-plan-detective/pull/81)（精简 UI 文案）；PR [#83](https://github.com/0verme/dbx-plugin-plan-detective/pull/83)（关闭 Issue [#82](https://github.com/0verme/dbx-plugin-plan-detective/issues/82)，取消正式包 Node runtime 注册）。
+- Open scope check（创建本 Release PR 前）：未发现其他 targeting `main` 的开放 PR；Issue #74 仍开放作为 UI/UX 总控，Issue #66 仍开放且 AI Tool 因上游 connection binding / structured plan handoff 限制暂不发布。Issues #72 / #73 是独立的 Plan History / Diff 后续能力。
+- Release gates: `npm ci` PASS（本机因 esbuild binary 执行权限限制，使用同版本 `ESBUILD_BINARY_PATH` workaround 后干净安装成功）；`npm test` PASS（1296/1296）；`npm run build` PASS；`npm run package` PASS。独立包检查确认 manifest `0.7.1`、target `universal`、插件 ID / Host API / 权限不变；包中 6 项（manifest、checksums、1 个 asset、3 个 UI 文件），无 Node launcher、sidecar、`node_modules` 或开发目录。tracked `ui/` 已含 PR #75–#81 的构建产物，重建没有产生额外差异。
+- Local package preflight: `io.github.0verme.plan-detective-0.7.1-universal.dbxp`，107352 bytes，SHA-256 `a4168ac3d11221f2116b1701c0aebe9d5729ccf5b64358b686fec118d1baafd2`；这只是本地候选，不等同 GitHub Release 上传资产。真实 DBX 验收依据用户报告；AI Tool E2E 仍因上游限制未验证。
+- DBX Store / signing: 不在本次范围；无 Store 或上游仓库修改。
 
-- Next Actions: review / merge docs-only PR #64；用户在内网验证 OceanBase 4.2.5.7 MySQL-mode 计划；DBX Store / signing 独立处理。
+## 历史实现记录
 
-## 0. 当前状态
+以下 0.x 小节保留各阶段的原始实现与验证记录，作为历史档案；其中旧版本号、旧 worktree 状态不代表本次 Release 的当前状态。详细变更与验证边界见 [v0.7.1 Release Notes](docs/RELEASE_NOTES_v0.7.1.md)。
 
 ### 0.1 Host Plan API 核验（2026-09-20，直接读取 `t8y2/dbx/main`）
 
