@@ -233,6 +233,11 @@ function isScan(node) {
   return SCAN_KINDS.has(node.kind);
 }
 
+/** @param {object} node */
+function hasRelationIdentity(node) {
+  return typeof node.relation?.name === "string" && node.relation.name.trim().length > 0;
+}
+
 /**
  * Read database-owned schema evidence without inferring a default schema.
  * PostgreSQL's raw `Schema` property is preserved in `engineSpecific.extra`;
@@ -253,7 +258,7 @@ function relationSchema(node, database) {
 function groupRelationScans(nodes, database) {
   const groups = new Map();
   for (const node of nodes) {
-    if (!isScan(node) || typeof node.relation?.name !== "string" || node.relation.name.trim().length === 0) continue;
+    if (!isScan(node) || !hasRelationIdentity(node)) continue;
     const key = JSON.stringify([node.relation.name, node.relation.alias ?? null, relationSchema(node, database)]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
@@ -300,7 +305,7 @@ function matchRelationScans(context) {
 function remainingScansByIdentity(nodes, matched, database) {
   const groups = new Map();
   for (const node of nodes) {
-    if (!isScan(node) || matched.has(node) || typeof node.relation?.name !== "string" || node.relation.name.trim().length === 0) continue;
+    if (!isScan(node) || matched.has(node) || !hasRelationIdentity(node)) continue;
     const identity = JSON.stringify([node.relation.name, relationSchema(node, database)]);
     if (!groups.has(identity)) groups.set(identity, []);
     groups.get(identity).push(node);
@@ -384,15 +389,24 @@ function collectLineage(root, scanTokens, ambiguousScans) {
   function visit(node) {
     const childInfo = node.children.map(visit);
     const ownScan = isScan(node);
-    const ownToken = ownScan ? scanTokens.get(node) : undefined;
+    const ownIdentityScan = ownScan && hasRelationIdentity(node);
+    const ownToken = ownIdentityScan ? scanTokens.get(node) : undefined;
     const scanCount = (ownScan ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.scanCount, 0);
+    const identityScanCount = (ownIdentityScan ? 1 : 0) + childInfo.reduce((sum, child) => sum + child.identityScanCount, 0);
+    const matchedIdentityScanCount = (ownToken === undefined ? 0 : 1) + childInfo.reduce((sum, child) => sum + child.matchedIdentityScanCount, 0);
     const tokens = [
       ...(ownToken === undefined ? [] : [ownToken]),
       ...childInfo.flatMap((child) => child.tokens),
     ];
-    const complete = (ownScan ? ownToken !== undefined : true) && childInfo.every((child) => child.complete);
-    const ambiguous = (ownScan && ambiguousScans.has(node)) || childInfo.some((child) => child.ambiguous);
-    const info = { scanCount, tokens, complete, ambiguous };
+    // Scans without a relation identity (for example PostgreSQL Bitmap Index
+    // Scan) cannot be matched independently. Ignore them as blockers only when
+    // this subtree has at least one identity-bearing scan to anchor its lineage;
+    // an all-unidentified scan subtree remains incomplete.
+    const complete = identityScanCount > 0
+      ? matchedIdentityScanCount === identityScanCount
+      : scanCount === 0;
+    const ambiguous = (ownIdentityScan && ambiguousScans.has(node)) || childInfo.some((child) => child.ambiguous);
+    const info = { scanCount, identityScanCount, matchedIdentityScanCount, tokens, complete, ambiguous };
     lineage.set(node, info);
     return info;
   }
@@ -476,7 +490,7 @@ function describeUnmatched(nodes, matched, ambiguous, lineage) {
     .filter((node) => !matched.has(node) && !ambiguous.has(node))
     .map((node) => {
       let reasonCode = "NO_UNIQUE_COUNTERPART";
-      if (isScan(node) && typeof node.relation?.name !== "string") {
+      if (isScan(node) && !hasRelationIdentity(node)) {
         reasonCode = "NO_STABLE_RELATION";
       } else if (!isScan(node)) {
         const info = lineage.get(node);

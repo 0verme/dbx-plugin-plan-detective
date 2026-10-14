@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { analyzeRawPlan, createRawPlanInput } from "../../src/core/index.js";
 import { diffEstimatedPlans } from "../../src/core/diff/estimated-plan-diff.js";
+import { normalizedNode } from "../helpers/plan-builders.js";
 import { REPO_ROOT, validateFixtureMeta } from "../helpers/fixtures.js";
 
 const DIFF_FIXTURES = path.join(REPO_ROOT, "fixtures", "diff");
@@ -54,6 +55,47 @@ test("synthetic PostgreSQL before/after fixture matches the relation across Seq 
   otherSchema.normalized.root.engineSpecific.extra.Schema = "tenant_b";
   const crossSchema = diffEstimatedPlans(before.analysis, otherSchema);
   assert.equal(crossSchema.matches.length, 0, "schema evidence prevents matching a same-named table in another schema");
+});
+
+test("PostgreSQL Bitmap Index Scan without relation identity does not block an anchored ancestor", async () => {
+  const fixturePath = path.join(REPO_ROOT, "fixtures", "postgres", "estimated", "bitmap-scan.plan.json");
+  const plan = JSON.parse(await readFile(fixturePath, "utf8"));
+  const analysis = analyzeRawPlan(createRawPlanInput({
+    database: "postgresql",
+    mode: "estimated",
+    format: "json",
+    plan,
+    sql: "SELECT * FROM pd_fix_events WHERE customer_id BETWEEN 100 AND 115",
+  }));
+  const heapScan = analysis.normalized.root;
+  const bitmapIndexScan = heapScan.children[0];
+  assert.equal(heapScan.kind, "bitmap_heap_scan");
+  assert.equal(bitmapIndexScan.kind, "bitmap_index_scan");
+  assert.equal(bitmapIndexScan.relation?.name ?? null, null);
+
+  const withSort = (sortKeys) => {
+    const wrapped = structuredClone(analysis);
+    wrapped.normalized.root = normalizedNode({
+      id: "synthetic-sort",
+      kind: "sort",
+      nodeType: "Sort",
+      sortKeys,
+      children: [wrapped.normalized.root],
+    });
+    return wrapped;
+  };
+  const result = diffEstimatedPlans(withSort(["pd_fix_events.customer_id"]), withSort(["pd_fix_events.customer_id DESC"]));
+
+  const sortMatch = result.matches.find(({ beforeId }) => beforeId === "synthetic-sort");
+  assert.ok(sortMatch, "the matched heap relation anchors lineage through its Bitmap Index Scan child");
+  assert.deepEqual(sortMatch.changes.find(({ field }) => field === "sortKeys"), {
+    field: "sortKeys",
+    before: ["pd_fix_events.customer_id"],
+    after: ["pd_fix_events.customer_id DESC"],
+  });
+  assert.ok(result.matches.some(({ beforeId }) => beforeId === heapScan.id));
+  assert.deepEqual(result.unmatched.baseline, [{ id: bitmapIndexScan.id, reasonCode: "NO_STABLE_RELATION" }]);
+  assert.deepEqual(result.unmatched.current, [{ id: bitmapIndexScan.id, reasonCode: "NO_STABLE_RELATION" }]);
 });
 
 test("synthetic MySQL before/after fixture matches the table while keeping native cost unmapped", async () => {
