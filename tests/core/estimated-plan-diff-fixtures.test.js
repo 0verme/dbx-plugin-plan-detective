@@ -39,6 +39,8 @@ test("synthetic PostgreSQL before/after fixture matches the relation across Seq 
   const { before, after } = await loadPair("postgresql");
   assert.equal(before.meta.expect.rootNodeType, "Seq Scan");
   assert.equal(after.meta.expect.rootNodeType, "Index Scan");
+  assert.equal(before.analysis.normalized.root.engineSpecific.extra.Schema, "public");
+  assert.equal(after.analysis.normalized.root.engineSpecific.extra.Schema, "public");
 
   const result = diffEstimatedPlans(before.analysis, after.analysis);
   assert.equal(result.status, "comparable");
@@ -47,6 +49,11 @@ test("synthetic PostgreSQL before/after fixture matches the relation across Seq 
   assert.ok(result.matches[0].changes.some(({ field, before: oldValue, after: newValue }) =>
     field === "operator.nodeType" && oldValue === "Seq Scan" && newValue === "Index Scan"));
   assert.ok(result.matches[0].changes.some(({ field, after: value }) => field === "relation.indexName" && value === "orders_status_idx"));
+
+  const otherSchema = structuredClone(after.analysis);
+  otherSchema.normalized.root.engineSpecific.extra.Schema = "tenant_b";
+  const crossSchema = diffEstimatedPlans(before.analysis, otherSchema);
+  assert.equal(crossSchema.matches.length, 0, "schema evidence prevents matching a same-named table in another schema");
 });
 
 test("synthetic MySQL before/after fixture matches the table while keeping native cost unmapped", async () => {

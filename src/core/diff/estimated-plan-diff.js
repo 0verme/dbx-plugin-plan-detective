@@ -2,9 +2,10 @@
  * Conservative, pure matching and field comparison for structured Estimated Plans.
  *
  * Node ids are returned only as per-plan locators. Cross-plan identity is based
- * on unique relation name / alias for scans, then on the set of already matched
- * descendant scans for operators. Cost and row estimates never participate in
- * identity. Ambiguous candidates are kept explicit rather than paired by order.
+ * on relation name / alias plus available schema evidence for scans, then on
+ * the set of already matched descendant scans for operators. Cost and row
+ * estimates never participate in identity. Ambiguous candidates are kept
+ * explicit rather than paired by order.
  */
 
 const SUPPORTED_DATABASES = new Set(["postgresql", "mysql"]);
@@ -30,6 +31,7 @@ const CHANGE_FIELDS = Object.freeze([
   ["operator.kind", (node) => node.kind],
   ["operator.nodeType", (node) => node.nodeType],
   ["relation.name", (node) => node.relation?.name ?? null],
+  ["relation.schema", (node, database) => relationSchema(node, database)],
   ["relation.alias", (node) => node.relation?.alias ?? null],
   ["relation.indexName", (node) => node.relation?.indexName ?? null],
   ["estimatedRows", (node) => node.estimatedRows],
@@ -78,6 +80,7 @@ export function diffEstimatedPlans(baseline, current) {
   const ambiguities = [];
 
   matchRelationScans({
+    database: beforePlan.database,
     beforeNodes,
     afterNodes,
     beforeScanTokens,
@@ -95,6 +98,7 @@ export function diffEstimatedPlans(baseline, current) {
   matchNonScanNodes({
     beforeNodes,
     afterNodes,
+    database: beforePlan.database,
     beforeLineage,
     afterLineage,
     matchedBefore,
@@ -229,12 +233,28 @@ function isScan(node) {
   return SCAN_KINDS.has(node.kind);
 }
 
+/**
+ * Read database-owned schema evidence without inferring a default schema.
+ * PostgreSQL's raw `Schema` property is preserved in `engineSpecific.extra`;
+ * MySQL V2 exposes `schema_name` as `engineSpecific.mysql.schemaName`.
+ * @param {object} node
+ * @param {string} database
+ */
+function relationSchema(node, database) {
+  const schema = database === "postgresql"
+    ? node.engineSpecific?.extra?.Schema
+    : database === "mysql"
+      ? node.engineSpecific?.mysql?.schemaName
+      : null;
+  return typeof schema === "string" && schema.trim().length > 0 ? schema : null;
+}
+
 /** @param {object[]} nodes */
-function groupRelationScans(nodes) {
+function groupRelationScans(nodes, database) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || typeof node.relation?.name !== "string" || node.relation.name.trim().length === 0) continue;
-    const key = JSON.stringify([node.relation.name, node.relation.alias ?? null]);
+    const key = JSON.stringify([node.relation.name, node.relation.alias ?? null, relationSchema(node, database)]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
   }
@@ -243,70 +263,72 @@ function groupRelationScans(nodes) {
 
 function matchRelationScans(context) {
   const {
-    beforeNodes, afterNodes, beforeScanTokens, afterScanTokens,
+    database, beforeNodes, afterNodes, beforeScanTokens, afterScanTokens,
     matchedBefore, matchedAfter, ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
-  const beforeGroups = groupRelationScans(beforeNodes);
-  const afterGroups = groupRelationScans(afterNodes);
+  const beforeGroups = groupRelationScans(beforeNodes, database);
+  const afterGroups = groupRelationScans(afterNodes, database);
 
-  // First use the strongest key: exact relation name and alias. Neither the
-  // operator kind (so Seq -> Index remains matchable) nor its index is identity.
+  // First use the strongest key: exact relation name, alias, and available schema.
+  // Operator kind (so Seq -> Index remains matchable) and index are not identity.
   const exactKeys = [...beforeGroups.keys()].filter((key) => afterGroups.has(key)).sort();
   for (const key of exactKeys) {
     const before = beforeGroups.get(key);
     const after = afterGroups.get(key);
     if (before.length === 1 && after.length === 1) {
-      addScanMatch(before[0], after[0], "relation-name-and-alias", context);
+      addScanMatch(before[0], after[0], "qualified-relation-name-and-alias", context);
     }
   }
 
   // If aliases changed, relation name is a safe fallback only when exactly one
   // unmatched occurrence remains on each side. Repeated/self-join occurrences
   // are never disambiguated by child order, path, rows, or cost.
-  const beforeByName = remainingScansByName(beforeNodes, matchedBefore);
-  const afterByName = remainingScansByName(afterNodes, matchedAfter);
-  const relationNames = [...new Set([...beforeByName.keys(), ...afterByName.keys()])].sort();
-  for (const name of relationNames) {
-    const before = beforeByName.get(name) ?? [];
-    const after = afterByName.get(name) ?? [];
+  const beforeByIdentity = remainingScansByIdentity(beforeNodes, matchedBefore, database);
+  const afterByIdentity = remainingScansByIdentity(afterNodes, matchedAfter, database);
+  const identities = [...new Set([...beforeByIdentity.keys(), ...afterByIdentity.keys()])].sort();
+  for (const identity of identities) {
+    const before = beforeByIdentity.get(identity) ?? [];
+    const after = afterByIdentity.get(identity) ?? [];
     if (before.length === 1 && after.length === 1) {
-      addScanMatch(before[0], after[0], "unique-relation-name", context);
+      addScanMatch(before[0], after[0], "unique-qualified-relation-name", context);
     } else if (before.length > 1 || after.length > 1) {
-      addAmbiguity(before, after, "REPEATED_RELATION_IDENTITY", "relation-name", context);
+      addAmbiguity(before, after, "REPEATED_RELATION_IDENTITY", "qualified-relation-name", context);
     }
   }
 }
 
-function remainingScansByName(nodes, matched) {
+function remainingScansByIdentity(nodes, matched, database) {
   const groups = new Map();
   for (const node of nodes) {
     if (!isScan(node) || matched.has(node) || typeof node.relation?.name !== "string" || node.relation.name.trim().length === 0) continue;
-    if (!groups.has(node.relation.name)) groups.set(node.relation.name, []);
-    groups.get(node.relation.name).push(node);
+    const identity = JSON.stringify([node.relation.name, relationSchema(node, database)]);
+    if (!groups.has(identity)) groups.set(identity, []);
+    groups.get(identity).push(node);
   }
   return groups;
 }
 
 function addScanMatch(before, after, method, context) {
   const name = before.relation.name;
-  const token = JSON.stringify(["matched-relation", name, before.relation.alias ?? null, after.relation.alias ?? null]);
+  const schema = relationSchema(before, context.database);
+  const token = JSON.stringify(["matched-relation", name, schema, before.relation.alias ?? null, after.relation.alias ?? null]);
   context.beforeScanTokens.set(before, token);
   context.afterScanTokens.set(after, token);
   addMatch(before, after, {
     method,
-    reason: method === "relation-name-and-alias"
-      ? "Relation name and alias uniquely identify this scan in both plans."
-      : "This relation occurs once among the remaining scan candidates in both plans.",
+    reason: method === "qualified-relation-name-and-alias"
+      ? "Relation name, alias, and available schema evidence uniquely identify this scan in both plans."
+      : "This relation and available schema evidence occur once among the remaining scan candidates in both plans.",
   }, context);
 }
 
 function matchNonScanNodes(context) {
   const {
-    beforeNodes, afterNodes, beforeLineage, afterLineage,
+    database, beforeNodes, afterNodes, beforeLineage, afterLineage,
     matchedBefore, matchedAfter, ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
-  const beforeGroups = groupNonScanCandidates(beforeNodes, beforeLineage, matchedBefore);
-  const afterGroups = groupNonScanCandidates(afterNodes, afterLineage, matchedAfter);
+  const beforeGroups = groupNonScanCandidates(beforeNodes, beforeLineage, matchedBefore, database);
+  const afterGroups = groupNonScanCandidates(afterNodes, afterLineage, matchedAfter, database);
   const keys = [...new Set([...beforeGroups.keys(), ...afterGroups.keys()])].sort();
 
   for (const key of keys) {
@@ -321,7 +343,7 @@ function matchNonScanNodes(context) {
           }
         : {
             method: "exact-semantic-subtree",
-            reason: "The semantic subtree excluding ids, estimated rows, and costs is identical and unique.",
+            reason: "The semantic subtree, including available relation schema, excluding ids, estimated rows, and costs is identical and unique.",
           };
       addMatch(before[0], after[0], evidence, context);
     } else if (before.length > 1 || after.length > 1) {
@@ -337,7 +359,7 @@ function matchNonScanNodes(context) {
   }
 }
 
-function groupNonScanCandidates(nodes, lineage, alreadyMatched) {
+function groupNonScanCandidates(nodes, lineage, alreadyMatched, database) {
   const groups = new Map();
   for (const node of nodes) {
     if (isScan(node) || alreadyMatched.has(node)) continue;
@@ -349,7 +371,7 @@ function groupNonScanCandidates(nodes, lineage, alreadyMatched) {
       const tokens = [...info.tokens].sort();
       key = JSON.stringify(["descendant-scans", identityFamily(node), tokens]);
     } else {
-      key = JSON.stringify(["semantic-subtree", semanticFingerprint(node)]);
+      key = JSON.stringify(["semantic-subtree", semanticFingerprint(node, database)]);
     }
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(node);
@@ -384,18 +406,18 @@ function collectLineage(root, scanTokens, ambiguousScans) {
  * Child order is retained as structural evidence, but never used to pair siblings.
  * @param {object} node
  */
-function semanticFingerprint(node) {
+function semanticFingerprint(node, database) {
   return [
     node.kind,
     node.nodeType,
-    node.relation === null ? null : [node.relation.name, node.relation.alias],
+    node.relation === null ? null : [node.relation.name, relationSchema(node, database), node.relation.alias],
     node.filter,
     node.joinType,
     node.joinCondition,
     node.indexCondition,
     node.sortKeys,
     node.groupKeys,
-    node.children.map(semanticFingerprint),
+    node.children.map((child) => semanticFingerprint(child, database)),
   ];
 }
 
@@ -415,7 +437,7 @@ function addMatch(before, after, evidence, context) {
     beforeId: before.id,
     afterId: after.id,
     evidence,
-    changes: collectChanges(before, after),
+    changes: collectChanges(before, after, context.database),
   });
 }
 
@@ -433,11 +455,11 @@ function addAmbiguity(before, after, reasonCode, method, context) {
   });
 }
 
-function collectChanges(before, after) {
+function collectChanges(before, after, database) {
   const changes = [];
   for (const [field, getValue] of CHANGE_FIELDS) {
-    const beforeValue = getValue(before);
-    const afterValue = getValue(after);
+    const beforeValue = getValue(before, database);
+    const afterValue = getValue(after, database);
     if (!sameValue(beforeValue, afterValue)) changes.push({ field, before: beforeValue, after: afterValue });
   }
   return changes;

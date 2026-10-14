@@ -2,6 +2,7 @@
   {
     "Plan": {
       "Node Type": "Seq Scan",
+      "Schema": "public",
       "Relation Name": "orders",
       "Alias": "o",
       "Startup Cost": 0,

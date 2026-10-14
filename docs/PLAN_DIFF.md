@@ -33,14 +33,14 @@ Phase 73.1 新增纯函数 `diffEstimatedPlans(baseline, current)`，实现位�
 
 不兼容输入返回 `status: "incompatible"`、稳定 `reasonCode` 和空的匹配集合。当前原因码包括 `INVALID_ANALYSIS`、`ANALYSIS_NOT_READY`、`ANALYSIS_NOT_STRUCTURED`、`ANALYSIS_FAILED`、`PLAN_TRUNCATED`、`RAW_ONLY`、`INVALID_NORMALIZED_PLAN`、`DATABASE_MISMATCH`、`UNSUPPORTED_DATABASE`、`UNSUPPORTED_FORMAT`、`MODE_NOT_ESTIMATED`。
 
-Node changes 只记录明确字段的前后值：operator kind / label、relation / alias / index、estimated rows、filter / join / index condition、sort / group keys。缺失值保持 `null`，不按 0 计算。成本字段目前不进入 Diff 输出，因为纯 Core 输入没有足够的数据库版本 / 来源 / optimizer context 来声明成本可比；也不计算差值、百分比、总体优化率、提速率或性能评分。MySQL cost 保持在引擎专属 evidence，`startupCost` / `totalCost` 仍为 `null`，Diff 不会伪造 PostgreSQL cost。文本变化只表示文本不同，不证明 SQL 语义变化。
+Node changes 只记录明确字段的前后值：operator kind / label、relation / schema / alias / index、estimated rows、filter / join / index condition、sort / group keys。缺失值保持 `null`，不按 0 计算。成本字段目前不进入 Diff 输出，因为纯 Core 输入没有足够的数据库版本 / 来源 / optimizer context 来声明成本可比；也不计算差值、百分比、总体优化率、提速率或性能评分。MySQL cost 保持在引擎专属 evidence，`startupCost` / `totalCost` 仍为 `null`，Diff 不会伪造 PostgreSQL cost。文本变化只表示文本不同，不证明 SQL 语义变化。
 
 ## 保守匹配
 
-1. **Relation scan**：先按 relation name + alias 的精确组合匹配，要求两侧均唯一；不把 operator kind 或 index name 当身份，因此 Seq Scan → Index Scan、Index → 另一索引可以继续匹配。若 alias 不同，只在两侧剩余的该 relation occurrence 均恰好一个时按 relation name fallback。
+1. **Relation scan**：先按 relation name + alias + 可用 schema evidence 的精确组合匹配，要求两侧均唯一；PostgreSQL `Schema` 从 `engineSpecific.extra` 读取，MySQL V2 `schema_name` 从 `engineSpecific.mysql.schemaName` 读取。schema 不同或仅一侧提供 schema 时不会跨 schema 配对；schema 相同且 alias 不同时，只在两侧剩余该 schema 下的 relation occurrence 均恰好一个时 fallback。不把 operator kind 或 index name 当身份，因此 Seq Scan → Index Scan、Index → 另一索引可以继续匹配。
 2. **Repeated table / self-join**：稳定且唯一的 alias 可区分 occurrence；重复且相同的 relation identity 或多个 alias 同时变化时输出 `ambiguous`。不会按数组顺序、路径、cost 或 rows 拆分。
 3. **Operators**：按 operator family + 已匹配 descendant scans 的无序集合匹配，集合对 Join child reorder 稳定，并允许 Nested Loop / Hash Join / Merge Join 算法变化；Sort / Incremental Sort 也共享一个 family。该 subtree identity 必须唯一，才建立一对一匹配。
-4. **No-scan subtree**：只有当 subtree 中没有 scan 时，才可用精确语义 subtree fingerprint；排除 node id、rows、cost、index name 与 engine-specific evidence，保留 child order。重复 fingerprint 不按兄弟顺序配对。
+4. **No-scan subtree**：只有当 subtree 中没有 scan 时，才可用精确语义 subtree fingerprint；排除 node id、rows、cost、index name 和其他 engine-specific evidence，但纳入 available relation schema，保留 child order。重复 fingerprint 不按兄弟顺序配对。
 5. 无可靠 identity、descendant scan 自身未匹配、重复候选或不完整结构会留下 `unmatched` / `ambiguous`；不会猜测一对多或多对一关系。
 
 路径式 `NormalizedNode.id` 仅用于输入树定位与结果引用，不参与 identity。结果顺序确定，但排序也不作为配对依据。

@@ -63,7 +63,7 @@ test("matches Seq Scan to Index Scan by unique relation identity and reports fie
   const result = diffEstimatedPlans(before, after);
   assert.equal(result.matches.length, 1);
   const [match] = result.matches;
-  assert.equal(match.evidence.method, "relation-name-and-alias");
+  assert.equal(match.evidence.method, "qualified-relation-name-and-alias");
   assert.deepEqual(match.changes.map(({ field }) => field), [
     "operator.kind",
     "operator.nodeType",
@@ -73,6 +73,22 @@ test("matches Seq Scan to Index Scan by unique relation identity and reports fie
   ]);
   assert.deepEqual(change(match, "estimatedRows"), { field: "estimatedRows", before: 1000, after: 40 });
   assert.equal(Object.hasOwn(match, "percentChange"), false);
+});
+
+test("PostgreSQL scan schema participates in identity, preventing cross-schema false matches", () => {
+  const pgScan = (schema, alias = "orders") => analysis(node("0", {
+    relation: relation("orders", alias),
+    engineSpecific: { database: "postgresql", extra: { Schema: schema } },
+  }));
+
+  const sameSchema = diffEstimatedPlans(pgScan("tenant_a", "old_alias"), pgScan("tenant_a", "new_alias"));
+  assert.equal(sameSchema.matches.length, 1, "alias fallback remains scoped to the same schema");
+  assert.equal(sameSchema.matches[0].evidence.method, "unique-qualified-relation-name");
+
+  const differentSchemas = diffEstimatedPlans(pgScan("tenant_a"), pgScan("tenant_b"));
+  assert.equal(differentSchemas.matches.length, 0);
+  assert.deepEqual(differentSchemas.unmatched.baseline, [{ id: "0", reasonCode: "NO_UNIQUE_COUNTERPART" }]);
+  assert.deepEqual(differentSchemas.unmatched.current, [{ id: "0", reasonCode: "NO_UNIQUE_COUNTERPART" }]);
 });
 
 test("rows and costs never define identity; missing rows remain distinct from zero", () => {
