@@ -10,11 +10,6 @@
   "engines": { "dbx": ">=0.6.23", "host_api": "^1.2" },
   "permissions": ["host.plans:read"],
   "entrypoints": {
-    "backend": {
-      "protocol_versions": [1],
-      "transport": "stdio-jsonl",
-      "executable": "backend/plan-detective-runtime"
-    },
     "ui": { "root": "ui", "entry": "ui/index.html" }
   },
   "contributions": [

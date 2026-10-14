@@ -6,14 +6,15 @@
 
 - 项目：DBX Plan Detective
 - 插件 ID：`io.github.0verme.plan-detective`
-- 类型：独立 DBX 插件（Svelte + Vite UI、platform-independent Node JSONL sidecar，`universal` 包；v0.7.0-rc.1 起）
+- 类型：独立 DBX 插件（Svelte + Vite UI、frontend-only `universal` 发布包）
+- v0.7.0 曾加入实验性 Node JSONL AI Tool sidecar；当前正式候选暂停注册与打包，源码 / contract / 测试留在仓库，恢复 gate 见 `docs/AI_TOOL_V0.7.0.md`
 - **不是** DBX 主仓（`t8y2/dbx`）的一部分
 
 ## 架构红线（必须遵守）
 
 1. **Thin Plugin** —— 只做执行计划智能。
 2. **DBX 已有能力优先复用** —— Connection、Credential、Database Driver、Query Context、SQL Execution、Timeout、Cancel、Database Type / Version、Explain execution、基础安全控制均属于 DBX。
-3. **AI Tool sidecar only（Issue #66）** —— Node sidecar 仅实现 `plugin/initialize`、`mcp/tools`、`mcp/call`，把已取得的 Estimated Plan 映射为 `RawPlanInput` 并调用现有 Plan Core；不得连接数据库、获取 / 重跑计划、访问 Host bridge / 网络、读取或保存 lifecycle / credential。AI 推理仍由 DBX Agent 完成。
+3. **AI Tool experimental source only（Issue #66）** —— 保留的 Node sidecar 源码仅实现 `plugin/initialize`、`mcp/tools`、`mcp/call`，把已取得的 Estimated Plan 映射为 `RawPlanInput` 并调用现有 Plan Core；不得连接数据库、获取 / 重跑计划、访问 Host bridge / 网络、读取或保存 lifecycle / credential。由于 DBX 上游普通原生连接绑定和 structured plan handoff 未完成，当前发布 manifest / 包不得注册或携带该 sidecar。AI 推理仍由 DBX Agent 完成。
 4. **不调内部接口** —— 只能使用公开的 Plugin Host API。不得为了绕过插件边界而调用 DBX 未公开的内部接口。
 5. **不提前架构** —— 不为"未来可能需要"增加复杂架构。
 
@@ -50,22 +51,22 @@ DBX internal capability      ≠  Plugin Host public capability
 
 ## 开发与验证
 
-- 安装依赖：`npm install`
-- 离线测试（无需 DBX / 数据库 / 依赖）：`npm test`
+- 安装锁定依赖：`npm ci`
+- 离线测试（无需 DBX / 数据库）：`npm test`
 - 单 fixture 分析：`npm run analyze -- estimated/seq-scan`
 - 重建 golden：`npm run test:update-goldens`（仅确认 pipeline 变更是有意的时候）
 - 构建：`npm run build`
 - 本地开发：`dbx-plugin dev --path .`
-- 打包：`npm run package`（构建 UI 并用仓库 Node packager 生成含 sidecar 的 `.dbxp`；DBX CLI package 目前只从 `[backend]` 编译 Rust/Go sidecar）
-- Node.js 22+ 是 `dbx-plugin dev` / `npm run package` / sidecar 的运行时前提。
+- 打包：`npm run package`（构建 UI 并通过项目锁定版本的 DBX 官方 CLI 生成 frontend-only `.dbxp`）
+- Node.js 22+ 是开发 / CI 构建工具要求，不是安装后 UI 运行要求；普通用户不需要 Node.js 或额外 PATH 配置。
 
 开发阶段只运行与本次改动直接相关的最小验证，不要运行 DBX 主仓全量测试。
 
 ## 打包边界
 
-`dbx-plugin.toml` 的 `[package].include` 与 `scripts/package-plugin.mjs` 必须保持一致。`.dbxp` 必须包含 UI、Node sidecar launcher/runtime、最小 `{ "type": "module" }` runtime package descriptor、`src/ai-tool`、Plan Core 及其 presentation/i18n 运行依赖；`docs/`、`fixtures/`、`tests/`、`node_modules/` 不会进入包。当前发布用自有 Node packager，不能运行 `dbx-plugin package .`。
+正式 `.dbxp` 仅包含 `assets/`、`ui/` 静态资源及官方 package metadata。manifest 只声明 UI entrypoint；不包含 `backend`、launcher、Node runtime、`package.json` 或 `src/ai-tool`。Node AI Tool 实现、contract 与测试保留在仓库，但上游集成 gate 未满足前不向普通用户注册。`dbx-plugin.toml` 的 `[package].include` 是官方 CLI 的唯一 package inputs；Release workflow 使用 `npm ci` 安装本地锁定 CLI 并调用 `npm run package`。
 
-`ui/` 由 `npm run build` 生成，但**必须入库**（见下方 Git 规则）；它是发布产物，不是可忽略的本地生成物。正式 release workflow 先安装 npm 依赖再运行 `npm run package`。
+`ui/` 由 `npm run build` 生成，但**必须入库**（见下方 Git 规则）；它是发布产物，不是可忽略的本地生成物。
 
 ## 语言规则
 
@@ -84,7 +85,7 @@ DBX internal capability      ≠  Plugin Host public capability
 
 - 只提交与当前任务直接相关的文件，禁止 `git add .` / `git add -A`。
 - 不提交本地生成物：`dist/`、`.dbx-dev/`、`node_modules/`（已由 `.gitignore` 覆盖）。
-- **例外：`ui/` 必须入库。** `ui/` 是 DBX 插件 package input；修改前端源码后必须重新 `npm run build` 并提交 `ui/` 的变更，不要将 `ui/` 加入 `.gitignore`。release workflow 通过 `npm ci && npm run package` 调用 Node sidecar packager。
+- **例外：`ui/` 必须入库。** `ui/` 是 DBX 插件 package input；修改前端源码后必须重新 `npm run build` 并提交 `ui/` 的变更，不要将 `ui/` 加入 `.gitignore`。release workflow 通过 `npm ci && npm run package` 调用 DBX 官方 CLI。
 - 发现 `.env`、密钥、Token、私钥或真实连接串时，停止提交并提醒用户。
 - 不执行 force push，不删除远程内容。
 - 不修改 `t8y2/dbx` 仓库。

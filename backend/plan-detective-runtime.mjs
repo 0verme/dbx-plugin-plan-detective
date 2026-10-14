@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+// Experimental Issue #66 source retained for contract tests; not registered or
+// packaged until DBX supports native-connection binding and structured plan handoff.
 import readline from "node:readline";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
