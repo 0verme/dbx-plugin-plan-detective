@@ -4,8 +4,9 @@
 
 - **Phase 72.1 完成**：版本化 Snapshot envelope、session provenance、校验与 JSON/Text/XML round-trip。
 - **Phase 72.2 完成**：正式 DBX Host Storage adapter 与有界单值快照仓库。
-- **Phase 72.3 实现中**：快照保存/历史管理 UI、基线选择和本地历史回看。
-- **真实环境**：NAS 无 DBX Desktop；Storage 持久化及重启恢复仍 **NOT VERIFIED**。
+- **Phase 72.3 完成（PR #88）**：快照保存/历史管理 UI、窗口内基线选择和本地历史回看。
+- **Phase 72.4 软件回归通过**：全量 `npm test`、build/package、`npm audit --audit-level=high` 与 diff-check 均通过；package 仅为 unsigned review candidate，未发布。这不等同于真实 Host 验收。
+- **Issue #72 仍 OPEN**：NAS 无 DBX Desktop；Host Storage 持久化、安装/升级权限、重启恢复及多窗口行为均 **NOT VERIFIED**，待真实 DBX Desktop 验收后再关闭。
 
 ## Snapshot Schema v1
 
