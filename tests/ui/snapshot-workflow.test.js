@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { MESSAGE_CATALOG } from "../../src/lib/i18n/messages.js";
+
+const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+const [app, manager, replay] = await Promise.all([
+  read("src/App.svelte"),
+  read("src/components/SnapshotManager.svelte"),
+  read("src/lib/plan-snapshot-view.js"),
+]);
+
+test("snapshot manager is independent of the connection gate and uses only the Host Storage repository", () => {
+  assert.match(app, /<SnapshotManager[\s\S]*?repository=\{snapshotRepository\}/);
+  assert.ok(app.indexOf("{#if activeSnapshot !== null}") < app.indexOf("{#if hostEntryState === \"loading\"}"), "history view is reachable before host connection/Plan API gates");
+  assert.match(app, /describePluginStorage\(bridge, \{ initialized: true \}\)/);
+  assert.match(app, /createPlanSnapshotRepository\(bridge\)/);
+  assert.doesNotMatch(manager, /localStorage|indexedDB/);
+  assert.match(manager, /target\.list\(/, "list uses the repository API");
+  for (const operation of ["get", "save", "rename", "delete", "clear"]) {
+    assert.match(manager, new RegExp(`repository\\.${operation}\\(`), `${operation} uses the repository API`);
+  }
+});
+
+test("opening history replays the saved RawPlanInput locally and never calls the host plan API", () => {
+  const openHandler = app.match(/function openSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(openHandler, "App has a dedicated history-open handler");
+  assert.match(openHandler, /createPlanSnapshotView\(snapshot\)/);
+  assert.doesNotMatch(openHandler, /analyze\(/);
+  assert.match(app, /const displaySession = \$derived\(activeSnapshot\?\.session \?\? session\)/);
+  assert.match(app, /<PlanAnalysisLayout[\s\S]*?\{summary\}[\s\S]*?\{findingViews\}[\s\S]*?\{hotspotViews\}/);
+  assert.match(app, /snapshot\.history\.reanalysis/);
+  assert.match(app, /snapshot\.history\.analysis\.structured/);
+  assert.match(app, /activeSnapshot\.snapshot\.rawInput\.sql/);
+  assert.doesNotMatch(replay, /^import .*host/mi, "snapshot replay has no Host adapter dependency");
+  assert.doesNotMatch(replay, /explainEstimatedPlan\s*\(/);
+});
+
+test("history actions expose rename, delete, clear, and an explicit comparison-baseline selection", () => {
+  assert.match(manager, /repository\.rename\(snapshotId, renameTitle\.trim\(\), renameNote\)/);
+  assert.match(manager, /repository\.delete\(snapshotId\)/);
+  assert.match(manager, /repository\.clear\(\)/);
+  assert.match(manager, /onSelectBaseline\(baselineSnapshotId === snapshotId \? null : snapshotId\)/);
+  assert.match(manager, /!nextSnapshots\.some\(\(snapshot\) => snapshot\.snapshotId === baselineSnapshotId\)[\s\S]*?onSelectBaseline\(null\)/);
+  assert.match(manager, /onDeleteSnapshot\(snapshotId\)/);
+  assert.match(manager, /onClearSnapshots\(\)/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.baseline.select"], /基线/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.baseline.select"], /baseline/i);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.description"], /当前窗口/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.manager.description"], /this window/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.concurrentWarning"], /多个插件窗口/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
+});
+
+test("save form requires explicit user action and warns about local SQL/Raw Plan persistence", () => {
+  assert.match(manager, /createPlanSnapshot\(\{[\s\S]*?session: currentSession/);
+  assert.match(manager, /snapshot\.save\.localWarning/);
+  assert.match(manager, /maxlength="120"/);
+  assert.match(manager, /maxlength="2000"/);
+  assert.match(manager, /disabled=\{!canMutate \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
+});
