@@ -136,6 +136,8 @@ test("synthetic MySQL before/after fixture matches the table while keeping nativ
   const afterScan = after.analysis.normalized.root.children[0];
   assert.equal(beforeScan.nodeType, "Table Scan");
   assert.equal(afterScan.nodeType, "Index Lookup");
+  assert.equal(beforeScan.engineSpecific.mysql.possibleKeys, null, "the hypothetical index is unavailable before the change");
+  assert.deepEqual(afterScan.engineSpecific.mysql.possibleKeys, ["idx_orders_status"]);
   assert.equal(beforeScan.totalCost, null);
   assert.equal(afterScan.totalCost, null);
 

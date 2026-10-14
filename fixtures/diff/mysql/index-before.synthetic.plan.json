@@ -4,7 +4,6 @@
     "table": {
       "table_name": "orders",
       "access_type": "ALL",
-      "possible_keys": ["idx_orders_status"],
       "rows_examined_per_scan": 1000,
       "rows_produced_per_join": 300,
       "filtered": "30.00",
