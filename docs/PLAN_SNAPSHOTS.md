@@ -3,7 +3,8 @@
 ## 开发状态
 
 - **Phase 72.1 完成**：版本化 Snapshot envelope、session provenance、校验与 JSON/Text/XML round-trip。
-- **Phase 72.2 实现中**：正式 DBX Host Storage adapter 与有界快照仓库；当前尚未接入管理 UI。
+- **Phase 72.2 完成**：正式 DBX Host Storage adapter 与有界单值快照仓库。
+- **Phase 72.3 实现中**：快照保存/历史管理 UI、基线选择和本地历史回看。
 - **真实环境**：NAS 无 DBX Desktop；Storage 持久化及重启恢复仍 **NOT VERIFIED**。
 
 ## Snapshot Schema v1
@@ -50,9 +51,11 @@ Plan Detective 将全部快照和索引保存为**一个版本化 value / 一个
 ## 隐私与恢复行为
 
 - envelope 只复制 `RawPlanInput` 已知字段，以及 `source.databaseName` / `source.schema`；不保留完整分析 session、DBX bridge、connectionId、credential、capability 或 lifecycle 对象。
-- SQL 与 Raw Plan 默认会一起进入用户主动保存的本地快照。计划或 SQL 可能含用户提供的敏感字面量；**本功能不声称脱敏**。后续保存 UI 必须明确告知本地保存内容。
+- SQL 与 Raw Plan 默认会一起进入用户主动保存的本地快照。计划或 SQL 可能含用户提供的敏感字面量；**本功能不声称脱敏**。保存表单会明确告知写入 DBX Host Storage 的内容。
 - `deserializePlanSnapshot` 遇到损坏的序列化快照返回 `CORRUPT_SNAPSHOT`；持久化仓库遇到损坏的 store envelope/记录返回 `CORRUPT_SNAPSHOT_STORE`。未知快照/store 版本分别返回 `UNSUPPORTED_SNAPSHOT_VERSION` / `UNSUPPORTED_STORE_VERSION`。读取端不会静默覆盖、丢弃或按 v1 解码未知版本。
 - 当前只支持 v1，不自动迁移未知版本。任何未来迁移必须显式、可测试，并保留旧记录直到迁移成功。
+- 打开历史快照时，使用快照中的完整 `RawPlanInput` 由当前 Plan Core 本地重新计算 Findings / Hotspots；不调用 `explainPlan`、不要求连接仍打开。UI 显示保存时插件版本与当前 analyzer 版本，并明确重新计算结果不代表保存时的诊断判断；当当前 Core 无 parser 或解析失败时仍保留并展示 Raw Plan。
+- 「选作基线」状态当前只保存在插件窗口内，不修改快照，不跨重启持久化；Issue #73 会消费该选择并定义 diff 交互。
 
 ## 当前验证边界
 

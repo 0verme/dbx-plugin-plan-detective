@@ -83,12 +83,12 @@ test("Host refresh, Raw Plan, and prompt-copy controls remain wired to existing 
   assert.match(app, /loadPlanCapabilities\(\{ bridge, connectionId \}\)/);
   assert.match(connection, /aria-label=\{t\("connection\.refresh"\)\}[\s\S]*?onclick=\{onRefresh\}/);
 
-  assert.match(app, /formatRawPlan\(session\.hostResult\)/);
-  assert.match(app, /<RawPlanViewer \{locale\} hostResult=\{session\.hostResult \?\? null\} preview=\{rawPlanPreview\} warningLabels=\{rawPlanWarnings\}/);
+  assert.match(app, /formatRawPlan\(displaySession\.hostResult\)/);
+  assert.match(app, /<RawPlanViewer \{locale\} hostResult=\{displaySession\.hostResult \?\? null\} preview=\{rawPlanPreview\} warningLabels=\{rawPlanWarnings\}/);
   assert.match(rawPlan, /<details>\s*<summary>\{t\("raw\.view"/);
   assert.doesNotMatch(rawPlan, /<details\s+open>/);
 
-  assert.match(app, /session\.status === "structured" \? \{ \.\.\.describeCopyPromptAction\(copyState, locale\), onCopy: copyAiAnalysisPrompt \}/);
+  assert.match(app, /displaySession\.status === "structured" \? \{ \.\.\.describeCopyPromptAction\(copyState, locale\), onCopy: copyAiAnalysisPrompt \}/);
   assert.match(app, /buildAiAnalysisPrompt\(\{/);
   assert.match(app, /copyTextToClipboard\(\{ bridge, text: prompt \}\)/);
   assert.match(notice, /onclick=\{copyPrompt\.onCopy\}/);

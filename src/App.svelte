@@ -7,8 +7,10 @@
   import HostAudit from "./components/HostAudit.svelte";
   import PlanAnalysisLayout from "./components/PlanAnalysisLayout.svelte";
   import RawPlanViewer from "./components/RawPlanViewer.svelte";
+  import SnapshotManager from "./components/SnapshotManager.svelte";
   import SqlInput from "./components/SqlInput.svelte";
-  import { describePlanApi, resolvePlanBridge } from "./host/index.js";
+  import { describePlanApi, describePluginStorage, resolvePlanBridge } from "./host/index.js";
+  import pluginPackage from "../package.json";
   import { buildAiAnalysisPrompt } from "./lib/ai-analysis-prompt.js";
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
   import { describeHostEntryState } from "./lib/host-entry-state.js";
@@ -16,6 +18,8 @@
   import { analyzeFixture, countByMode, findCatalogEntry, pickDefaultFixture } from "./lib/fixture-catalog.js";
   import { createTranslator, normalizeLocale } from "./lib/i18n/index.js";
   import { readLocalePreference, resolveLocalePreference, saveLocalePreference } from "./lib/i18n/locale-preference.js";
+  import { createPlanSnapshotRepository } from "./lib/plan-snapshot-store.js";
+  import { createPlanSnapshotView, formatPlanSnapshotTime } from "./lib/plan-snapshot-view.js";
   import {
     describeAnalysisError,
     describeAnalysisNotice,
@@ -54,10 +58,13 @@
 
   const bridge = resolvePlanBridge();
   const initialPlanApi = describePlanApi(bridge);
+  const initialStorageApi = describePluginStorage(bridge);
   /** Fixtures / host audit are development tools and stay out of production UI. */
   const isDev = import.meta.env.DEV;
 
   let planApi = $state(initialPlanApi);
+  let storageApi = $state(initialStorageApi);
+  let snapshotRepository = $state(initialStorageApi.available ? createPlanSnapshotRepository(bridge) : null);
   const storedLocale = readLocalePreference();
   let manualLocale = $state(null);
   const initialHostLocale = bridge?.locale ?? null;
@@ -84,6 +91,8 @@
   let capabilityState = $state("idle");
   let capabilityError = $state(null);
   let session = $state(idleAnalysis());
+  let activeSnapshot = $state(null);
+  let baselineSnapshotId = $state(null);
   /** `idle` | `copying` | `copied` | `failed` — see describeCopyPromptAction. */
   let copyState = $state("idle");
   let copyResetTimer = null;
@@ -119,8 +128,18 @@
       planApi = describePlanApi(bridge, { initialized: true });
     };
 
+    const syncStorageApi = () => {
+      storageApi = describePluginStorage(bridge, { initialized: true });
+      snapshotRepository = storageApi.available ? createPlanSnapshotRepository(bridge) : null;
+    };
+
+    let hostInitHandled = false;
     const handleInit = () => {
-      syncPlanApi();
+      if (!hostInitHandled) {
+        hostInitHandled = true;
+        syncPlanApi();
+        syncStorageApi();
+      }
       syncContext();
     };
 
@@ -203,6 +222,7 @@
   async function analyze() {
     if (!analysisReady || effectiveConnectionId === null) return;
 
+    activeSnapshot = null;
     session = loadingAnalysis();
     selectedNodeId = "0";
     collapsedIds = new Set();
@@ -233,7 +253,8 @@
     }
   });
 
-  const hostStructured = $derived(session.status === "structured" ? session.analysis : null);
+  const displaySession = $derived(activeSnapshot?.session ?? session);
+  const hostStructured = $derived(displaySession.status === "structured" ? displaySession.analysis : null);
   const activeAnalysis = $derived(view === "host" ? hostStructured : (fixtureAnalysis?.result ?? null));
 
   const rows = $derived(activeAnalysis ? buildTreeRows(activeAnalysis.normalized.root) : []);
@@ -253,16 +274,22 @@
 
   /* ---------------------------------------------------- host view mapping -- */
 
-  const analysisNotice = $derived(describeAnalysisNotice(session, locale));
+  const analysisNotice = $derived.by(() => {
+    const notice = describeAnalysisNotice(displaySession, locale);
+    if (activeSnapshot === null || notice === null) return notice;
+    if (displaySession.status === "structured") return { ...notice, title: t("snapshot.history.analysis.structured") };
+    if (displaySession.status === "raw-only") return { ...notice, title: t("snapshot.history.analysis.rawOnly") };
+    return notice;
+  });
   const analysisError = $derived(
-    session.status === "error"
-      ? { ...describeAnalysisError(session.error.code, locale), code: session.error.code, message: session.error.message, hostMessage: session.error.hostMessage }
+    displaySession.status === "error"
+      ? { ...describeAnalysisError(displaySession.error.code, locale), code: displaySession.error.code, message: displaySession.error.message, hostMessage: displaySession.error.hostMessage }
       : null,
   );
-  const rawPlanPreview = $derived(session.hostResult ? formatRawPlan(session.hostResult) : null);
-  const rawPlanWarnings = $derived((session.hostResult?.warnings ?? []).map((warning) => describePlanWarning(warning, locale)));
+  const rawPlanPreview = $derived(displaySession.hostResult ? formatRawPlan(displaySession.hostResult) : null);
+  const rawPlanWarnings = $derived((displaySession.hostResult?.warnings ?? []).map((warning) => describePlanWarning(warning, locale)));
   const copyPromptAction = $derived(
-    session.status === "structured" ? { ...describeCopyPromptAction(copyState, locale), onCopy: copyAiAnalysisPrompt } : null,
+    displaySession.status === "structured" ? { ...describeCopyPromptAction(copyState, locale), onCopy: copyAiAnalysisPrompt } : null,
   );
 
   /* ------------------------------------------------------------ copy prompt -- */
@@ -273,13 +300,14 @@
    * handler performs no network request and sends nothing anywhere.
    */
   async function copyAiAnalysisPrompt() {
-    if (session.status !== "structured" || session.analysis === null || session.rawInput === null) return;
+    const currentSession = displaySession;
+    if (currentSession.status !== "structured" || currentSession.analysis === null || currentSession.rawInput === null) return;
 
     copyState = "copying";
     const prompt = buildAiAnalysisPrompt({
-      rawInput: session.rawInput,
-      analysis: session.analysis,
-      databaseType: session.capabilities?.dbType ?? null,
+      rawInput: currentSession.rawInput,
+      analysis: currentSession.analysis,
+      databaseType: currentSession.capabilities?.dbType ?? currentSession.rawInput.database ?? null,
       locale,
     });
     const result = await copyTextToClipboard({ bridge, text: prompt });
@@ -293,6 +321,40 @@
   }
 
   /* --------------------------------------------------------------- events -- */
+
+  function openSnapshot(snapshot) {
+    activeSnapshot = createPlanSnapshotView(snapshot);
+    selectedNodeId = "0";
+    collapsedIds = new Set();
+    copyState = "idle";
+  }
+
+  function returnToCurrentAnalysis() {
+    activeSnapshot = null;
+    selectedNodeId = "0";
+    collapsedIds = new Set();
+    copyState = "idle";
+  }
+
+  function selectBaseline(snapshotId) {
+    baselineSnapshotId = snapshotId;
+  }
+
+  function updateActiveSnapshot(snapshot) {
+    if (activeSnapshot?.snapshot.snapshotId === snapshot.snapshotId) {
+      activeSnapshot = { ...activeSnapshot, snapshot };
+    }
+  }
+
+  function handleSnapshotDeleted(snapshotId) {
+    if (activeSnapshot?.snapshot.snapshotId === snapshotId) returnToCurrentAnalysis();
+    if (baselineSnapshotId === snapshotId) baselineSnapshotId = null;
+  }
+
+  function handleSnapshotsCleared() {
+    returnToCurrentAnalysis();
+    baselineSnapshotId = null;
+  }
 
   function selectLocale(nextLocale) {
     manualLocale = normalizeLocale(nextLocale);
@@ -387,6 +449,83 @@
       <p class="panel empty">{t("app.fixture.empty", { count: catalogCounts.total })}</p>
     {/if}
   {:else}
+    <SnapshotManager
+      {locale}
+      storageState={storageApi}
+      repository={snapshotRepository}
+      currentSession={activeSnapshot === null ? session : null}
+      activeSnapshotId={activeSnapshot?.snapshot.snapshotId ?? null}
+      {baselineSnapshotId}
+      producerVersion={pluginPackage.version}
+      onOpenSnapshot={openSnapshot}
+      onSelectBaseline={selectBaseline}
+      onDeleteSnapshot={handleSnapshotDeleted}
+      onClearSnapshots={handleSnapshotsCleared}
+      onUpdateSnapshot={updateActiveSnapshot}
+    />
+
+    {#if activeSnapshot !== null}
+      <section class="snapshot-history" aria-labelledby="snapshot-history-title">
+        <div class="snapshot-history-head">
+          <span class="badge info">{t("snapshot.history.label")}</span>
+          <button type="button" class="secondary-link" onclick={returnToCurrentAnalysis}>{t("snapshot.history.return")}</button>
+        </div>
+        <h2 id="snapshot-history-title">{activeSnapshot.snapshot.title}</h2>
+        <p class="snapshot-history-reanalysis">
+          {t("snapshot.history.reanalysis", {
+            savedVersion: activeSnapshot.snapshot.producerVersion ?? t("snapshot.unknownVersion"),
+            currentVersion: pluginPackage.version,
+          })}
+        </p>
+        <div class="snapshot-history-metadata">
+          <span>{t("snapshot.meta.database", {
+            database: activeSnapshot.snapshot.rawInput.database,
+            version: activeSnapshot.snapshot.rawInput.databaseVersion ?? t("snapshot.unknown"),
+          })}</span>
+          <span>{t("snapshot.meta.savedAt", { time: formatPlanSnapshotTime(activeSnapshot.snapshot.savedAt, locale) ?? t("snapshot.unknown") })}</span>
+          <span>{t("snapshot.meta.capturedAt", { time: formatPlanSnapshotTime(activeSnapshot.snapshot.capturedAt, locale) ?? t("snapshot.unknown") })}</span>
+          <span>{t("snapshot.meta.producer", { version: activeSnapshot.snapshot.producerVersion ?? t("snapshot.unknownVersion") })}</span>
+          {#if activeSnapshot.snapshot.source.databaseName || activeSnapshot.snapshot.source.schema}
+            <span>{t("snapshot.meta.source", {
+              source: [activeSnapshot.snapshot.source.databaseName, activeSnapshot.snapshot.source.schema].filter(Boolean).join(" / "),
+            })}</span>
+          {/if}
+        </div>
+        {#if activeSnapshot.snapshot.note}
+          <p class="snapshot-history-note">{activeSnapshot.snapshot.note}</p>
+        {/if}
+        {#if activeSnapshot.snapshot.rawInput.sql}
+          <details class="snapshot-history-sql">
+            <summary>{t("snapshot.history.sql")}</summary>
+            <pre>{activeSnapshot.snapshot.rawInput.sql}</pre>
+          </details>
+        {/if}
+      </section>
+
+      <AnalysisNotice {locale} status={displaySession.status} notice={analysisNotice} error={analysisError} copyPrompt={copyPromptAction} />
+      {#if displaySession.status === "structured" && hostStructured}
+        <PlanAnalysisLayout
+          {locale}
+          {summary}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={selectNode}
+          hotspotView={hotspotViews}
+          hotspotCounts={hotspotCounts}
+          findingViews={findingViews}
+          findingCounts={findingCounts}
+          {rows}
+          collapsed={collapsedIds}
+          {findingsByNodeRef}
+          {hotspotsByNodeRef}
+          {inspector}
+          selectedNodeFindings={selectedNodeFindings}
+          onToggleNode={toggleNode}
+        />
+      {/if}
+      <div class="raw-plan-section">
+        <RawPlanViewer {locale} hostResult={displaySession.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
+      </div>
+    {:else}
     {#if hostEntryState === "loading"}
       <section class="panel context-loading" role="status" aria-live="polite">
         <p>{t("app.context.loading")}</p>
@@ -478,8 +617,9 @@
       {/if}
 
       <div class="raw-plan-section">
-        <RawPlanViewer {locale} hostResult={session.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
+        <RawPlanViewer {locale} hostResult={displaySession.hostResult ?? null} preview={rawPlanPreview} warningLabels={rawPlanWarnings} />
       </div>
+    {/if}
     {/if}
   {/if}
 </div>
@@ -735,6 +875,71 @@
     flex: 3 1 620px;
     flex-direction: column;
     gap: var(--pd-layout-gap);
+  }
+
+  .snapshot-history {
+    margin: 0 0 var(--pd-layout-gap);
+    padding: 12px;
+    border: 1px solid var(--pd-border);
+    border-left: 3px solid var(--pd-accent);
+    border-radius: 6px;
+    background: var(--pd-surface);
+  }
+
+  .snapshot-history-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .snapshot-history h2 {
+    margin: 6px 0 0;
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+
+  .snapshot-history-reanalysis,
+  .snapshot-history-note {
+    margin: 6px 0 0;
+    color: var(--pd-muted);
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .snapshot-history-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 8px;
+    color: var(--pd-muted);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+  }
+
+  .snapshot-history-sql {
+    margin-top: 8px;
+  }
+
+  .snapshot-history-sql summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .snapshot-history-sql pre {
+    max-height: 240px;
+    margin: 6px 0 0;
+    padding: 8px;
+    overflow: auto;
+    border: 1px solid var(--pd-border);
+    border-radius: 5px;
+    background: var(--pd-surface-muted);
+    font-size: 11px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .raw-plan-section {
