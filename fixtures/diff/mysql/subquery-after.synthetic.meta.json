@@ -1,0 +1,25 @@
+{
+  "database": "mysql",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Synthetic hand-assembled MySQL EXPLAIN FORMAT=JSON V1 plan for Diff Core regression tests. Not captured from a live server and not evidence of performance.",
+    "reference": null
+  },
+  "features": ["orders scan inside an attached subquery", "estimated mode", "subquery boundary regression"],
+  "expect": {
+    "rootNodeType": "Query Block",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": [],
+    "scenario": "orders scan moved into an attached subquery",
+    "sql": "SELECT * FROM orders WHERE status = 'OPEN';",
+    "operation": "move the scan into an attached subquery",
+    "expectedChanges": ["the relation scan does not match across the query-scope change"]
+  }
+}

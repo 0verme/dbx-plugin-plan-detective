@@ -183,3 +183,95 @@ test("synthetic MySQL before/after fixture matches the table while keeping nativ
   assert.ok(scanMatch.changes.some(({ field }) => field === "estimatedRows"));
   assert.equal(scanMatch.changes.some(({ field }) => field === "totalCost"), false);
 });
+
+test("MySQL relation scan moved into an attached subquery fails closed across query scopes", async () => {
+  const { before, after } = await loadPair("mysql", "subquery");
+  assert.deepEqual(validateFixtureMeta(before.meta, { database: "mysql", name: "subquery-before.synthetic" }), []);
+  assert.deepEqual(validateFixtureMeta(after.meta, { database: "mysql", name: "subquery-after.synthetic" }), []);
+  const beforeScan = before.analysis.normalized.root.children[0];
+  const afterWrapper = after.analysis.normalized.root.children[0];
+  const afterBlock = afterWrapper.children[0];
+  const afterScan = afterBlock.children[0];
+  assert.equal(beforeScan.nodeType, "Table Scan");
+  assert.equal(beforeScan.engineSpecific.mysql.structure, "table");
+  assert.equal(afterWrapper.engineSpecific.mysql.structure, "attached_subqueries");
+  assert.equal(afterBlock.engineSpecific.mysql.structure, "query_block");
+  assert.equal(afterBlock.engineSpecific.mysql.selectId, 2);
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched.baseline.find(({ id }) => id === beforeScan.id), {
+    id: beforeScan.id,
+    reasonCode: "NO_UNIQUE_COUNTERPART",
+  });
+  assert.deepEqual(result.unmatched.current.find(({ id }) => id === afterScan.id), {
+    id: afterScan.id,
+    reasonCode: "NO_UNIQUE_COUNTERPART",
+  });
+
+  // The same inherited scope in both plans still matches, so the guard fails
+  // closed only when query-scope evidence differs.
+  const stable = diffEstimatedPlans(after.analysis, after.analysis);
+  const stableMatch = stable.matches.find(({ beforeId }) => beforeId === afterScan.id);
+  assert.ok(stableMatch, "an identical attached-subquery plan keeps its scan matchable");
+  assert.deepEqual(stableMatch.changes, []);
+});
+
+test("MySQL subquery branch role changes fail closed for an ancestor that still has a matched scan", async () => {
+  const plan = JSON.parse(await readFile(path.join(DIFF_FIXTURES, "mysql", "subquery-after.synthetic.plan.json"), "utf8"));
+  const withScan = structuredClone(plan);
+  withScan.query_block.table = {
+    table_name: "orders",
+    access_type: "ALL",
+    rows_examined_per_scan: 1000,
+    filtered: "50.00",
+  };
+  const analyze = (raw) => analyzeRawPlan(createRawPlanInput({
+    database: "mysql",
+    mode: "estimated",
+    format: "json",
+    plan: raw,
+    sql: "SELECT * FROM orders WHERE status = 'OPEN';",
+  }));
+  const baseline = analyze(withScan);
+  const moved = structuredClone(withScan);
+  moved.query_block.optimized_away_subqueries = moved.query_block.attached_subqueries;
+  delete moved.query_block.attached_subqueries;
+  const current = analyze(moved);
+  assert.equal(current.normalized.root.children[1].engineSpecific.mysql.structure, "optimized_away_subqueries");
+
+  const result = diffEstimatedPlans(baseline, current);
+  const baselineRoot = baseline.normalized.root;
+  const baselineScan = baselineRoot.children[0];
+  const scanMatch = result.matches.find(({ beforeId }) => beforeId === baselineScan.id);
+  assert.ok(scanMatch, "the top-level scan is unaffected by the sibling subquery role change");
+  assert.deepEqual(scanMatch.changes, []);
+  assert.equal(
+    result.matches.some(({ beforeId, changes }) => beforeId === baselineRoot.id && changes.length === 0),
+    false,
+    "the root does not match while its independent subquery branch changed role",
+  );
+  assert.ok(result.unmatched.baseline.some(({ id }) => id === baselineRoot.id));
+  assert.ok(result.unmatched.current.some(({ id }) => id === current.normalized.root.id));
+});
+
+test("MySQL scan-free query block reports a changed optimizer message instead of an empty diff", async () => {
+  const { before, after } = await loadPair("mysql", "message");
+  assert.equal(before.analysis.normalized.root.engineSpecific.mysql.message, "Impossible WHERE");
+  assert.equal(after.analysis.normalized.root.engineSpecific.mysql.message, "Select tables optimized away");
+
+  const result = diffEstimatedPlans(before.analysis, after.analysis);
+  assert.equal(result.status, "comparable");
+  assert.deepEqual(result.ambiguous, []);
+  assert.deepEqual(result.unmatched, { baseline: [], current: [] });
+  assert.deepEqual(
+    result.matches.map(({ beforeId, afterId, evidence }) => [beforeId, afterId, evidence.method]),
+    [["0", "0", "exact-semantic-subtree"]],
+  );
+  assert.deepEqual(result.matches[0].changes, [{
+    field: "engineSpecific.mysql.message",
+    before: "Impossible WHERE",
+    after: "Select tables optimized away",
+  }]);
+});

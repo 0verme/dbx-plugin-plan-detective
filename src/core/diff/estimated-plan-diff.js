@@ -41,6 +41,12 @@ const CHANGE_FIELDS = Object.freeze([
   ["indexCondition", (node) => node.indexCondition],
   ["sortKeys", (node) => node.sortKeys],
   ["groupKeys", (node) => node.groupKeys],
+  // MySQL reports optimizer conclusions such as "Impossible WHERE" here; the
+  // value is engine-owned evidence, so the neutral diff reports it verbatim
+  // instead of hiding a changed conclusion behind an empty change list.
+  ["engineSpecific.mysql.message", (node, database) => (
+    database === "mysql" ? node.engineSpecific?.mysql?.message ?? null : null
+  )],
 ]);
 
 /**
@@ -260,19 +266,60 @@ function flatten(root) {
 }
 
 /**
- * Preserve PostgreSQL's independent InitPlan / SubPlan boundaries as identity
- * context for every descendant. Ordinary Outer / Inner relationships are
- * intentionally excluded because join inputs may be reordered.
+ * MySQL structural keys that open a new query scope. V1 plans keep the raw key
+ * in `engineSpecific.mysql.structure`; `selectId` identifies the block when the
+ * server provides it. V2 access-path nodes never use these keys.
+ */
+const MYSQL_QUERY_SCOPE_STRUCTURES = new Set([
+  "query_block",
+  "union_result",
+  "unary_result",
+  "intersect_result",
+  "except_result",
+  "attached_subqueries",
+  "optimized_away_subqueries",
+  "group_by_subqueries",
+  "having_subqueries",
+  "order_by_subqueries",
+  "select_list_subqueries",
+  "materialized_from_subquery",
+]);
+
+/**
+ * Independent MySQL branches whose identity must reach ancestors, mirroring
+ * PostgreSQL's InitPlan / SubPlan boundaries: a changed subquery role or set
+ * operation must break every enclosing operator key, not just its own node.
+ */
+const MYSQL_BRANCH_STRUCTURES = new Set([
+  "union_result",
+  "unary_result",
+  "intersect_result",
+  "except_result",
+  "attached_subqueries",
+  "optimized_away_subqueries",
+  "group_by_subqueries",
+  "having_subqueries",
+  "order_by_subqueries",
+  "select_list_subqueries",
+  "materialized_from_subquery",
+]);
+
+/**
+ * Preserve PostgreSQL's independent InitPlan / SubPlan boundaries and MySQL's
+ * query-block / subquery boundaries as identity context for every descendant.
+ * Ordinary Outer / Inner relationships are intentionally excluded because join
+ * inputs may be reordered.
  * @param {object} root
  * @param {string} database
  */
 function collectSubplanContexts(root, database) {
   const contexts = new Map();
   function visit(node, inherited) {
-    const relationship = database === "postgresql" ? node.engineSpecific?.parentRelationship : null;
-    const context = relationship === "InitPlan" || relationship === "SubPlan"
-      ? [...inherited, [relationship, typeof node.engineSpecific?.subplanName === "string" ? node.engineSpecific.subplanName : null]]
-      : inherited;
+    const context = database === "postgresql"
+      ? postgresContext(node, inherited)
+      : database === "mysql"
+        ? mysqlContext(node, inherited)
+        : inherited;
     contexts.set(node, JSON.stringify(context));
     for (const child of node.children) visit(child, context);
   }
@@ -280,9 +327,35 @@ function collectSubplanContexts(root, database) {
   return contexts;
 }
 
+/** @param {object} node @param {Array} inherited */
+function postgresContext(node, inherited) {
+  const relationship = node.engineSpecific?.parentRelationship;
+  if (relationship !== "InitPlan" && relationship !== "SubPlan") return inherited;
+  const subplanName = typeof node.engineSpecific?.subplanName === "string" ? node.engineSpecific.subplanName : null;
+  return [...inherited, [relationship, subplanName]];
+}
+
 /**
- * Collect each independent subplan's identity evidence for its ancestors.
- * Relation-scan lineage alone cannot see no-scan InitPlan/SubPlan branches.
+ * A MySQL query block or set operation starts a scope for its descendants, so
+ * a relation scan moved between the top-level block and an attached, optimized
+ * away, or materialized subquery no longer shares a context. The raw structure
+ * is kept as fallback evidence when `select_id` is missing.
+ * @param {object} node @param {Array} inherited
+ */
+function mysqlContext(node, inherited) {
+  const structure = node.engineSpecific?.mysql?.structure;
+  if (typeof structure !== "string" || !MYSQL_QUERY_SCOPE_STRUCTURES.has(structure)) return inherited;
+  const selectId = node.engineSpecific?.mysql?.selectId;
+  return [
+    ...inherited,
+    [structure, typeof selectId === "number" && Number.isFinite(selectId) ? selectId : null],
+  ];
+}
+
+/**
+ * Collect each independent subplan / branch's identity evidence for its
+ * ancestors. Relation-scan lineage alone cannot see no-scan PostgreSQL
+ * InitPlan / SubPlan or MySQL subquery / set-operation branches.
  * @param {object} root
  * @param {string} database
  * @param {Map<object, string>} subplanContexts
@@ -292,7 +365,10 @@ function collectSubplanIdentityTokens(root, database, subplanContexts) {
   function visit(node) {
     const descendants = node.children.flatMap(visit);
     const relationship = database === "postgresql" ? node.engineSpecific?.parentRelationship : null;
-    const ownIdentity = relationship === "InitPlan" || relationship === "SubPlan"
+    const isPostgresSubplan = relationship === "InitPlan" || relationship === "SubPlan";
+    const isMySqlBranch = database === "mysql"
+      && MYSQL_BRANCH_STRUCTURES.has(node.engineSpecific?.mysql?.structure);
+    const ownIdentity = isPostgresSubplan || isMySqlBranch
       ? JSON.stringify([
           subplanContexts.get(node) ?? "[]",
           semanticFingerprint(node, database, subplanContexts),

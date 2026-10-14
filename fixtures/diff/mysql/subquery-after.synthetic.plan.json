@@ -1,0 +1,28 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "attached_subqueries": [
+      {
+        "dependent": false,
+        "cacheable": true,
+        "query_block": {
+          "select_id": 2,
+          "table": {
+            "table_name": "orders",
+            "access_type": "ALL",
+            "rows_examined_per_scan": 1000,
+            "rows_produced_per_join": 300,
+            "filtered": "30.00",
+            "attached_condition": "(`orders`.`status` = 'OPEN')",
+            "cost_info": {
+              "read_cost": "25.00",
+              "eval_cost": "5.00",
+              "prefix_cost": "30.00",
+              "data_read_per_join": "96K"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
