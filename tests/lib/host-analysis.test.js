@@ -119,6 +119,21 @@ test("runHostAnalysis acquires capabilities first and sends one estimated plan",
   );
 });
 
+test("successful analysis records capture time and display-safe source context in its own session", async () => {
+  const session = await runHostAnalysis({
+    ...REQUEST,
+    bridge: fakeBridge(),
+    database: "analytics",
+    schema: "reporting",
+  });
+
+  assert.equal(session.status, "structured");
+  assert.equal(session.rawInput.sql, REQUEST.sql);
+  assert.deepEqual(session.source, { databaseName: "analytics", schema: "reporting" });
+  assert.equal(Number.isNaN(Date.parse(session.capturedAt)), false);
+  assert.equal(Object.hasOwn(session, "connectionId"), false);
+});
+
 test("runHostAnalysis does not acquire a plan when the dialect is unsupported", async () => {
   let explained = 0;
   const bridge = fakeBridge({
