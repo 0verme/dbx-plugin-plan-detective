@@ -1,4 +1,5 @@
 <script>
+  import { onDestroy } from "svelte";
   import { createTranslator } from "../lib/i18n/index.js";
   import { formatPlanSnapshotTime } from "../lib/plan-snapshot-view.js";
   import { PlanSnapshotStoreError } from "../lib/plan-snapshot-store.js";
@@ -24,8 +25,11 @@
   let loadState = $state("unavailable");
   let loadError = $state(null);
   let operationError = $state(null);
+  let saveError = $state(null);
   let statusMessage = $state(null);
   let saving = $state(false);
+  let savePendingLonger = $state(false);
+  let saveWaitTimer = null;
   let showSaveForm = $state(false);
   let saveTitle = $state("");
   let saveNote = $state("");
@@ -63,29 +67,53 @@
   });
 
   async function refresh(target = repository) {
-    if (target === null) return;
+    if (target === null) return null;
     const token = ++loadToken;
     loadState = "loading";
     loadError = null;
     try {
       const nextSnapshots = await target.list();
-      if (token !== loadToken) return;
+      if (token !== loadToken) return null;
       snapshots = nextSnapshots;
       if (baselineSnapshotId !== null && !nextSnapshots.some((snapshot) => snapshot.snapshotId === baselineSnapshotId)) {
         onSelectBaseline(null);
       }
       loadState = "ready";
+      return nextSnapshots;
     } catch (error) {
-      if (token !== loadToken) return;
+      if (token !== loadToken) return null;
       loadError = error;
       loadState = "error";
+      return null;
     }
   }
 
-  function clearFeedback() {
+  function clearOperationFeedback() {
     operationError = null;
     statusMessage = null;
   }
+
+  function clearSaveFeedback() {
+    saveError = null;
+    statusMessage = null;
+  }
+
+  function setSaving(value) {
+    saving = value;
+    savePendingLonger = false;
+    if (saveWaitTimer !== null) clearTimeout(saveWaitTimer);
+    saveWaitTimer = null;
+    if (value) {
+      saveWaitTimer = setTimeout(() => {
+        saveWaitTimer = null;
+        if (saving) savePendingLonger = true;
+      }, 10_000);
+    }
+  }
+
+  onDestroy(() => {
+    if (saveWaitTimer !== null) clearTimeout(saveWaitTimer);
+  });
 
   function getErrorMessage(error) {
     const code = typeof error?.code === "string" ? error.code : "GENERIC";
@@ -105,10 +133,10 @@
       saveNote,
       producerVersion,
     }),
-    setSaving: (value) => { saving = value; },
-    clearFeedback,
+    setSaving,
+    clearFeedback: clearSaveFeedback,
     setDuplicateMessage: () => { statusMessage = t("snapshot.save.inProgress"); },
-    setError: (error) => { operationError = error; },
+    setError: (error) => { saveError = error; },
     onSuccess: () => {
       showSaveForm = false;
       saveTitle = "";
@@ -119,7 +147,7 @@
   });
 
   async function openSnapshot(snapshotId) {
-    clearFeedback();
+    clearOperationFeedback();
     if (!canMutate) return;
     try {
       const snapshot = await repository.get(snapshotId);
@@ -137,13 +165,13 @@
   }
 
   function selectBaseline(snapshotId) {
-    clearFeedback();
+    clearOperationFeedback();
     if (!canMutate) return;
     onSelectBaseline(baselineSnapshotId === snapshotId ? null : snapshotId);
   }
 
   function beginRename(snapshot) {
-    clearFeedback();
+    clearOperationFeedback();
     renameId = snapshot.snapshotId;
     renameTitle = snapshot.title;
     renameNote = snapshot.note;
@@ -151,7 +179,7 @@
 
   async function saveRename(event, snapshotId) {
     event.preventDefault();
-    clearFeedback();
+    clearOperationFeedback();
     if (!canMutate || savingRename) return;
 
     savingRename = true;
@@ -170,7 +198,7 @@
   }
 
   async function deleteSnapshot(snapshotId) {
-    clearFeedback();
+    clearOperationFeedback();
     if (!canMutate) return;
     try {
       const deleted = await repository.delete(snapshotId);
@@ -187,7 +215,7 @@
   }
 
   async function clearSnapshots() {
-    clearFeedback();
+    clearOperationFeedback();
     if (!canMutate) return;
     try {
       const count = await repository.clear();
@@ -216,7 +244,7 @@
         type="button"
         class="snapshot-primary"
         disabled={!canMutate}
-        onclick={() => { clearFeedback(); showSaveForm = !showSaveForm; }}
+        onclick={() => { clearSaveFeedback(); showSaveForm = !showSaveForm; }}
       >{t("snapshot.save.open")}</button>
     {:else}
       <button type="button" class="snapshot-primary" disabled title={t("snapshot.save.requiresStructured")}>{t("snapshot.save.open")}</button>
@@ -226,7 +254,7 @@
   {#if saveGateMessage !== null}
     <p id="snapshot-save-gate" class="snapshot-save-gate" role="status">{saveGateMessage}</p>
   {/if}
-  {#if operationError && !showSaveForm}
+  {#if operationError}
     <p class="snapshot-feedback error" role="alert">{getErrorMessage(operationError)}</p>
   {/if}
   {#if statusMessage}
@@ -238,11 +266,11 @@
       <p class="snapshot-privacy-note">{t("snapshot.save.localWarning")}</p>
       <label>
         <span>{t("snapshot.field.title")}</span>
-        <input bind:value={saveTitle} maxlength="120" required autocomplete="off" />
+        <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} />
       </label>
       <label>
         <span>{t("snapshot.field.note")}</span>
-        <textarea bind:value={saveNote} maxlength="2000" rows="2"></textarea>
+        <textarea bind:value={saveNote} maxlength="2000" rows="2" disabled={saving}></textarea>
       </label>
       <div class="snapshot-actions">
         <button type="submit" class="snapshot-primary" disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
@@ -250,8 +278,11 @@
         </button>
         <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>
       </div>
-      {#if operationError}
-        <p class="snapshot-feedback error snapshot-save-error" role="alert">{getErrorMessage(operationError)}</p>
+      {#if saving && savePendingLonger}
+        <p class="snapshot-feedback snapshot-save-pending" role="status" aria-live="polite">{t("snapshot.save.pendingDiagnostic")}</p>
+      {/if}
+      {#if saveError}
+        <p class="snapshot-feedback error snapshot-save-error" role="alert">{getErrorMessage(saveError)}</p>
       {/if}
     </form>
   {/if}
@@ -281,7 +312,7 @@
             <button type="button" class="snapshot-secondary" onclick={() => (clearConfirmation = false)}>{t("snapshot.cancel")}</button>
           </div>
         {:else}
-          <button type="button" class="snapshot-text-button" onclick={() => { clearFeedback(); clearConfirmation = true; }}>
+          <button type="button" class="snapshot-text-button" onclick={() => { clearOperationFeedback(); clearConfirmation = true; }}>
             {t("snapshot.clear.open")}
           </button>
         {/if}
@@ -347,7 +378,7 @@
                 type="button"
                 class="snapshot-danger-link"
                 disabled={!canMutate}
-                onclick={() => { clearFeedback(); deleteConfirmationId = snapshot.snapshotId; }}
+                onclick={() => { clearOperationFeedback(); deleteConfirmationId = snapshot.snapshotId; }}
               >{t("snapshot.delete.open")}</button>
             </div>
           {/if}
@@ -406,7 +437,8 @@
     font-size: 12px;
   }
 
-  .snapshot-save-error {
+  .snapshot-save-error,
+  .snapshot-save-pending {
     margin: 0;
   }
 

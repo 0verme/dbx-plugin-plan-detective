@@ -131,20 +131,42 @@ async function mutateStore(bridge, mutate) {
 
   try {
     await setPluginStorageValue(bridge, PLAN_SNAPSHOT_STORAGE_KEY, candidate);
-  } catch (error) {
+  } catch (writeError) {
     // A transport failure may occur after the host committed the atomic value.
-    // Re-read once: acknowledge our exact commit, report conflict, or preserve
-    // the host error while leaving the previous document untouched.
-    const afterFailure = await loadStore(bridge).catch((readError) => { throw wrapStorageError(readError); });
-    const afterFingerprint = fingerprint(afterFailure);
-    if (afterFingerprint === candidateFingerprint) return change.result;
-    if (afterFingerprint !== baseFingerprint) throw concurrentModification();
-    throw wrapStorageError(error);
+    // Re-read (read-only) to distinguish our exact commit, a competing update,
+    // an unchanged document, and an outcome that the host still cannot confirm.
+    const outcome = await readMutationOutcome(bridge, candidateFingerprint, baseFingerprint);
+    if (outcome === "candidate") return change.result;
+    if (outcome === "other") throw concurrentModification();
+    throw wrapStorageError(writeError);
   }
 
-  const persisted = await loadStore(bridge);
-  if (fingerprint(persisted) !== candidateFingerprint) throw concurrentModification();
-  return change.result;
+  // Even when set resolves, verify the host's persisted value. If the first
+  // read is inconclusive, read once more; never retry the write itself.
+  const outcome = await readMutationOutcome(bridge, candidateFingerprint, baseFingerprint);
+  if (outcome === "candidate") return change.result;
+  if (outcome === "other") throw concurrentModification();
+  throw writeOutcomeUnknown();
+}
+
+async function readMutationOutcome(bridge, candidateFingerprint, baseFingerprint) {
+  let lastReadError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let persisted;
+    try {
+      persisted = await loadStore(bridge);
+      lastReadError = null;
+    } catch (error) {
+      lastReadError = error;
+      continue;
+    }
+    const persistedFingerprint = fingerprint(persisted);
+    if (persistedFingerprint === candidateFingerprint) return "candidate";
+    if (persistedFingerprint !== baseFingerprint) return "other";
+    if (attempt === 1) return "base";
+  }
+  if (lastReadError !== null) throw writeOutcomeUnknown(lastReadError);
+  return "base";
 }
 
 async function loadStore(bridge) {
@@ -268,6 +290,15 @@ function serializeForBridge(bridge, operation) {
 
 function concurrentModification() {
   return new PlanSnapshotStoreError("SNAPSHOT_STORAGE_CONFLICT", "Snapshot storage changed in another window. Reload the snapshot list; no automatic retry or merge was attempted.");
+}
+
+function writeOutcomeUnknown(error = null) {
+  const diagnostic = error === null ? null : wrapStorageError(error);
+  return new PlanSnapshotStoreError(
+    "SNAPSHOT_WRITE_UNCONFIRMED",
+    "DBX did not confirm whether the snapshot update was committed; reload history before retrying.",
+    diagnostic?.hostMessage ?? null,
+  );
 }
 
 function corruptStore(message) {

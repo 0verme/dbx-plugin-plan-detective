@@ -44,8 +44,9 @@ export function createSnapshotSaveHandler({
 
     inFlight = true;
     setSaving(true);
+    let snapshot = null;
     try {
-      const snapshot = createSnapshot({
+      snapshot = createSnapshot({
         session: state.currentSession,
         title: state.saveTitle.trim(),
         note: state.saveNote,
@@ -56,8 +57,16 @@ export function createSnapshotSaveHandler({
       onSuccess(snapshot);
       return { status: "saved", snapshot };
     } catch (error) {
+      if (error?.code === "SNAPSHOT_WRITE_UNCONFIRMED" && snapshot !== null) {
+        const refreshed = await refresh(state.repository).catch(() => null);
+        if (Array.isArray(refreshed) && refreshed.some((entry) => entry.snapshotId === snapshot.snapshotId)) {
+          onSuccess(snapshot);
+          return { status: "saved", snapshot, confirmedAfterUncertainWrite: true };
+        }
+      } else if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") {
+        await refresh(state.repository);
+      }
       setError(error);
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") await refresh(state.repository);
       return { status: "failed", error };
     } finally {
       inFlight = false;

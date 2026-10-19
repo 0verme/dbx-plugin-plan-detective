@@ -109,6 +109,29 @@ test("save failures are surfaced, leave the form success callback untouched, and
   assert.deepEqual(harness.saving, [true, false]);
 });
 
+test("an unconfirmed write is checked against refreshed history before success or error feedback", async () => {
+  let persisted = [];
+  let saveCount = 0;
+  const harness = createHarness({
+    repository: {
+      async save(snapshot) {
+        saveCount += 1;
+        persisted = [snapshot];
+        throw new PlanSnapshotStoreError("SNAPSHOT_WRITE_UNCONFIRMED", "Host read-back failed.");
+      },
+      async list() { return persisted; },
+    },
+  });
+
+  const result = await harness.handler(harness.event());
+  assert.equal(result.status, "saved");
+  assert.equal(result.confirmedAfterUncertainWrite, true);
+  assert.equal(saveCount, 1, "checking history never calls save a second time");
+  assert.equal(harness.successes[0].snapshotId, persisted[0].snapshotId);
+  assert.equal(harness.errors.length, 0);
+  assert.deepEqual(harness.saving, [true, false]);
+});
+
 test("duplicate submits during an in-flight save are explicitly reported and do not write twice", async () => {
   let finishSave;
   let saveCount = 0;

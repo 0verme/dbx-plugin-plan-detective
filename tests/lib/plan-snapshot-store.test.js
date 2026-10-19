@@ -243,3 +243,41 @@ test("verifies the committed document and reports a concurrent post-write overwr
   assert.equal(calls.set, 1);
   assert.deepEqual(values.get(PLAN_SNAPSHOT_STORAGE_KEY), external);
 });
+
+test("re-reads once after a Host Storage read-back failure and confirms the committed write", async () => {
+  let gets = 0;
+  const { bridge, calls } = createHarness({ hooks: {
+    async get({ key, values }) {
+      gets += 1;
+      if (gets === 3) throw new Error("temporary storage read failure");
+      return values.has(key) ? copy(values.get(key)) : null;
+    },
+  } });
+  const repository = createPlanSnapshotRepository(bridge);
+  const snapshot = makeSnapshot("read-back-recovered");
+
+  assert.deepEqual(await repository.save(snapshot), snapshot);
+  assert.equal(gets, 4, "the failed read-back is followed by one read-only confirmation");
+  assert.equal(calls.set, 1, "confirmation never retries the write");
+  assert.deepEqual(await repository.get(snapshot.snapshotId), snapshot);
+});
+
+test("reports an unconfirmed write after both verification reads fail without retrying storage.set", async () => {
+  let gets = 0;
+  const { bridge, calls } = createHarness({ hooks: {
+    async get({ key, values }) {
+      gets += 1;
+      if (gets >= 3 && gets <= 4) throw new Error("storage read-back unavailable");
+      return values.has(key) ? copy(values.get(key)) : null;
+    },
+  } });
+  const repository = createPlanSnapshotRepository(bridge);
+  const snapshot = makeSnapshot("read-back-unknown");
+
+  await assert.rejects(repository.save(snapshot), (error) => {
+    assert.equal(error.code, "SNAPSHOT_WRITE_UNCONFIRMED");
+    return true;
+  });
+  assert.equal(calls.set, 1, "an unknown outcome is never retried automatically");
+  assert.deepEqual((await repository.list()).map((entry) => entry.snapshotId), [snapshot.snapshotId], "a later read can confirm whether it committed");
+});

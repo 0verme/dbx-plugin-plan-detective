@@ -68,3 +68,25 @@ test("save form requires explicit user action and gives visible, actionable save
   assert.match(manager, /snapshot-save-gate/);
   assert.match(manager, /snapshot-save-error/);
 });
+
+test("save errors and non-save operation errors are isolated in their own feedback regions", () => {
+  const operationFeedbackIndex = manager.indexOf("{#if operationError}");
+  const saveFormIndex = manager.indexOf("{#if showSaveForm}");
+  const saveFeedbackIndex = manager.indexOf("{#if saveError}");
+
+  assert.ok(operationFeedbackIndex >= 0 && operationFeedbackIndex < saveFormIndex);
+  assert.ok(saveFormIndex < saveFeedbackIndex);
+  assert.match(manager, /setError: \(error\) => \{ saveError = error; \}/);
+  assert.match(manager, /operationError = error;/, "open, rename, delete, and clear handlers use the global operation error");
+  assert.doesNotMatch(manager, /operationError && !showSaveForm/);
+  assert.doesNotMatch(manager.slice(saveFormIndex, saveFeedbackIndex), /operationError/);
+});
+
+test("save waiting and uncertain-outcome diagnostics are localized and forbid blind resubmission", () => {
+  assert.match(manager, /setTimeout\([\s\S]*?10_000/);
+  assert.match(manager, /snapshot\.save\.pendingDiagnostic/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.pendingDiagnostic"], /不要重复提交/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.save.pendingDiagnostic"], /do not submit again/i);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.error.SNAPSHOT_WRITE_UNCONFIRMED"], /不要立即重复提交/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.error.SNAPSHOT_WRITE_UNCONFIRMED"], /do not submit again/i);
+});
