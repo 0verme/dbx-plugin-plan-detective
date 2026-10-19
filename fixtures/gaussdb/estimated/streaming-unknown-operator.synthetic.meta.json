@@ -1,0 +1,21 @@
+{
+  "database": "gaussdb",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-authored Streaming node without distribution detail and future child labels; not a real database capture and no SQL was executed.",
+    "reference": null
+  },
+  "features": ["Streaming without type", "unknown node fallback", "child tree preservation"],
+  "expect": {
+    "rootNodeType": "Streaming",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": []
+  }
+}

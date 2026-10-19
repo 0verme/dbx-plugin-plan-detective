@@ -1,0 +1,113 @@
+{
+  "parsed": {
+    "database": "gaussdb",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Result",
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "startupCost": 0,
+      "totalCost": 0.01,
+      "planRows": 1,
+      "planWidth": 0,
+      "filter": null,
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": null,
+      "asyncCapable": null,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "gaussdb",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "result",
+      "nodeType": "Result",
+      "relation": null,
+      "estimatedRows": 1,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 0,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "gaussdb",
+        "gaussdb": {
+          "streamType": null,
+          "startupCost": 0,
+          "totalCost": 0.01,
+          "groupByKey": null,
+          "mergeSortKey": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 1,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "result",
+      "nodeType": "Result",
+      "relation": null,
+      "estimatedRows": 1
+    },
+    "costAttribution": {
+      "engine": "gaussdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "gaussdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

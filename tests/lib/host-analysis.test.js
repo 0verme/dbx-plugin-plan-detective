@@ -18,6 +18,7 @@ const mysqlV2Fixture = await loadFixture({ database: "mysql", mode: "estimated",
 const sqlserverFixture = await loadFixture({ database: "sqlserver", mode: "estimated", name: "table-scan.synthetic" });
 const questDbFixture = await loadFixture({ database: "questdb", mode: "estimated", name: "async-jit-filter" });
 const dorisFixture = await loadFixture({ database: "doris", mode: "estimated", name: "distributed-hash-join" });
+const gaussdbFixture = await loadFixture({ database: "gaussdb", mode: "estimated", name: "distributed-operators.synthetic" });
 
 function capabilities(overrides = {}) {
   return {
@@ -250,6 +251,63 @@ test("runHostAnalysis parses Doris estimated text from the Host response and ret
   assert.equal(session.analysis.metrics.costAttribution.status, "not-applicable");
   assert.deepEqual(session.analysis.findings, []);
   assert.equal(session.hostResult.rawPlan, dorisFixture.input.plan);
+});
+
+test("runHostAnalysis trusts affirmative GaussDB Host capability and enters the dedicated DWS parser", async () => {
+  const dwsCapabilities = capabilities({ dbType: "gaussdb", dbVersion: "GaussDB 9.1.1" });
+  const dwsResult = planResult({ dbType: "gaussdb", dbVersion: "GaussDB 9.1.1", rawPlan: gaussdbFixture.plan });
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => dwsCapabilities,
+    explainPlan: async () => dwsResult,
+  });
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "structured");
+  assert.equal(session.capabilities.dbType, "gaussdb");
+  assert.equal(session.capabilities.supports.estimatedPlan, true);
+  assert.equal(session.rawInput.database, "gaussdb");
+  assert.equal(session.analysis.parser, "gaussdb-dws-json");
+  assert.equal(session.analysis.normalized.database, "gaussdb");
+  assert.equal(session.analysis.normalized.root.engineSpecific.gaussdb.totalCost, 28.4);
+  assert.equal(session.analysis.metrics.totalEstimatedCost, null, "DWS native cost is not attributed using PostgreSQL metrics");
+  assert.equal(session.analysis.hotspots.cost.engine, "gaussdb");
+  assert.equal(session.analysis.hotspots.cost.status, "not-applicable");
+  assert.equal(session.hostResult.rawPlan, gaussdbFixture.plan, "Raw Plan remains the exact Host payload");
+});
+
+test("runHostAnalysis does not call explainPlan for an unconfirmed GaussDB capability", async () => {
+  let explained = 0;
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => capabilities({ dbType: "gaussdb", supports: { estimatedPlan: false } }),
+    explainPlan: async () => {
+      explained += 1;
+      return planResult({ dbType: "gaussdb", rawPlan: gaussdbFixture.plan });
+    },
+  });
+
+  const session = await runHostAnalysis({ ...REQUEST, bridge });
+  assert.equal(session.status, "unsupported");
+  assert.equal(session.capabilities.dbType, "gaussdb");
+  assert.equal(explained, 0, "a parser must not bypass the Host capability gate");
+});
+
+test("SQL changes produce independent GaussDB sessions without retaining the previous plan", async () => {
+  const plans = [gaussdbFixture.plan, [{ Plan: { "Node Type": "Result", "Plan Rows": 1, "Plan Width": 0 } }]];
+  let callIndex = 0;
+  const bridge = fakeBridge({
+    getPlanCapabilities: async () => capabilities({ dbType: "gaussdb" }),
+    explainPlan: async () => planResult({ dbType: "gaussdb", rawPlan: plans[callIndex++] }),
+  });
+
+  const first = await runHostAnalysis({ ...REQUEST, sql: "SELECT 1", bridge });
+  const second = await runHostAnalysis({ ...REQUEST, sql: "SELECT 2", bridge });
+  assert.equal(first.status, "structured");
+  assert.equal(second.status, "structured");
+  assert.equal(first.rawInput.plan, plans[0]);
+  assert.equal(second.rawInput.plan, plans[1]);
+  assert.notEqual(second.rawInput.plan, first.rawInput.plan);
+  assert.equal(second.analysis.normalized.root.nodeType, "Result");
+  assert.equal(second.analysis.metrics.nodeCount, 1);
 });
 
 test("runHostAnalysis runs the structured pipeline for a SQL Server ShowPlanXML host response", async () => {

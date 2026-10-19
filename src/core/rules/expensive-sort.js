@@ -24,6 +24,7 @@ export const expensiveSortRule = {
    * @returns {import("../findings/finding.js").Finding[]}
    */
   run(normalized, metrics) {
+    if (normalized.database !== "postgresql") return [];
     const totalPlanCost = metrics.totalEstimatedCost;
     if (typeof totalPlanCost !== "number" || totalPlanCost <= 0) return [];
 

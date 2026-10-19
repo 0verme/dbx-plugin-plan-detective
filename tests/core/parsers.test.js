@@ -62,13 +62,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(doris?.id, "doris");
   assert.deepEqual(doris?.formats, ["text"]);
 
+  const gaussdb = getParser("gaussdb");
+  assert.equal(gaussdb?.id, "gaussdb-dws-json");
+  assert.deepEqual(gaussdb?.formats, ["json"]);
+
   for (const database of ["unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "gaussdb", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
 });
 
 test("describeParserSupport separates structured, unsupported-format and unknown families", () => {
@@ -139,6 +143,13 @@ test("describeParserSupport separates structured, unsupported-format and unknown
   assert.deepEqual(describeParserSupport("doris", "json"), {
     structured: false,
     parser: "doris",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  assert.deepEqual(describeParserSupport("gaussdb", "json"), { structured: true, parser: "gaussdb-dws-json", reasonCode: null });
+  assert.deepEqual(describeParserSupport("gaussdb", "text"), {
+    structured: false,
+    parser: "gaussdb-dws-json",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 

@@ -15,11 +15,11 @@ export const ORACLE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "oracle");
 export const DAMENG_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "dameng");
 export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
 export const DORIS_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "doris");
+export const GAUSSDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "gaussdb");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
- * existing call sites keep working; MySQL / SQL Server / OceanBase Oracle / MySQL /
- * Oracle, Dameng, QuestDB and Doris call sites pass the family explicitly.
+ * existing call sites keep working; other call sites pass the family explicitly.
  */
 export const FIXTURE_DIRS = Object.freeze({
   postgresql: POSTGRES_FIXTURES_DIR,
@@ -31,15 +31,15 @@ export const FIXTURE_DIRS = Object.freeze({
   dameng: DAMENG_FIXTURES_DIR,
   questdb: QUESTDB_FIXTURES_DIR,
   doris: DORIS_FIXTURES_DIR,
+  gaussdb: GAUSSDB_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "gaussdb"]);
 export const MODES = ["estimated", "actual"];
 /**
- * Modes each database has fixtures for. MySQL, SQL Server, OceanBase Oracle / MySQL,
- * Oracle, Dameng, QuestDB and Doris support estimated plans only: the Host API
- * never serves an actual plan for them, and none of them has an actual-plan
- * shape this plugin models, so there is no `actual/` directory for them by design.
+ * Modes each database has fixtures for. Every family except PostgreSQL supports
+ * estimated plans only: the Host API never serves actual plans for them, and
+ * the plugin has no actual-plan shape it models.
  */
 export const MODES_BY_DATABASE = Object.freeze({
   postgresql: ["estimated", "actual"],
@@ -51,6 +51,7 @@ export const MODES_BY_DATABASE = Object.freeze({
   dameng: ["estimated"],
   questdb: ["estimated"],
   doris: ["estimated"],
+  gaussdb: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic", "real"];
 
@@ -65,6 +66,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   dameng: ".plan.txt",
   questdb: ".plan.txt",
   doris: ".plan.txt",
+  gaussdb: ".plan.json",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -78,6 +80,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   dameng: "text",
   questdb: "text",
   doris: "text",
+  gaussdb: "json",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -199,7 +202,7 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oceanbase-mysql` / `oracle` / `dameng` / `questdb` / `doris`) and
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oceanbase-mysql` / `oracle` / `dameng` / `questdb` / `doris` / `gaussdb`) and
  *   must match the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;

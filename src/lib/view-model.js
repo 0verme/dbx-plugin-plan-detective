@@ -142,7 +142,7 @@ function buildHighlight(key, label, summary, t) {
  *   id: string, parentId: string|null, ancestorIds: string[], depth: number,
  *   hasChildren: boolean, kind: string, nodeType: string, relation: string|null,
  *   alias: string|null, indexName: string|null, estimatedRows: number|null,
- *   totalCost: number|null, label: string,
+ *   totalCost: number|null, costLabel: string, label: string,
  * }>}
  */
 export function buildTreeRows(root) {
@@ -162,7 +162,8 @@ export function buildTreeRows(root) {
       alias: node.relation?.alias ?? null,
       indexName: node.relation?.indexName ?? null,
       estimatedRows: node.estimatedRows,
-      totalCost: node.totalCost,
+      totalCost: node.totalCost ?? node.engineSpecific?.gaussdb?.totalCost ?? null,
+      costLabel: node.engineSpecific?.gaussdb === undefined ? "tree.cost" : "tree.gaussdbCost",
       label: nodeLabel(node),
     });
     for (const child of node.children) {
@@ -640,6 +641,7 @@ function engineFields(engine) {
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
   if (isPlainObject(engine.oceanBase)) return oceanBaseEngineFields(engine.oceanBase);
+  if (isPlainObject(engine.gaussdb)) return gaussdbEngineFields(engine.gaussdb);
   if (isPlainObject(engine.oracle)) return oracleEngineFields(engine.oracle);
   if (isPlainObject(engine.dameng)) return damengEngineFields(engine.dameng);
   return [
@@ -697,6 +699,15 @@ function oceanBaseEngineFields(oceanBase) {
     field("Estimated Time (EST.TIME(us))", formatNumber(oceanBase.estimatedTimeUs)),
     field("Cost (COST)", formatNumber(oceanBase.cost)),
     field("Output", oceanBase.output),
+  ];
+}
+
+/** @param {Record<string, unknown>} gaussdb */
+function gaussdbEngineFields(gaussdb) {
+  return [
+    field("DWS Streaming Type", gaussdb.streamType),
+    field("DWS Startup Cost", formatNumber(gaussdb.startupCost)),
+    field("DWS Total Cost", formatNumber(gaussdb.totalCost)),
   ];
 }
 
@@ -897,5 +908,5 @@ const INSPECTOR_FIELD_LABELS = new Set([
   "Using Index For Group By", "Using Filesort", "Using Temporary Table", "Using Join Buffer", "First Match", "Dependent", "Cacheable",
   "Query Cost", "Read Cost", "Eval Cost", "Prefix Cost", "Data Read Per Join", "Sort Cost", "Parallel Aware", "Async Capable",
   "Strategy", "Partial Mode", "Parent Relationship", "Subplan Name", "Hash Condition", "Merge Condition", "Join Filter",
-  "Recheck Condition", "Presorted Keys",
+  "Recheck Condition", "Presorted Keys", "DWS Streaming Type", "DWS Startup Cost", "DWS Total Cost",
 ]);

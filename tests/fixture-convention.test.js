@@ -13,6 +13,7 @@ import {
   ORACLE_FIXTURES_DIR,
   DAMENG_FIXTURES_DIR,
   DORIS_FIXTURES_DIR,
+  GAUSSDB_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   QUESTDB_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
@@ -119,6 +120,14 @@ test("fixtures/doris has estimated EXPLAIN text plans and no actual directory", 
   assert.equal(planSuffixFor("doris"), ".plan.txt");
 });
 
+test("fixtures/gaussdb has estimated JSON plans and no actual directory", async () => {
+  const entries = await readdir(path.join(GAUSSDB_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.json")), "fixtures/gaussdb/estimated must contain .plan.json files");
+  await assert.rejects(readdir(path.join(GAUSSDB_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.gaussdb, ["estimated"]);
+  assert.equal(planSuffixFor("gaussdb"), ".plan.json");
+});
+
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {
   for (const database of FIXTURE_DATABASES) {
     const root = FIXTURE_DIRS[database];
@@ -139,7 +148,7 @@ test("every plan file has exactly one metadata sidecar in every fixture root", a
 test("all committed fixtures satisfy the fixture convention", async () => {
   for (const database of FIXTURE_DATABASES) {
     const fixtures = await loadAllFixtures(database);
-    const minimumFixtures = database === "oceanbase-mysql" ? 1 : 5;
+    const minimumFixtures = database === "oceanbase-mysql" ? 1 : database === "gaussdb" ? 3 : 5;
     assert.ok(fixtures.length >= minimumFixtures, `expected at least ${minimumFixtures} ${database} fixtures, found ${fixtures.length}`);
     for (const fixture of fixtures) {
       assert.ok(fixture.meta.features.length > 0, `${database}/${fixture.mode}/${fixture.name} must declare features`);

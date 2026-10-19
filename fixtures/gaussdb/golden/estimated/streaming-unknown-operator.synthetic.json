@@ -1,0 +1,251 @@
+{
+  "parsed": {
+    "database": "gaussdb",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "nodeType": "Streaming",
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "startupCost": 0.4,
+      "totalCost": 3.8,
+      "planRows": 2,
+      "planWidth": 8,
+      "filter": null,
+      "indexCondition": null,
+      "recheckCondition": null,
+      "hashCondition": null,
+      "mergeCondition": null,
+      "joinFilter": null,
+      "joinType": null,
+      "parentRelationship": null,
+      "subplanName": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "presortedKeys": null,
+      "parallelAware": null,
+      "asyncCapable": null,
+      "strategy": null,
+      "partialMode": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "actualRows": null,
+      "actualLoops": null,
+      "children": [
+        {
+          "nodeType": "Future DWS Exchange Child",
+          "relationName": null,
+          "alias": null,
+          "indexName": null,
+          "startupCost": 0.1,
+          "totalCost": 2.9,
+          "planRows": 2,
+          "planWidth": 8,
+          "filter": null,
+          "indexCondition": null,
+          "recheckCondition": null,
+          "hashCondition": null,
+          "mergeCondition": null,
+          "joinFilter": null,
+          "joinType": null,
+          "parentRelationship": null,
+          "subplanName": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "presortedKeys": null,
+          "parallelAware": null,
+          "asyncCapable": null,
+          "strategy": null,
+          "partialMode": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "actualRows": null,
+          "actualLoops": null,
+          "children": [
+            {
+              "nodeType": "Values Scan",
+              "relationName": null,
+              "alias": null,
+              "indexName": null,
+              "startupCost": 0,
+              "totalCost": 1.2,
+              "planRows": 2,
+              "planWidth": 8,
+              "filter": null,
+              "indexCondition": null,
+              "recheckCondition": null,
+              "hashCondition": null,
+              "mergeCondition": null,
+              "joinFilter": null,
+              "joinType": null,
+              "parentRelationship": null,
+              "subplanName": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "presortedKeys": null,
+              "parallelAware": null,
+              "asyncCapable": null,
+              "strategy": null,
+              "partialMode": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "actualRows": null,
+              "actualLoops": null,
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {
+            "Synthetic Detail": "unknown node remains inspectable"
+          }
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "gaussdb",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "exchange",
+      "nodeType": "Streaming",
+      "relation": null,
+      "estimatedRows": 2,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": 8,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "unknown",
+          "nodeType": "Future DWS Exchange Child",
+          "relation": null,
+          "estimatedRows": 2,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": 8,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "values_scan",
+              "nodeType": "Values Scan",
+              "relation": null,
+              "estimatedRows": 2,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": 8,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "gaussdb",
+                "gaussdb": {
+                  "streamType": null,
+                  "startupCost": 0,
+                  "totalCost": 1.2,
+                  "groupByKey": null,
+                  "mergeSortKey": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "gaussdb",
+            "gaussdb": {
+              "streamType": null,
+              "startupCost": 0.1,
+              "totalCost": 2.9,
+              "groupByKey": null,
+              "mergeSortKey": null
+            },
+            "extra": {
+              "Synthetic Detail": "unknown node remains inspectable"
+            }
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "gaussdb",
+        "gaussdb": {
+          "streamType": null,
+          "startupCost": 0.4,
+          "totalCost": 3.8,
+          "groupByKey": null,
+          "mergeSortKey": null
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": [
+      "Future DWS Exchange Child"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 2,
+    "scanCount": 0,
+    "sequentialScanCount": 0,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "exchange",
+      "nodeType": "Streaming",
+      "relation": null,
+      "estimatedRows": 2
+    },
+    "costAttribution": {
+      "engine": "gaussdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "gaussdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

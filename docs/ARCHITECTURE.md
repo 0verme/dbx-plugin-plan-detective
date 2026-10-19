@@ -47,12 +47,12 @@ Metrics Engine
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
 已实现：DBX Host response → RawPlanInput adapter（fail-closed）
-已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / OceanBase MySQL / Oracle / Dameng / QuestDB / Doris Estimated 结构化 parser
+已实现：parser registry + PostgreSQL / MySQL / SQL Server / OceanBase Oracle / OceanBase MySQL / Oracle / Dameng / QuestDB / Doris Estimated parser；GaussDB/DWS Estimated JSON parser（仅在同连接 Host capability 为 true 时运行；上游 Host 支持尚未合入）
 已实现：RawPlanInput → Parser → NormalizedPlan → Metrics → Rules → Structured Findings
 已实现：Finding Presentation Golden Sample（`large-sequential-scan`）+ `zh-CN` / `en` 最小 catalog 与 fallback
 已实现：Hotspot Presentation（结构化 reason code → 中英文自然语言摘要；未知 code 优雅回退到原始 statement）
 已实现：本地 AI prompt / context packaging（纯函数打包 + `host.copy` / clipboard 复制；不调用任何模型 API）
-已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号 + SQL Server rows 信号）
+已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号 + SQL Server rows 信号；DWS 原生 cost 不按 PostgreSQL 语义归因）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
 已实现：计划快照历史与窗口内 baseline（Issue #72；真实 DBX Desktop Storage acceptance 仍 NOT VERIFIED）
@@ -74,7 +74,7 @@ src/host/dbx-plan-host.js（结构校验 + 稳定错误码）
    ↓
 src/core/adapter/dbx-plan-response.js（dbType → database family，format → RawPlanInput）
    ↓
-src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oceanbase-mysql / oracle / dameng / questdb / doris structured）
+src/core/parsers/index.js（registry：postgres / mysql / sqlserver / oceanbase-oracle / oceanbase-mysql / oracle / dameng / questdb / doris / gaussdb structured）
    ↓
 src/core/normalize → metrics → rules → findings（facts + legacy copy）
 src/core/hotspots（NormalizedPlan + Metrics → HotspotAnalysis）
@@ -101,7 +101,7 @@ Svelte components
 ### Offline / Fixture 数据链路（开发用）
 
 ```text
-fixture（fixtures/postgres/**；其他数据库 fixture 由核心测试与 golden 直接加载，包括 Doris estimated text）
+fixture（UI 离线 catalog 使用 fixtures/postgres/**；其他数据库 fixture 由核心测试与 golden 直接加载，包括 Doris text 与 synthetic GaussDB JSON）
    ↓ 构建期嵌入为 Fixture Catalog（原样保留 RawPlanInput + provenance）
 RawPlanInput
    ↓ analyzePlan()
@@ -125,8 +125,9 @@ Fixture / mock 只服务测试、离线 UI 开发与 golden sample，**不进入
 | Dameng | 结构化（Estimated only） | 宿主返回驱动原生文本（format `text`；`src/core/dameng/**`）；按缩进建树、operation id 关联 predicate |
 | QuestDB | 结构化（Estimated only） | 宿主返回 EXPLAIN 文本（format `text`；`src/core/questdb/**`）；相对缩进建树，保留 properties / 未知 operator；PageFrame / Row / Frame pipeline 只计一次 relation access |
 | Doris | 结构化（Estimated only） | 宿主返回 EXPLAIN 文本（format `text`；`src/core/doris/**`）；按 Fragment 与 branch glyph 构建 local tree，跨 Fragment exchange 仅作 metadata |
+| GaussDB / Huawei DWS | 条件结构化（Estimated only） | 仅接收同连接 Host capability 明确支持的 JSON（`src/core/gaussdb/**`）；原生 cost 仅展示，不参与 PostgreSQL cost attribution；fixtures 为 synthetic，上游 Host 支持未合并；详见 [Host contract audit](./GAUSSDB_DWS_HOST_CONTRACT_AUDIT.md) |
 
-registry 对每个 family 显式声明支持状态；Doris 复用单 root NormalizedPlan，以 `engineSpecific.structural: true` 标记分布式 root / Fragment wrappers。通用 operator traversal 跳过容器自身但继续遍历 children；UI 继续显示完整嵌套树，跨 Fragment edge 只在 generic Inspector metadata 中展示，不重构 DAG Canvas。
+registry 对每个 family 显式声明支持状态；GaussDB/DWS 不由 `dbType` / `dbVersion` 推断，只有同一连接的 Host capability 为 true 时才进入其 parser。该 parser 复用 PostgreSQL-family JSON walker，但使用 GaussDB normalizer；DWS 原生 cost 仅保留为 engine-specific evidence。Doris 复用单 root NormalizedPlan，以 `engineSpecific.structural: true` 标记分布式 root / Fragment wrappers。通用 operator traversal 跳过容器自身但继续遍历 children；UI 继续显示完整嵌套树，跨 Fragment edge 只在 generic Inspector metadata 中展示，不重构 DAG Canvas。
 
 ## 3. 职责边界
 
@@ -210,13 +211,14 @@ src/
 │   └── host-plan-errors.js     # HostPlanError + 错误分类
 ├── core/                       # Plan Core：RawPlanInput → Parser → Normalize → Metrics → Rules / Hotspots → Findings
 │   ├── adapter/                # DBX response → RawPlanInput（纯函数，fail-closed）
-│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oceanbase-mysql / oracle / dameng / questdb / doris 声明
+│   ├── parsers/                # parser registry + postgres / mysql / sqlserver / oceanbase-oracle / oceanbase-mysql / oracle / dameng / questdb / doris / gaussdb 声明
 │   ├── sqlserver/              # ShowPlanXML 读取与 RelOp 映射（无 dependency XML reader）
 │   ├── oceanbase/              # OceanBase Oracle / MySQL JSON plan 解析（ID / OPERATOR / EST.ROWS / CHILD_<n>）
 │   ├── oracle/                 # Oracle DBMS_XPLAN text 解析（header columns / indentation / predicates）
 │   ├── dameng/                 # Dameng native EXPLAIN text 解析（tuple / indentation / predicates）
 │   ├── questdb/                # QuestDB estimated EXPLAIN text 解析（indentation / properties）
 │   ├── doris/                  # Doris estimated EXPLAIN tokenizer / Fragment-local branch tree
+│   ├── gaussdb/                # GaussDB / DWS estimated JSON envelope / size bounds
 │   ├── cost/                   # PostgreSQL 代价归因边界（analyzePostgresCost，Metrics + Hotspots 共用）
 │   └── hotspots/               # 确定性热点分析（信号聚合 / 阈值）
 ├── App.svelte                  # Host 分析 + Fixtures（开发）+ 宿主审计（开发）

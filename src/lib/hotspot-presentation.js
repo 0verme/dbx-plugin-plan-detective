@@ -49,6 +49,7 @@ const COST_NOTE_KEYS = Object.freeze({
  * engines without an entry use the shared reason copy.
  */
 const ENGINE_COST_NOTE_KEYS = Object.freeze({
+  "gaussdb:NOT_POSTGRES_COST_MODEL": "hotspot.cost.gaussdbCostModel",
   "oceanbase-oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseOracleCostModel",
   "oceanbase-mysql:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oceanbaseMysqlCostModel",
   "oracle:NOT_POSTGRES_COST_MODEL": "hotspot.cost.oracleCostModel",

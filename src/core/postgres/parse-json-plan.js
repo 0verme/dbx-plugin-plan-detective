@@ -2,16 +2,15 @@ import { PlanInputError, PlanParseError } from "../errors.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 
 /**
- * PostgreSQL `EXPLAIN (FORMAT JSON)` parser.
+ * PostgreSQL-family `EXPLAIN (FORMAT JSON)` tree parser.
  *
  * Pipeline position:
  *
- *     RawPlanInput --(this parser)--> ParsedPlan --(normalizer)--> NormalizedPlan
+ *     RawPlanInput --(this parser)--> ParsedPlan --(family normalizer)--> NormalizedPlan
  *
- * The parser is the only PostgreSQL-aware stage before normalization. It maps
- * the PostgreSQL property names onto typed fields, keeps every property it does
- * not map verbatim in `extra`, and never fails on an unknown node type: the
- * node type string and the child list always survive.
+ * The shared walker maps PostgreSQL-family property names onto typed fields,
+ * keeps every unrecognized property verbatim in `extra`, and never fails on an
+ * unknown node type: the native node type string and child list survive.
  *
  * The parser intentionally does not interpret the plan. Node semantics such as
  * "is this a scan" or "is this node expensive" belong to the normalizer,
@@ -119,7 +118,7 @@ const NODE_TYPE_PROPERTY = "Node Type";
  * @property {Record<string, unknown>} extra native properties the parser does not map
  *
  * @typedef {Object} ParsedPlan
- * @property {"postgresql"} database
+ * @property {"postgresql"|"gaussdb"} database
  * @property {"json"} format
  * @property {"estimated"|"actual"} mode
  * @property {ParsedPlanNode} root
@@ -138,40 +137,58 @@ const NODE_TYPE_PROPERTY = "Node Type";
  * @throws {PlanParseError} when the payload is malformed or contradicts `mode`
  */
 export function parsePostgresJsonPlan(input) {
+  return parsePostgresFamilyJsonPlan(input, "postgresql");
+}
+
+/**
+ * Shared JSON tree walker. The expected database family remains explicit; this
+ * reuses structure parsing without reclassifying GaussDB as PostgreSQL.
+ *
+ * @param {unknown} input a RawPlanInput
+ * @param {"postgresql"|"gaussdb"} database
+ * @returns {ParsedPlan}
+ */
+export function parsePostgresFamilyJsonPlan(input, database) {
   const problems = validateRawPlanInput(input);
   if (problems.length > 0) {
     throw new PlanInputError("INVALID_RAW_PLAN_INPUT", `Invalid RawPlanInput: ${problems.join(" ")}`);
   }
+  if (input.database !== database) {
+    throw new PlanInputError("INVALID_RAW_PLAN_INPUT", `Expected database ${JSON.stringify(database)}; got ${JSON.stringify(input.database)}.`);
+  }
 
-  // Contract validation guarantees database "postgresql" and format "json".
-  // The adapter picks the parser per database, so no second dispatch layer.
   const { mode, plan } = /** @type {import("../raw-plan-input.js").RawPlanInput} */ (input);
+  if (database === "gaussdb" && mode !== "estimated") {
+    throw new PlanParseError("MODE_MISMATCH", 'GaussDB/DWS parser only supports mode "estimated".');
+  }
 
-  const envelope = readEnvelope(plan);
-  const root = parseNode(envelope[0].Plan, "plan[0].Plan", mode);
+  const familyLabel = database === "gaussdb" ? "GaussDB/DWS" : "PostgreSQL";
+  const envelope = readEnvelope(plan, familyLabel);
+  const root = parseNode(envelope[0].Plan, "plan[0].Plan", mode, database);
 
-  return { database: "postgresql", format: "json", mode, root };
+  return { database, format: "json", mode, root };
 }
 
 /**
  * Verify the PostgreSQL JSON envelope and return it.
  *
  * @param {unknown} plan
+ * @param {string} familyLabel
  * @returns {Array<Record<string, unknown>>}
  */
-function readEnvelope(plan) {
+function readEnvelope(plan, familyLabel) {
   if (Array.isArray(plan)) {
     if (plan.length !== 1) {
       throw new PlanParseError(
         "MALFORMED_PLAN",
-        `PostgreSQL EXPLAIN (FORMAT JSON) returns a single-element array envelope; got an array of length ${plan.length}.`,
+        `${familyLabel} EXPLAIN (FORMAT JSON) returns a single-element array envelope; got an array of length ${plan.length}.`,
       );
     }
     const entry = plan[0];
     if (!isPlainObject(entry) || !Object.hasOwn(entry, "Plan")) {
       throw new PlanParseError(
         "MALFORMED_PLAN",
-        `plan[0] must be an object with a "Plan" property (the PostgreSQL JSON envelope); got ${describeValue(entry)}.`,
+        `plan[0] must be an object with a "Plan" property (the ${familyLabel} JSON envelope); got ${describeValue(entry)}.`,
       );
     }
     return /** @type {Array<Record<string, unknown>>} */ (plan);
@@ -180,13 +197,13 @@ function readEnvelope(plan) {
   if (isPlainObject(plan) && Object.hasOwn(plan, "Plan")) {
     throw new PlanParseError(
       "MALFORMED_PLAN",
-      'plan is the inner envelope entry ({ "Plan": ... }), not the full payload. Pass the array returned by EXPLAIN (FORMAT JSON) unchanged.',
+      `plan is the inner envelope entry ({ "Plan": ... }), not the full payload. Pass the ${familyLabel} array returned by EXPLAIN (FORMAT JSON) unchanged.`,
     );
   }
 
   throw new PlanParseError(
     "MALFORMED_PLAN",
-    `plan must be the array envelope returned by EXPLAIN (FORMAT JSON); got ${describeValue(plan)}.`,
+    `plan must be the ${familyLabel} array envelope returned by EXPLAIN (FORMAT JSON); got ${describeValue(plan)}.`,
   );
 }
 
@@ -194,9 +211,10 @@ function readEnvelope(plan) {
  * @param {unknown} raw
  * @param {string} path location used in error messages, e.g. `plan[0].Plan.Plans[1]`
  * @param {"estimated"|"actual"} mode
+ * @param {"postgresql"|"gaussdb"} database
  * @returns {ParsedPlanNode}
  */
-function parseNode(raw, path, mode) {
+function parseNode(raw, path, mode, database) {
   if (!isPlainObject(raw)) {
     throw new PlanParseError("MALFORMED_NODE", `${path} must be an object; got ${describeValue(raw)}.`);
   }
@@ -225,6 +243,9 @@ function parseNode(raw, path, mode) {
   for (const [key, field] of NUMBER_PROPERTIES) mapped[field] = optionalNumber(raw, key, path);
   for (const [key, field] of BOOLEAN_PROPERTIES) mapped[field] = optionalBoolean(raw, key, path);
   for (const [key, field] of STRING_LIST_PROPERTIES) mapped[field] = optionalStringList(raw, key, path);
+  if (database === "gaussdb" && !Object.hasOwn(raw, "Group Key") && Object.hasOwn(raw, "Group By Key")) {
+    mapped.groupKeys = optionalStringList(raw, "Group By Key", path);
+  }
 
   /** @type {ParsedPlanNode[]} */
   const children = [];
@@ -236,11 +257,11 @@ function parseNode(raw, path, mode) {
       );
     }
     raw[CHILD_PROPERTY].forEach((child, index) => {
-      children.push(parseNode(child, `${path}.${CHILD_PROPERTY}[${index}]`, mode));
+      children.push(parseNode(child, `${path}.${CHILD_PROPERTY}[${index}]`, mode, database));
     });
   }
 
-  const extra = collectExtra(raw);
+  const extra = collectExtra(raw, database);
 
   return {
     nodeType,
@@ -281,14 +302,16 @@ function parseNode(raw, path, mode) {
  * is lost to the typed model.
  *
  * @param {Record<string, unknown>} raw
+ * @param {"postgresql"|"gaussdb"} database
  * @returns {Record<string, unknown>}
  */
-function collectExtra(raw) {
+function collectExtra(raw, database) {
   const mapped = new Set([NODE_TYPE_PROPERTY, CHILD_PROPERTY]);
   for (const key of STRING_PROPERTIES.keys()) mapped.add(key);
   for (const key of NUMBER_PROPERTIES.keys()) mapped.add(key);
   for (const key of BOOLEAN_PROPERTIES.keys()) mapped.add(key);
   for (const key of STRING_LIST_PROPERTIES.keys()) mapped.add(key);
+  if (database === "gaussdb" && !Object.hasOwn(raw, "Group Key")) mapped.add("Group By Key");
 
   /** @type {Record<string, unknown>} */
   const extra = {};

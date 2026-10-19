@@ -1,0 +1,132 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Result",
+      "Startup Cost": 0.2,
+      "Total Cost": 28.4,
+      "Plan Rows": 8,
+      "Plan Width": 32,
+      "Plans": [
+        {
+          "Node Type": "Vector Streaming(type: GATHER)",
+          "Nodes": "synthetic worker set",
+          "Startup Cost": 1.1,
+          "Total Cost": 27.9,
+          "Plan Rows": 8,
+          "Plan Width": 32,
+          "Plans": [
+            {
+              "Node Type": "Vector Sonic Hash Join",
+              "Join Type": "Left",
+              "Hash Cond": "(left_key = right_key)",
+              "Startup Cost": 1.0,
+              "Total Cost": 26.1,
+              "Plan Rows": 8,
+              "Plan Width": 32,
+              "Plans": [
+                {
+                  "Node Type": "Seq Scan",
+                  "Relation Name": "synthetic_left",
+                  "Startup Cost": 0.0,
+                  "Total Cost": 9.2,
+                  "Plan Rows": 8,
+                  "Plan Width": 16,
+                  "Filter": "(left_key >= 0)"
+                },
+                {
+                  "Node Type": "Hash",
+                  "Startup Cost": 0.5,
+                  "Total Cost": 3.7,
+                  "Plan Rows": 4,
+                  "Plan Width": 16,
+                  "Plans": [
+                    {
+                      "Node Type": "Values Scan",
+                      "Startup Cost": 0.0,
+                      "Total Cost": 2.1,
+                      "Plan Rows": 4,
+                      "Plan Width": 16
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Node Type": "Gather",
+          "Startup Cost": 1.4,
+          "Total Cost": 10.7,
+          "Plan Rows": 5,
+          "Plan Width": 16,
+          "Plans": [
+            {
+              "Node Type": "Sort",
+              "Sort Key": ["synthetic_order_key"],
+              "Startup Cost": 1.3,
+              "Total Cost": 8.7,
+              "Plan Rows": 5,
+              "Plan Width": 16,
+              "Plans": [
+                {
+                  "Node Type": "WindowAgg",
+                  "Startup Cost": 1.2,
+                  "Total Cost": 7.4,
+                  "Plan Rows": 5,
+                  "Plan Width": 16,
+                  "Plans": [
+                    {
+                      "Node Type": "Append",
+                      "Startup Cost": 0.6,
+                      "Total Cost": 6.3,
+                      "Plan Rows": 5,
+                      "Plan Width": 16,
+                      "Plans": [
+                        {
+                          "Node Type": "Vector Sonic Hash Aggregate",
+                          "Group By Key": ["synthetic_group_key"],
+                          "Startup Cost": 0.5,
+                          "Total Cost": 3.2,
+                          "Plan Rows": 3,
+                          "Plan Width": 16,
+                          "Plans": [
+                            {
+                              "Node Type": "Data Node Scan",
+                              "RemoteQuery name": "synthetic_remote_query",
+                              "Nodes": "synthetic worker set",
+                              "Startup Cost": 0.1,
+                              "Total Cost": 2.5,
+                              "Plan Rows": 3,
+                              "Plan Width": 16
+                            }
+                          ]
+                        },
+                        {
+                          "Node Type": "Future DWS Operator",
+                          "Synthetic Attribute": "preserved without classification",
+                          "Startup Cost": 0.0,
+                          "Total Cost": 1.0,
+                          "Plan Rows": 2,
+                          "Plan Width": 8,
+                          "Plans": [
+                            {
+                              "Node Type": "Values Scan",
+                              "Startup Cost": 0.0,
+                              "Total Cost": 0.5,
+                              "Plan Rows": 2,
+                              "Plan Width": 8
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
