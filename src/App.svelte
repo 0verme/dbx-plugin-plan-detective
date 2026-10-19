@@ -376,11 +376,6 @@
     if (baselineSnapshotId === snapshotId) baselineSnapshotId = null;
   }
 
-  function handleSnapshotsCleared() {
-    returnToCurrentAnalysis();
-    baselineSnapshotId = null;
-  }
-
   function selectLocale(nextLocale) {
     manualLocale = normalizeLocale(nextLocale);
     locale = resolveLocalePreference({ manualLocale, storedLocale, hostLocale });
@@ -443,6 +438,22 @@
     </div>
   </header>
 
+  {#if view === "host"}
+    <SnapshotManager
+      {locale}
+      storageState={storageApi}
+      repository={snapshotRepository}
+      currentSession={activeSnapshot === null ? session : null}
+      activeSnapshotId={activeSnapshot?.snapshot.snapshotId ?? null}
+      {baselineSnapshotId}
+      producerVersion={pluginPackage.version}
+      onOpenSnapshot={openSnapshot}
+      onSelectBaseline={selectBaseline}
+      onDeleteSnapshot={handleSnapshotDeleted}
+      onUpdateSnapshot={updateActiveSnapshot}
+    />
+  {/if}
+
   {#if isDev && view === "audit"}
     <HostAudit {locale} />
   {:else if isDev && view === "fixtures"}
@@ -474,21 +485,6 @@
       <p class="panel empty">{t("app.fixture.empty", { count: catalogCounts.total })}</p>
     {/if}
   {:else}
-    <SnapshotManager
-      {locale}
-      storageState={storageApi}
-      repository={snapshotRepository}
-      currentSession={activeSnapshot === null ? session : null}
-      activeSnapshotId={activeSnapshot?.snapshot.snapshotId ?? null}
-      {baselineSnapshotId}
-      producerVersion={pluginPackage.version}
-      onOpenSnapshot={openSnapshot}
-      onSelectBaseline={selectBaseline}
-      onDeleteSnapshot={handleSnapshotDeleted}
-      onClearSnapshots={handleSnapshotsCleared}
-      onUpdateSnapshot={updateActiveSnapshot}
-    />
-
     {#if activeSnapshot !== null}
       <section class="snapshot-history" aria-labelledby="snapshot-history-title">
         <div class="snapshot-history-head">

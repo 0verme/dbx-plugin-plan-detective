@@ -4,28 +4,60 @@ import test from "node:test";
 import { MESSAGE_CATALOG } from "../../src/lib/i18n/messages.js";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-const [app, manager, replay, saveAction] = await Promise.all([
+const [app, manager, replay, saveAction, manifest] = await Promise.all([
   read("src/App.svelte"),
   read("src/components/SnapshotManager.svelte"),
   read("src/lib/plan-snapshot-view.js"),
   read("src/lib/snapshot-save-action.js"),
+  read("manifest.json"),
 ]);
 
-test("snapshot manager is independent of the connection gate and uses only the Host Storage repository", () => {
-  assert.match(app, /<SnapshotManager[\s\S]*?repository=\{snapshotRepository\}/);
-  assert.ok(app.indexOf("{#if activeSnapshot !== null}") < app.indexOf("{#if hostEntryState === \"loading\"}"), "history view is reachable before host connection/Plan API gates");
+test("snapshot tools are a compact host-page toolbar before connection and SQL gates", () => {
+  const toolbarPlacement = app.indexOf("<SnapshotManager");
+  const connectionGate = app.indexOf("{#if hostEntryState === \"loading\"}");
+  assert.ok(toolbarPlacement >= 0 && toolbarPlacement < connectionGate, "history is reachable without a connection or SQL context");
+  assert.match(app, /\{#if view === "host"\}[\s\S]*?<SnapshotManager[\s\S]*?repository=\{snapshotRepository\}/);
   assert.match(app, /describePluginStorage\(bridge, \{ initialized: true \}\)/);
   assert.match(app, /createPlanSnapshotRepository\(bridge\)/);
+  assert.match(manifest, /"host\.storage"/);
   assert.doesNotMatch(manager, /localStorage|indexedDB/);
-  assert.match(manager, /target\.list\(/, "list uses the repository API");
-  assert.match(manager, /createSnapshotSaveHandler\(/);
-  assert.match(saveAction, /state\.repository\.save\(snapshot\)/, "save uses the repository API");
-  for (const operation of ["get", "rename", "delete", "clear"]) {
-    assert.match(manager, new RegExp(`repository\\.${operation}\\(`), `${operation} uses the repository API`);
-  }
+  assert.match(manager, /<button[\s\S]*?class="snapshot-secondary snapshot-history-button"[\s\S]*?snapshot\.history\.button/);
+  assert.match(manager, /<button[\s\S]*?class="snapshot-primary"[\s\S]*?snapshot\.save\.open/);
+  assert.match(manager, /viewBox="0 0 16 16"[\s\S]*?M2\.2 5\.2/);
+  assert.match(manager, /viewBox="0 0 16 16"[\s\S]*?M2\.5 2\.5/);
+  assert.match(manager, /const historyCount = \$derived\(hasConfirmedHistory \? String\(orderedSnapshots\.length\) : "—"\)/);
+  assert.match(manager, /hasConfirmedHistory = true;[\s\S]*?loadState = "ready"/);
+  assert.match(manager, /title=\{saveDisabledReason\}/);
+  assert.match(manager, /class="snapshot-toolbar-help"/);
+  assert.match(manager, /disabled=\{!canSave \|\| !canMutate\}/);
+  assert.match(manager, /aria-busy=\{saving\}/);
+  assert.match(manager, /function toggleHistory\(\)[\s\S]*?showHistory = opening/);
+  assert.match(manager, /snapshot\.history\.refresh/);
+  assert.match(manager, /snapshot\.history\.close/);
+  assert.match(manager, /snapshot\.storage\.unavailable/);
+  assert.match(manager, /storageState\?\.reason/);
 });
 
-test("opening history replays the saved RawPlanInput locally and never calls the host plan API", () => {
+test("history records render compact metadata and all requested management actions", () => {
+  assert.match(manager, /\[\.\.\.snapshots\]\.sort\(\(left, right\) => right\.savedAt\.localeCompare\(left\.savedAt\)\)/);
+  assert.match(manager, /<h3>\{snapshot\.title\}<\/h3>/);
+  assert.match(manager, /formatPlanSnapshotTime\(snapshot\.savedAt, locale\)/);
+  assert.match(manager, /\{snapshot\.rawInput\.database\}/);
+  assert.match(manager, /\{snapshot\.note \|\| t\("snapshot\.noNote"\)\}/);
+  assert.match(manager, /repository\.get\(snapshotId\)/);
+  assert.match(manager, /repository\.rename\(snapshotId, renameTitle\.trim\(\), renameNote\)/);
+  assert.match(manager, /repository\.delete\(snapshotId\)/);
+  assert.match(manager, /onSelectBaseline\(baselineSnapshotId === snapshotId \? null : snapshotId\)/);
+  assert.match(manager, /snapshot\.empty/);
+  assert.match(manager, /snapshot\.history\.refresh/);
+  assert.match(manager, /snapshot\.baseline\.windowOnly/);
+  assert.match(manager, /snapshot\.manager\.concurrentWarning/);
+  assert.match(manager, /onUpdateSnapshot\(updated\)/);
+  assert.match(manager, /onDeleteSnapshot\(snapshotId\)/);
+  assert.doesNotMatch(manager, /clearSnapshots\(|snapshot\.clear\.open/);
+});
+
+test("opening history replays the saved RawPlanInput locally and never re-runs SQL", () => {
   const openHandler = app.match(/function openSnapshot\(snapshot\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(openHandler, "App has a dedicated history-open handler");
   assert.match(openHandler, /createPlanSnapshotView\(snapshot\)/);
@@ -39,58 +71,72 @@ test("opening history replays the saved RawPlanInput locally and never calls the
   assert.doesNotMatch(replay, /explainEstimatedPlan\s*\(/);
 });
 
-test("history actions expose rename, delete, clear, and an explicit comparison-baseline selection", () => {
-  assert.match(manager, /repository\.rename\(snapshotId, renameTitle\.trim\(\), renameNote\)/);
-  assert.match(manager, /repository\.delete\(snapshotId\)/);
-  assert.match(manager, /repository\.clear\(\)/);
-  assert.match(manager, /onSelectBaseline\(baselineSnapshotId === snapshotId \? null : snapshotId\)/);
-  assert.match(manager, /!nextSnapshots\.some\(\(snapshot\) => snapshot\.snapshotId === baselineSnapshotId\)[\s\S]*?onSelectBaseline\(null\)/);
-  assert.match(manager, /onDeleteSnapshot\(snapshotId\)/);
-  assert.match(manager, /onClearSnapshots\(\)/);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.baseline.select"], /基线/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.baseline.select"], /baseline/i);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.description"], /当前窗口/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.manager.description"], /this window/);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.concurrentWarning"], /多个插件窗口/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
-});
-
-test("save form requires explicit user action and gives visible, actionable save feedback", () => {
-  assert.match(saveAction, /createSnapshot\(\{[\s\S]*?session: state\.currentSession/);
-  assert.match(saveAction, /if \(state\.repository === null \|\| state\.storageAvailable !== true\)/);
-  assert.match(saveAction, /if \(state\.currentSession\?\.status !== "structured"\)/);
+test("save form is opt-in, guarded, privacy-aware, and keeps typed values on failure", () => {
+  assert.match(manager, /\{#if showSaveForm\}[\s\S]*?<form class="snapshot-form" onsubmit=\{saveCurrent\}/);
+  assert.match(saveAction, /event\.preventDefault\(\)/);
+  assert.match(saveAction, /state\.repository\.save\(snapshot\)/);
+  assert.match(saveAction, /state\.currentSession\?\.status !== "structured"/);
   assert.match(saveAction, /if \(inFlight\)[\s\S]*?setDuplicateMessage\(\)/);
-  assert.match(saveAction, /await refresh\(state\.repository\)/);
   assert.match(manager, /snapshot\.save\.localWarning/);
   assert.match(manager, /maxlength="120"/);
   assert.match(manager, /maxlength="2000"/);
   assert.match(manager, /disabled=\{!canMutate \|\| !canSave \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
-  assert.match(manager, /const canMutate = \$derived\(repository !== null && storageState\?\.available === true && loadState === "ready" && !saving\)/, "no history action can close the form while a save is pending");
-  assert.match(manager, /snapshot-save-gate/);
-  assert.match(manager, /snapshot-save-error/);
-});
-
-test("save errors and non-save operation errors are isolated in their own feedback regions", () => {
-  const operationFeedbackIndex = manager.indexOf("{#if operationError}");
-  const saveFormIndex = manager.indexOf("{#if showSaveForm}");
-  const saveFeedbackIndex = manager.indexOf("{#if saveError}");
-
-  assert.ok(operationFeedbackIndex >= 0 && operationFeedbackIndex < saveFormIndex);
-  assert.ok(saveFormIndex < saveFeedbackIndex);
   assert.match(manager, /setError: \(error\) => \{ saveError = error; \}/);
-  assert.match(manager, /operationError = error;/, "open, rename, delete, and clear handlers use the global operation error");
-  assert.doesNotMatch(manager, /operationError && !showSaveForm/);
-  assert.doesNotMatch(manager.slice(saveFormIndex, saveFeedbackIndex), /operationError/);
+  assert.match(manager, /snapshot-save-error/);
+  assert.match(saveAction, /if \(error\?\.code === "SNAPSHOT_WRITE_UNCONFIRMED"/);
+  assert.match(manager, /Repository\.save resolves only after Host Storage read-back confirms/);
+  assert.match(manager, /statusMessage = t\("snapshot\.saved"\)/);
+  assert.match(manager, /snapshot\.save\.pendingDiagnostic/);
+  const successCallback = manager.match(/onSuccess: \(snapshot\) => \{[\s\S]*?\n    \},\n    refresh/)?.[0];
+  assert.ok(successCallback, "confirmed save success callback exists");
+  assert.match(successCallback, /saveTitle = ""/);
+  assert.match(successCallback, /saveNote = ""/);
 });
 
-test("save waiting and uncertain-outcome diagnostics are localized and forbid blind resubmission", () => {
-  assert.match(manager, /setTimeout\([\s\S]*?10_000/);
-  assert.match(manager, /snapshot\.save\.pendingDiagnostic/);
-  assert.match(manager, /snapshot\.loading\.pendingDiagnostic/);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.loading.pendingDiagnostic"], /不要再次保存/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.loading.pendingDiagnostic"], /do not save again/i);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.pendingDiagnostic"], /不要重复提交/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.save.pendingDiagnostic"], /do not submit again/i);
-  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.error.SNAPSHOT_WRITE_UNCONFIRMED"], /不要立即重复提交/);
-  assert.match(MESSAGE_CATALOG.en["snapshot.error.SNAPSHOT_WRITE_UNCONFIRMED"], /do not submit again/i);
+test("save and history failures are shown in their own action regions with storage diagnostics", () => {
+  const saveFormIndex = manager.indexOf("{#if showSaveForm}");
+  const historyPanelIndex = manager.indexOf("{#if showHistory}");
+  const saveErrorIndex = manager.indexOf("{#if saveError}");
+  const operationErrorIndex = manager.indexOf("{#if operationError}");
+  assert.ok(saveFormIndex >= 0 && saveFormIndex < saveErrorIndex);
+  assert.ok(historyPanelIndex >= 0 && historyPanelIndex < operationErrorIndex);
+  assert.match(manager, /getErrorMessage\(saveError\)/);
+  assert.match(manager, /getErrorDetail\(saveError\)/);
+  assert.match(manager, /getErrorMessage\(loadError\)/);
+  assert.match(manager, /getErrorDetail\(loadError\)/);
+  assert.match(manager, /storageState\?\.reason/);
+  assert.match(manager, /function toggleHistory\(\)[\s\S]*?if \(saving\) return/);
+  assert.match(manager, /disabled=\{saving\}[\s\S]*?snapshot\.history\.button|snapshot\.history\.button[\s\S]*?disabled=\{saving\}/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.error.STORAGE_PERMISSION_DENIED"], /权限/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.error.STORAGE_PERMISSION_DENIED"], /permission/i);
+  for (const reasonCode of ["BRIDGE_UNAVAILABLE", "STORAGE_METHODS_MISSING", "INITIALIZING", "CAPABILITY_UNAVAILABLE"]) {
+    assert.equal(typeof MESSAGE_CATALOG.en[`snapshot.storage.reason.${reasonCode}`], "string");
+    assert.equal(typeof MESSAGE_CATALOG["zh-CN"][`snapshot.storage.reason.${reasonCode}`], "string");
+  }
+});
+
+test("all new snapshot entry and baseline copy is localized", () => {
+  for (const locale of ["zh-CN", "en"]) {
+    for (const key of [
+      "snapshot.tools.label",
+      "snapshot.history.button",
+      "snapshot.history.refresh",
+      "snapshot.history.close",
+      "snapshot.baseline.windowOnly",
+      "snapshot.save.open",
+      "snapshot.save.localWarning",
+    ]) {
+      assert.equal(typeof MESSAGE_CATALOG[locale][key], "string", `${locale} has ${key}`);
+      assert.ok(MESSAGE_CATALOG[locale][key].length > 0, `${locale} has non-empty ${key}`);
+    }
+  }
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.baseline.windowOnly"], /当前窗口/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.baseline.windowOnly"], /this window/i);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.localWarning"], /SQL 与完整 Raw Plan/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.save.localWarning"], /SQL and complete Raw Plan/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.concurrentWarning"], /多个插件窗口/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
+  assert.match(manifest, /不连接数据库直接浏览历史快照/);
+  assert.match(manifest, /browse saved snapshot history without an active connection/);
+  assert.match(manager, /@media \(max-width: 620px\)/);
 });

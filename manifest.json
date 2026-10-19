@@ -17,7 +17,7 @@
       "type": "workbench",
       "id": "io.github.0verme.plan-detective.workbench",
       "label": "DBX Plan Detective",
-      "description": "Choose an open DBX connection and enter SQL to inspect its estimated plan and nodes worth investigating.",
+      "description": "Analyze estimated plans from DBX context or browse saved snapshot history without an active connection.",
       "icon": "assets/plugin.svg"
     },
     {
@@ -34,7 +34,7 @@
       "contributions": {
         "io.github.0verme.plan-detective.workbench": {
           "label": "DBX Plan Detective",
-          "description": "选择 DBX 中已打开的连接并输入 SQL，查看预估执行计划和值得进一步检查的节点。"
+          "description": "可从当前 DBX 上下文分析预估计划，也可不连接数据库直接浏览历史快照。"
         },
         "io.github.0verme.plan-detective.audit-result-view": {
           "label": "Plan Detective",

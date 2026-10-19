@@ -37,7 +37,7 @@ export function resolvePluginStorageBridge(target = globalThis) {
  */
 export function describePluginStorage(bridge, options = {}) {
   if (bridge === null || typeof bridge !== "object") {
-    return unavailable(["storage.get", "storage.set", "storage.delete"], "当前不在 DBX 宿主中：window.dbxPlugin 不存在。");
+    return unavailable(["storage.get", "storage.set", "storage.delete"], "当前不在 DBX 宿主中：window.dbxPlugin 不存在。", "BRIDGE_UNAVAILABLE");
   }
 
   const storage = bridge.storage;
@@ -61,6 +61,7 @@ export function describePluginStorage(bridge, options = {}) {
       advertised: true,
       missing,
       reason: `宿主声明 capabilities.storage，但缺少方法：${missing.join(", ")}。`,
+      reasonCode: "STORAGE_METHODS_MISSING",
     };
   }
 
@@ -71,12 +72,14 @@ export function describePluginStorage(bridge, options = {}) {
       advertised: false,
       missing,
       reason: "DBX 宿主尚未完成初始化，暂时无法确认 Host Storage 能力；不会调用 storage 方法。",
+      reasonCode: "INITIALIZING",
     };
   }
 
   return unavailable(
     missing,
     "宿主未声明 capabilities.storage；当前不会调用 Host Storage。请确认 DBX 版本与插件 host.storage 权限。",
+    "CAPABILITY_UNAVAILABLE",
   );
 }
 
@@ -146,8 +149,8 @@ function canStillInitialize(bridge) {
   return hasReady || typeof bridge.onInit === "function";
 }
 
-function unavailable(missing, reason) {
-  return { state: PLUGIN_STORAGE_STATES.unavailable, available: false, advertised: false, missing, reason };
+function unavailable(missing, reason, reasonCode) {
+  return { state: PLUGIN_STORAGE_STATES.unavailable, available: false, advertised: false, missing, reason, reasonCode };
 }
 
 function mapStorageError(error, operation) {

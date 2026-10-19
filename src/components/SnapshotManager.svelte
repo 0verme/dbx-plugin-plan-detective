@@ -16,35 +16,37 @@
     onOpenSnapshot = () => {},
     onSelectBaseline = () => {},
     onDeleteSnapshot = () => {},
-    onClearSnapshots = () => {},
     onUpdateSnapshot = () => {},
   } = $props();
 
   const t = $derived(createTranslator(locale).t);
   let snapshots = $state([]);
+  let hasConfirmedHistory = $state(false);
   let loadState = $state("unavailable");
   let loadError = $state(null);
   let operationError = $state(null);
   let saveError = $state(null);
   let statusMessage = $state(null);
   let saving = $state(false);
+  let savingRename = $state(false);
   let savePendingLonger = $state(false);
   let loadPendingLonger = $state(false);
   let saveWaitTimer = null;
   let loadWaitTimer = null;
+  let showHistory = $state(false);
   let showSaveForm = $state(false);
   let saveTitle = $state("");
   let saveNote = $state("");
   let renameId = $state(null);
   let renameTitle = $state("");
   let renameNote = $state("");
-  let savingRename = $state(false);
   let deleteConfirmationId = $state(null);
-  let clearConfirmation = $state(false);
   let loadToken = 0;
 
   const canSave = $derived(currentSession?.status === "structured");
-  const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving);
+  const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving && !savingRename);
+  const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
+  const historyCount = $derived(hasConfirmedHistory ? String(orderedSnapshots.length) : "—");
   const saveGateMessage = $derived.by(() => {
     if (!canSave) return t("snapshot.save.requiresStructured");
     if (repository === null || storageState?.available !== true) return t("snapshot.storage.unavailable");
@@ -53,7 +55,7 @@
     if (loadState !== "ready") return t("snapshot.storage.unavailable");
     return null;
   });
-  const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
+  const saveDisabledReason = $derived(!canSave ? t("snapshot.save.requiresStructured") : (saveGateMessage ?? undefined));
 
   $effect(() => {
     const currentRepository = repository;
@@ -64,6 +66,7 @@
       loadWaitTimer = null;
       loadPendingLonger = false;
       snapshots = [];
+      hasConfirmedHistory = false;
       loadError = null;
       loadState = currentStorageState?.state === "initializing" ? "initializing" : "unavailable";
       return;
@@ -86,6 +89,7 @@
       const nextSnapshots = await target.list();
       if (token !== loadToken) return null;
       snapshots = nextSnapshots;
+      hasConfirmedHistory = true;
       if (baselineSnapshotId !== null && !nextSnapshots.some((snapshot) => snapshot.snapshotId === baselineSnapshotId)) {
         onSelectBaseline(null);
       }
@@ -140,6 +144,17 @@
     return localized === key ? t("snapshot.error.GENERIC") : localized;
   }
 
+  function getErrorDetail(error) {
+    return typeof error?.hostMessage === "string" && error.hostMessage.length > 0 ? error.hostMessage : null;
+  }
+
+  function getStorageReason() {
+    if (typeof storageState?.reason !== "string" || storageState.reason.length === 0) return null;
+    const key = `snapshot.storage.reason.${storageState.reasonCode}`;
+    const localized = t(key, { methods: (storageState.missing ?? []).join(", ") });
+    return localized === key ? storageState.reason : localized;
+  }
+
   const saveCurrent = createSnapshotSaveHandler({
     getState: () => ({
       repository,
@@ -155,7 +170,12 @@
     clearFeedback: clearSaveFeedback,
     setDuplicateMessage: () => { statusMessage = t("snapshot.save.inProgress"); },
     setError: (error) => { saveError = error; },
-    onSuccess: () => {
+    onSuccess: (snapshot) => {
+      // Repository.save resolves only after Host Storage read-back confirms the
+      // committed document. Reflect that confirmed item immediately, then let
+      // the background list refresh reconcile any external changes.
+      snapshots = [snapshot, ...snapshots.filter((entry) => entry.snapshotId !== snapshot.snapshotId)];
+      hasConfirmedHistory = true;
       showSaveForm = false;
       saveTitle = "";
       saveNote = "";
@@ -163,6 +183,23 @@
     },
     refresh,
   });
+
+  function toggleHistory() {
+    if (saving) return;
+    clearOperationFeedback();
+    const opening = !showHistory;
+    showHistory = opening;
+    if (!opening) return;
+    showSaveForm = false;
+    if (repository !== null && loadState !== "loading") void refresh(repository);
+  }
+
+  function toggleSaveForm() {
+    if (saving || !canSave || !canMutate) return;
+    clearSaveFeedback();
+    showHistory = false;
+    showSaveForm = !showSaveForm;
+  }
 
   async function openSnapshot(snapshotId) {
     clearOperationFeedback();
@@ -175,10 +212,11 @@
       showSaveForm = false;
       renameId = null;
       deleteConfirmationId = null;
+      showHistory = false;
       onOpenSnapshot(snapshot);
     } catch (error) {
       operationError = error;
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT" || error?.code === "SNAPSHOT_NOT_FOUND") await refresh(repository);
+      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT" || error?.code === "SNAPSHOT_NOT_FOUND") void refresh(repository);
     }
   }
 
@@ -198,7 +236,7 @@
   async function saveRename(event, snapshotId) {
     event.preventDefault();
     clearOperationFeedback();
-    if (!canMutate || savingRename) return;
+    if (!canMutate) return;
 
     savingRename = true;
     try {
@@ -209,7 +247,7 @@
       statusMessage = t("snapshot.updated");
     } catch (error) {
       operationError = error;
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") await refresh(repository);
+      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") void refresh(repository);
     } finally {
       savingRename = false;
     }
@@ -222,201 +260,211 @@
       const deleted = await repository.delete(snapshotId);
       deleteConfirmationId = null;
       if (deleted) {
+        snapshots = snapshots.filter((snapshot) => snapshot.snapshotId !== snapshotId);
         onDeleteSnapshot(snapshotId);
         statusMessage = t("snapshot.deleted");
       }
-      await refresh(repository);
+      void refresh(repository);
     } catch (error) {
       operationError = error;
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") await refresh(repository);
-    }
-  }
-
-  async function clearSnapshots() {
-    clearOperationFeedback();
-    if (!canMutate) return;
-    try {
-      const count = await repository.clear();
-      clearConfirmation = false;
-      if (count > 0) {
-        onClearSnapshots();
-        statusMessage = t("snapshot.cleared", { count });
-      }
-      await refresh(repository);
-    } catch (error) {
-      operationError = error;
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") await refresh(repository);
+      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") void refresh(repository);
     }
   }
 </script>
 
-<section class="panel snapshot-manager" aria-labelledby="snapshot-manager-title">
-  <header class="snapshot-manager-head">
-    <div>
-      <h2 id="snapshot-manager-title">{t("snapshot.manager.title")}</h2>
-      <p class="snapshot-manager-hint">{t("snapshot.manager.description")}</p>
-      <p class="snapshot-manager-warning">{t("snapshot.manager.concurrentWarning")}</p>
-    </div>
-    {#if canSave}
-      <button
-        type="button"
-        class="snapshot-primary"
-        disabled={!canMutate}
-        onclick={() => { clearSaveFeedback(); showSaveForm = !showSaveForm; }}
-      >{t("snapshot.save.open")}</button>
-    {:else}
-      <button type="button" class="snapshot-primary" disabled title={t("snapshot.save.requiresStructured")}>{t("snapshot.save.open")}</button>
-    {/if}
-  </header>
+<section class="snapshot-manager" aria-label={t("snapshot.tools.label")}>
+  <div class="snapshot-toolbar">
+    <button
+      type="button"
+      class="snapshot-secondary snapshot-history-button"
+      aria-expanded={showHistory}
+      onclick={toggleHistory}
+      disabled={saving}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M2.2 5.2A6.3 6.3 0 1 1 2 8" />
+        <path d="M2.2 2.8v2.7h2.7M8 4.5V8l2.3 1.4" />
+      </svg>
+      <span>{t("snapshot.history.button")} ({historyCount})</span>
+    </button>
+    <button
+      type="button"
+      class="snapshot-primary"
+      onclick={toggleSaveForm}
+      disabled={!canSave || !canMutate}
+      title={saveDisabledReason}
+      aria-describedby={!canSave ? "snapshot-save-disabled-reason" : undefined}
+    >
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+        <path d="M2.5 2.5h9l2 2v9h-11z" />
+        <path d="M5 2.7v4h5v-4M5 13v-4h6v4" />
+      </svg>
+      <span>{t("snapshot.save.open")}</span>
+    </button>
+  </div>
 
-  {#if saveGateMessage !== null}
-    <p id="snapshot-save-gate" class="snapshot-save-gate" role="status">{saveGateMessage}</p>
+  {#if !canSave}
+    <p id="snapshot-save-disabled-reason" class="snapshot-toolbar-help">{t("snapshot.save.requiresStructured")}</p>
   {/if}
-  {#if operationError}
-    <p class="snapshot-feedback error" role="alert">{getErrorMessage(operationError)}</p>
-  {/if}
+
   {#if statusMessage}
     <p class="snapshot-feedback success" role="status" aria-live="polite">{statusMessage}</p>
   {/if}
 
   {#if showSaveForm}
-    <form class="snapshot-form" onsubmit={saveCurrent}>
-      <p class="snapshot-privacy-note">{t("snapshot.save.localWarning")}</p>
-      <label>
-        <span>{t("snapshot.field.title")}</span>
-        <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} />
-      </label>
-      <label>
-        <span>{t("snapshot.field.note")}</span>
-        <textarea bind:value={saveNote} maxlength="2000" rows="2" disabled={saving}></textarea>
-      </label>
-      <div class="snapshot-actions">
-        <button type="submit" class="snapshot-primary" disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
-          {saving ? t("snapshot.save.saving") : t("snapshot.save.confirm")}
-        </button>
-        <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>
-      </div>
-      {#if saving && savePendingLonger}
-        <p class="snapshot-feedback snapshot-save-pending" role="status" aria-live="polite">{t("snapshot.save.pendingDiagnostic")}</p>
-      {/if}
-      {#if saveError}
-        <p class="snapshot-feedback error snapshot-save-error" role="alert">{getErrorMessage(saveError)}</p>
-      {/if}
-    </form>
+    <section class="snapshot-panel snapshot-save-panel" aria-labelledby="snapshot-save-title" aria-busy={saving}>
+      <form class="snapshot-form" onsubmit={saveCurrent}>
+        <h2 id="snapshot-save-title">{t("snapshot.save.confirm")}</h2>
+        <p class="snapshot-privacy-note">{t("snapshot.save.localWarning")}</p>
+        {#if saveGateMessage !== null}
+          <p class="snapshot-save-gate" role="status">{saveGateMessage}</p>
+          {#if repository === null && getStorageReason()}
+            <p class="snapshot-error-detail">{getStorageReason()}</p>
+          {/if}
+        {/if}
+        <label>
+          <span>{t("snapshot.field.title")}</span>
+          <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} />
+        </label>
+        <label>
+          <span>{t("snapshot.field.note")}</span>
+          <textarea bind:value={saveNote} maxlength="2000" rows="2" disabled={saving}></textarea>
+        </label>
+        <div class="snapshot-actions">
+          <button type="submit" class="snapshot-primary" disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
+            {saving ? t("snapshot.save.saving") : t("snapshot.save.confirm")}
+          </button>
+          <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>
+        </div>
+        {#if saving && savePendingLonger}
+          <p class="snapshot-feedback snapshot-save-pending" role="status" aria-live="polite">{t("snapshot.save.pendingDiagnostic")}</p>
+        {/if}
+        {#if statusMessage === t("snapshot.save.inProgress")}
+          <p class="snapshot-feedback" role="status">{statusMessage}</p>
+        {/if}
+        {#if saveError}
+          <p class="snapshot-feedback error snapshot-save-error" role="alert">{getErrorMessage(saveError)}</p>
+          {#if getErrorDetail(saveError)}<p class="snapshot-error-detail">{getErrorDetail(saveError)}</p>{/if}
+        {/if}
+      </form>
+    </section>
   {/if}
 
-  {#if storageState?.state === "initializing" && repository === null}
-    <p class="snapshot-empty" role="status">{t("snapshot.storage.initializing")}</p>
-  {:else if storageState?.available !== true}
-    <p class="snapshot-empty" role="status">{t("snapshot.storage.unavailable")}</p>
-  {:else if loadState === "loading"}
-    <div class="snapshot-empty snapshot-loading" role="status" aria-live="polite">
-      <p>{t("snapshot.loading")}</p>
-      {#if loadPendingLonger}<p>{t("snapshot.loading.pendingDiagnostic")}</p>{/if}
-    </div>
-  {:else if loadState === "error"}
-    <div class="snapshot-empty snapshot-load-error" role="alert">
-      <p>{t("snapshot.loadFailed")}</p>
-      <p>{getErrorMessage(loadError)}</p>
-      <button type="button" class="snapshot-secondary" onclick={() => refresh()}>{t("snapshot.retry")}</button>
-    </div>
-  {:else if orderedSnapshots.length === 0}
-    <p class="snapshot-empty">{t("snapshot.empty")}</p>
-  {:else}
-    <div class="snapshot-list-head">
-      <span>{t("snapshot.list.count", { count: orderedSnapshots.length })}</span>
-      {#if canMutate}
-        {#if clearConfirmation}
-          <div class="snapshot-confirm-inline" role="group" aria-label={t("snapshot.clear.confirmLabel")}>
-            <span>{t("snapshot.clear.confirm", { count: orderedSnapshots.length })}</span>
-            <button type="button" class="snapshot-danger" onclick={clearSnapshots}>{t("snapshot.clear.confirmAction")}</button>
-            <button type="button" class="snapshot-secondary" onclick={() => (clearConfirmation = false)}>{t("snapshot.cancel")}</button>
-          </div>
-        {:else}
-          <button type="button" class="snapshot-text-button" onclick={() => { clearOperationFeedback(); clearConfirmation = true; }}>
-            {t("snapshot.clear.open")}
-          </button>
-        {/if}
+  {#if showHistory}
+    <section class="snapshot-panel snapshot-history-panel" aria-labelledby="snapshot-history-list-title">
+      <header class="snapshot-panel-head">
+        <div>
+          <h2 id="snapshot-history-list-title">{t("snapshot.history.button")}</h2>
+          <p class="snapshot-baseline-hint">{t("snapshot.baseline.windowOnly")}</p>
+          <p class="snapshot-concurrency-hint">{t("snapshot.manager.concurrentWarning")}</p>
+        </div>
+        <div class="snapshot-panel-actions">
+          <button type="button" class="snapshot-secondary" disabled={repository === null || loadState === "loading"} onclick={() => refresh()}>{t("snapshot.history.refresh")}</button>
+          <button type="button" class="snapshot-text-button" onclick={() => (showHistory = false)}>{t("snapshot.history.close")}</button>
+        </div>
+      </header>
+
+      {#if operationError}
+        <p class="snapshot-feedback error" role="alert">{getErrorMessage(operationError)}</p>
+        {#if getErrorDetail(operationError)}<p class="snapshot-error-detail">{getErrorDetail(operationError)}</p>{/if}
       {/if}
-    </div>
 
-    <ul class="snapshot-list">
-      {#each orderedSnapshots as snapshot (snapshot.snapshotId)}
-        <li class="snapshot-item" class:active={activeSnapshotId === snapshot.snapshotId} class:baseline={baselineSnapshotId === snapshot.snapshotId}>
-          <div class="snapshot-item-main">
-            <div class="snapshot-item-title-row">
-              <h3>{snapshot.title}</h3>
-              {#if activeSnapshotId === snapshot.snapshotId}<span class="snapshot-tag">{t("snapshot.openTag")}</span>{/if}
-              {#if baselineSnapshotId === snapshot.snapshotId}<span class="snapshot-tag baseline-tag">{t("snapshot.baselineTag")}</span>{/if}
-            </div>
-            <div class="snapshot-metadata">
-              <span>{t("snapshot.meta.database", { database: snapshot.rawInput.database, version: snapshot.rawInput.databaseVersion ?? t("snapshot.unknown") })}</span>
-              <span>{t("snapshot.meta.savedAt", { time: formatPlanSnapshotTime(snapshot.savedAt, locale) ?? t("snapshot.unknown") })}</span>
-              <span>{t("snapshot.meta.capturedAt", { time: formatPlanSnapshotTime(snapshot.capturedAt, locale) ?? t("snapshot.unknown") })}</span>
-              {#if snapshot.source.databaseName || snapshot.source.schema}
-                <span>{t("snapshot.meta.source", { source: [snapshot.source.databaseName, snapshot.source.schema].filter(Boolean).join(" / ") })}</span>
-              {/if}
-              {#if snapshot.producerVersion}<span>{t("snapshot.meta.producer", { version: snapshot.producerVersion })}</span>{/if}
-            </div>
-            <p class="snapshot-note">{snapshot.note || t("snapshot.noNote")}</p>
-          </div>
-
-          {#if renameId === snapshot.snapshotId}
-            <form class="snapshot-form snapshot-rename-form" onsubmit={(event) => saveRename(event, snapshot.snapshotId)}>
-              <label>
-                <span>{t("snapshot.field.title")}</span>
-                <input bind:value={renameTitle} maxlength="120" required autocomplete="off" />
-              </label>
-              <label>
-                <span>{t("snapshot.field.note")}</span>
-                <textarea bind:value={renameNote} maxlength="2000" rows="2"></textarea>
-              </label>
-              <div class="snapshot-actions">
-                <button type="submit" class="snapshot-primary" disabled={!canMutate || savingRename || renameTitle.trim().length === 0}>
-                  {savingRename ? t("snapshot.rename.saving") : t("snapshot.rename.save")}
-                </button>
-                <button type="button" class="snapshot-secondary" disabled={savingRename} onclick={() => (renameId = null)}>{t("snapshot.cancel")}</button>
+      {#if storageState?.state === "initializing" && repository === null}
+        <p class="snapshot-empty" role="status">{t("snapshot.storage.initializing")}</p>
+      {:else if storageState?.available !== true || repository === null}
+        <p class="snapshot-empty" role="alert">{t("snapshot.storage.unavailable")}</p>
+        {#if getStorageReason()}<p class="snapshot-error-detail">{getStorageReason()}</p>{/if}
+      {:else if loadState === "loading"}
+        <div class="snapshot-empty snapshot-loading" role="status" aria-live="polite">
+          <p>{t("snapshot.loading")}</p>
+          {#if loadPendingLonger}<p>{t("snapshot.loading.pendingDiagnostic")}</p>{/if}
+        </div>
+      {:else if loadState === "error"}
+        <div class="snapshot-empty snapshot-load-error" role="alert">
+          <p>{t("snapshot.loadFailed")}</p>
+          <p>{getErrorMessage(loadError)}</p>
+          {#if getErrorDetail(loadError)}<p class="snapshot-error-detail">{getErrorDetail(loadError)}</p>{/if}
+        </div>
+      {:else if orderedSnapshots.length === 0}
+        <p class="snapshot-empty" role="status">{t("snapshot.empty")}</p>
+      {:else}
+        <div class="snapshot-list-head">
+          <span>{t("snapshot.list.count", { count: orderedSnapshots.length })}</span>
+        </div>
+        <ul class="snapshot-list">
+          {#each orderedSnapshots as snapshot (snapshot.snapshotId)}
+            <li class="snapshot-item" class:active={activeSnapshotId === snapshot.snapshotId} class:baseline={baselineSnapshotId === snapshot.snapshotId}>
+              <div class="snapshot-item-main">
+                <div class="snapshot-item-title-row">
+                  <h3>{snapshot.title}</h3>
+                  {#if activeSnapshotId === snapshot.snapshotId}<span class="snapshot-tag">{t("snapshot.openTag")}</span>{/if}
+                  {#if baselineSnapshotId === snapshot.snapshotId}<span class="snapshot-tag baseline-tag">{t("snapshot.baselineTag")}</span>{/if}
+                </div>
+                <div class="snapshot-metadata">
+                  <span>{formatPlanSnapshotTime(snapshot.savedAt, locale) ?? t("snapshot.unknown")}</span>
+                  <span>{snapshot.rawInput.database}</span>
+                </div>
+                <p class="snapshot-note">{snapshot.note || t("snapshot.noNote")}</p>
               </div>
-            </form>
-          {:else if deleteConfirmationId === snapshot.snapshotId}
-            <div class="snapshot-confirm-inline" role="group" aria-label={t("snapshot.delete.confirmLabel")}>
-              <span>{t("snapshot.delete.confirm", { title: snapshot.title })}</span>
-              <button type="button" class="snapshot-danger" onclick={() => deleteSnapshot(snapshot.snapshotId)}>{t("snapshot.delete.confirmAction")}</button>
-              <button type="button" class="snapshot-secondary" onclick={() => (deleteConfirmationId = null)}>{t("snapshot.cancel")}</button>
-            </div>
-          {:else}
-            <div class="snapshot-item-actions">
-              <button type="button" class="snapshot-secondary" disabled={!canMutate} onclick={() => openSnapshot(snapshot.snapshotId)}>{t("snapshot.open")}</button>
-              <button
-                type="button"
-                class="snapshot-secondary"
-                disabled={!canMutate}
-                aria-pressed={baselineSnapshotId === snapshot.snapshotId}
-                onclick={() => selectBaseline(snapshot.snapshotId)}
-              >{baselineSnapshotId === snapshot.snapshotId ? t("snapshot.baseline.selected") : t("snapshot.baseline.select")}</button>
-              <button type="button" class="snapshot-secondary" disabled={!canMutate} onclick={() => beginRename(snapshot)}>{t("snapshot.rename.open")}</button>
-              <button
-                type="button"
-                class="snapshot-danger-link"
-                disabled={!canMutate}
-                onclick={() => { clearOperationFeedback(); deleteConfirmationId = snapshot.snapshotId; }}
-              >{t("snapshot.delete.open")}</button>
-            </div>
-          {/if}
-        </li>
-      {/each}
-    </ul>
+
+              {#if renameId === snapshot.snapshotId}
+                <form class="snapshot-form snapshot-rename-form" onsubmit={(event) => saveRename(event, snapshot.snapshotId)}>
+                  <label>
+                    <span>{t("snapshot.field.title")}</span>
+                    <input bind:value={renameTitle} maxlength="120" required autocomplete="off" disabled={savingRename} />
+                  </label>
+                  <label>
+                    <span>{t("snapshot.field.note")}</span>
+                    <textarea bind:value={renameNote} maxlength="2000" rows="2" disabled={savingRename}></textarea>
+                  </label>
+                  <div class="snapshot-actions">
+                    <button type="submit" class="snapshot-primary" disabled={!canMutate || savingRename || renameTitle.trim().length === 0}>
+                      {savingRename ? t("snapshot.rename.saving") : t("snapshot.rename.save")}
+                    </button>
+                    <button type="button" class="snapshot-secondary" disabled={savingRename} onclick={() => (renameId = null)}>{t("snapshot.cancel")}</button>
+                  </div>
+                </form>
+              {:else if deleteConfirmationId === snapshot.snapshotId}
+                <div class="snapshot-confirm-inline" role="group" aria-label={t("snapshot.delete.confirmLabel")}>
+                  <span>{t("snapshot.delete.confirm", { title: snapshot.title })}</span>
+                  <button type="button" class="snapshot-danger" disabled={!canMutate} onclick={() => deleteSnapshot(snapshot.snapshotId)}>{t("snapshot.delete.confirmAction")}</button>
+                  <button type="button" class="snapshot-secondary" onclick={() => (deleteConfirmationId = null)}>{t("snapshot.cancel")}</button>
+                </div>
+              {:else}
+                <div class="snapshot-item-actions">
+                  <button type="button" class="snapshot-secondary" disabled={!canMutate} onclick={() => openSnapshot(snapshot.snapshotId)}>{t("snapshot.open")}</button>
+                  <button
+                    type="button"
+                    class="snapshot-secondary"
+                    disabled={!canMutate}
+                    aria-pressed={baselineSnapshotId === snapshot.snapshotId}
+                    onclick={() => selectBaseline(snapshot.snapshotId)}
+                  >{baselineSnapshotId === snapshot.snapshotId ? t("snapshot.baseline.selected") : t("snapshot.baseline.select")}</button>
+                  <button type="button" class="snapshot-secondary" disabled={!canMutate} onclick={() => beginRename(snapshot)}>{t("snapshot.rename.open")}</button>
+                  <button
+                    type="button"
+                    class="snapshot-danger-link"
+                    disabled={!canMutate}
+                    onclick={() => { clearOperationFeedback(); deleteConfirmationId = snapshot.snapshotId; }}
+                  >{t("snapshot.delete.open")}</button>
+                </div>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
   {/if}
 </section>
 
 <style>
   .snapshot-manager {
-    margin: 0 0 var(--pd-layout-gap);
-    padding: 12px;
+    margin: -2px 0 var(--pd-layout-gap);
   }
 
-  .snapshot-manager-head,
-  .snapshot-list-head,
+  .snapshot-toolbar,
+  .snapshot-panel-head,
+  .snapshot-panel-actions,
   .snapshot-item-title-row,
   .snapshot-actions,
   .snapshot-item-actions,
@@ -427,35 +475,55 @@
     gap: 7px;
   }
 
-  .snapshot-manager-head,
-  .snapshot-list-head {
-    justify-content: space-between;
+  .snapshot-toolbar {
+    justify-content: flex-end;
   }
 
-  .snapshot-manager-head h2 {
+  .snapshot-toolbar svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+  }
+
+  .snapshot-panel-head {
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .snapshot-panel-head h2,
+  .snapshot-form h2 {
     margin: 0;
     font-size: 14px;
   }
 
-  .snapshot-manager-hint,
+  .snapshot-baseline-hint,
+  .snapshot-concurrency-hint,
   .snapshot-empty,
   .snapshot-feedback,
-  .snapshot-note {
+  .snapshot-note,
+  .snapshot-error-detail {
     margin: 4px 0 0;
     color: var(--pd-muted);
     font-size: 12px;
   }
 
-  .snapshot-manager-warning {
-    margin: 4px 0 0;
-    color: var(--pd-warning-fg);
-    font-size: 12px;
+  .snapshot-error-detail {
+    overflow-wrap: anywhere;
   }
 
-  .snapshot-save-gate {
-    margin: 6px 0 0;
+  .snapshot-save-gate,
+  .snapshot-toolbar-help {
+    margin: 0;
     color: var(--pd-muted);
-    font-size: 12px;
+    font-size: 11px;
+  }
+
+  .snapshot-toolbar-help {
+    text-align: right;
   }
 
   .snapshot-save-error,
@@ -472,7 +540,11 @@
   .snapshot-danger,
   .snapshot-text-button,
   .snapshot-danger-link {
+    display: inline-flex;
     min-height: 30px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 5px 9px;
     border: 1px solid var(--pd-border-strong);
     border-radius: 5px;
@@ -515,14 +587,23 @@
     opacity: 0.55;
   }
 
+  .snapshot-panel {
+    margin: 8px 0 0;
+    padding: 12px;
+    border: 1px solid var(--pd-border);
+    border-radius: 7px;
+    background: var(--pd-surface);
+    box-shadow: var(--pd-shadow-sm, 0 4px 16px rgb(0 0 0 / 8%));
+  }
+
+  .snapshot-save-panel {
+    width: min(100%, 560px);
+    margin-left: auto;
+  }
+
   .snapshot-form {
     display: grid;
     gap: 9px;
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid var(--pd-border);
-    border-radius: 6px;
-    background: var(--pd-surface-muted);
   }
 
   .snapshot-form label {
@@ -569,12 +650,8 @@
     color: var(--pd-ok-fg);
   }
 
-  .snapshot-load-error p {
-    margin: 4px 0;
-  }
-
   .snapshot-list-head {
-    margin-top: 10px;
+    margin-top: 8px;
     color: var(--pd-muted);
     font-size: 11px;
   }
@@ -598,7 +675,7 @@
     padding: 9px 10px;
     border: 1px solid var(--pd-border);
     border-radius: 6px;
-    background: var(--pd-surface);
+    background: var(--pd-surface-muted);
   }
 
   .snapshot-item.active {
@@ -641,8 +718,12 @@
   }
 
   .snapshot-note {
+    display: -webkit-box;
+    overflow: hidden;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .snapshot-item-actions {
@@ -661,11 +742,19 @@
   }
 
   @media (max-width: 620px) {
-    .snapshot-manager-head {
+    .snapshot-toolbar {
+      justify-content: flex-start;
+    }
+
+    .snapshot-toolbar-help {
+      text-align: left;
+    }
+
+    .snapshot-panel-head {
       align-items: flex-start;
     }
 
-    .snapshot-manager-head .snapshot-primary {
+    .snapshot-panel-actions {
       width: 100%;
     }
 

@@ -45,6 +45,7 @@ test("waits for init and fails closed when a host has no storage capability", ()
     advertised: false,
     missing: [],
     reason: "DBX 宿主尚未完成初始化，暂时无法确认 Host Storage 能力；不会调用 storage 方法。",
+    reasonCode: "INITIALIZING",
   });
   assert.equal(describePluginStorage(bridge, { initialized: true }).state, "unavailable");
   bridge.capabilities = { storage: false };
@@ -56,11 +57,15 @@ test("waits for init and fails closed when a host has no storage capability", ()
 
 test("requires an advertised complete storage namespace, not method presence alone", () => {
   assert.equal(describePluginStorage(null).available, false);
-  assert.equal(describePluginStorage(createBridge({ advertised: false })).available, false);
+  assert.equal(describePluginStorage(null).reasonCode, "BRIDGE_UNAVAILABLE");
+  const noCapability = describePluginStorage(createBridge({ advertised: false }));
+  assert.equal(noCapability.available, false);
+  assert.equal(noCapability.reasonCode, "CAPABILITY_UNAVAILABLE");
   const half = describePluginStorage({ capabilities: { storage: true }, storage: { get() {}, set() {} } });
   assert.equal(half.state, "unavailable");
   assert.equal(half.advertised, true);
   assert.deepEqual(half.missing, ["storage.delete"]);
+  assert.equal(half.reasonCode, "STORAGE_METHODS_MISSING");
   assert.equal(describePluginStorage(createBridge()).available, true);
 });
 
