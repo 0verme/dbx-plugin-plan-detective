@@ -85,6 +85,9 @@ test("save errors and non-save operation errors are isolated in their own feedba
 test("save waiting and uncertain-outcome diagnostics are localized and forbid blind resubmission", () => {
   assert.match(manager, /setTimeout\([\s\S]*?10_000/);
   assert.match(manager, /snapshot\.save\.pendingDiagnostic/);
+  assert.match(manager, /snapshot\.loading\.pendingDiagnostic/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.loading.pendingDiagnostic"], /不要再次保存/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.loading.pendingDiagnostic"], /do not save again/i);
   assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.pendingDiagnostic"], /不要重复提交/);
   assert.match(MESSAGE_CATALOG.en["snapshot.save.pendingDiagnostic"], /do not submit again/i);
   assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.error.SNAPSHOT_WRITE_UNCONFIRMED"], /不要立即重复提交/);

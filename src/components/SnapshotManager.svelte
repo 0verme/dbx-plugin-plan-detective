@@ -29,7 +29,9 @@
   let statusMessage = $state(null);
   let saving = $state(false);
   let savePendingLonger = $state(false);
+  let loadPendingLonger = $state(false);
   let saveWaitTimer = null;
+  let loadWaitTimer = null;
   let showSaveForm = $state(false);
   let saveTitle = $state("");
   let saveNote = $state("");
@@ -58,6 +60,9 @@
     const currentStorageState = storageState;
     if (currentRepository === null) {
       loadToken += 1;
+      if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
+      loadWaitTimer = null;
+      loadPendingLonger = false;
       snapshots = [];
       loadError = null;
       loadState = currentStorageState?.state === "initializing" ? "initializing" : "unavailable";
@@ -69,8 +74,14 @@
   async function refresh(target = repository) {
     if (target === null) return null;
     const token = ++loadToken;
+    if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
+    loadPendingLonger = false;
     loadState = "loading";
     loadError = null;
+    const waitTimer = setTimeout(() => {
+      if (token === loadToken && loadState === "loading") loadPendingLonger = true;
+    }, 10_000);
+    loadWaitTimer = waitTimer;
     try {
       const nextSnapshots = await target.list();
       if (token !== loadToken) return null;
@@ -85,6 +96,12 @@
       loadError = error;
       loadState = "error";
       return null;
+    } finally {
+      if (loadWaitTimer === waitTimer) {
+        clearTimeout(waitTimer);
+        loadWaitTimer = null;
+        loadPendingLonger = false;
+      }
     }
   }
 
@@ -113,6 +130,7 @@
 
   onDestroy(() => {
     if (saveWaitTimer !== null) clearTimeout(saveWaitTimer);
+    if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
   });
 
   function getErrorMessage(error) {
@@ -292,7 +310,10 @@
   {:else if storageState?.available !== true}
     <p class="snapshot-empty" role="status">{t("snapshot.storage.unavailable")}</p>
   {:else if loadState === "loading"}
-    <p class="snapshot-empty" role="status" aria-live="polite">{t("snapshot.loading")}</p>
+    <div class="snapshot-empty snapshot-loading" role="status" aria-live="polite">
+      <p>{t("snapshot.loading")}</p>
+      {#if loadPendingLonger}<p>{t("snapshot.loading.pendingDiagnostic")}</p>{/if}
+    </div>
   {:else if loadState === "error"}
     <div class="snapshot-empty snapshot-load-error" role="alert">
       <p>{t("snapshot.loadFailed")}</p>
@@ -440,6 +461,10 @@
   .snapshot-save-error,
   .snapshot-save-pending {
     margin: 0;
+  }
+
+  .snapshot-loading p {
+    margin: 4px 0;
   }
 
   .snapshot-primary,

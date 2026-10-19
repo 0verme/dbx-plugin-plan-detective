@@ -53,8 +53,8 @@ export function createSnapshotSaveHandler({
         producerVersion: state.producerVersion,
       });
       await state.repository.save(snapshot);
-      await refresh(state.repository);
       onSuccess(snapshot);
+      void refresh(state.repository).catch(() => {});
       return { status: "saved", snapshot };
     } catch (error) {
       if (error?.code === "SNAPSHOT_WRITE_UNCONFIRMED" && snapshot !== null) {
@@ -64,7 +64,9 @@ export function createSnapshotSaveHandler({
           return { status: "saved", snapshot, confirmedAfterUncertainWrite: true };
         }
       } else if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") {
-        await refresh(state.repository);
+        setError(error);
+        void refresh(state.repository).catch(() => {});
+        return { status: "failed", error };
       }
       setError(error);
       return { status: "failed", error };

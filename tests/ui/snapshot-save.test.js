@@ -62,7 +62,7 @@ function createHarness(overrides = {}) {
   return { calls, state, errors, statuses, saving, successes, events, handler, event };
 }
 
-test("successful save writes through the Host Storage repository and refreshes history before success feedback", async () => {
+test("successful save writes through Host Storage, reports success, and starts a history refresh", async () => {
   const calls = [];
   let document = null;
   const bridge = {
@@ -86,7 +86,7 @@ test("successful save writes through the Host Storage repository and refreshes h
   assert.equal(result.status, "saved");
   assert.equal(calls.filter(([name]) => name === "set").length, 1, "one Host storage.set call commits the snapshot document");
   assert.equal(harness.calls.some(([name]) => name === "refresh"), true);
-  assert.ok(harness.events.indexOf("refresh") < harness.events.indexOf("success"), "success feedback waits for the history refresh");
+  assert.ok(harness.events.indexOf("success") < harness.events.indexOf("refresh"), "confirmed persistence reports success without waiting for list refresh");
   assert.equal(document.snapshots.length, 1);
   assert.deepEqual((await repository.list()).map(({ title }) => title), ["Snapshot baseline"]);
   assert.equal(harness.successes.length, 1);
@@ -107,6 +107,25 @@ test("save failures are surfaced, leave the form success callback untouched, and
   assert.equal(harness.errors[0].code, "HOST_STORAGE_ERROR");
   assert.equal(harness.successes.length, 0);
   assert.deepEqual(harness.saving, [true, false]);
+});
+
+test("a confirmed save does not leave the form busy while history refresh is pending", async () => {
+  let finishRefresh;
+  let saveCount = 0;
+  const harness = createHarness({
+    repository: {
+      async save() { saveCount += 1; },
+      list() { return new Promise((resolve) => { finishRefresh = resolve; }); },
+    },
+  });
+
+  const result = await harness.handler(harness.event());
+  assert.equal(result.status, "saved");
+  assert.equal(saveCount, 1);
+  assert.equal(harness.successes.length, 1);
+  assert.deepEqual(harness.saving, [true, false]);
+  assert.equal(harness.events.includes("refresh"), true);
+  finishRefresh([]);
 });
 
 test("an unconfirmed write is checked against refreshed history before success or error feedback", async () => {
