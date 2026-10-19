@@ -1,0 +1,30 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Streaming",
+      "Startup Cost": 0.4,
+      "Total Cost": 3.8,
+      "Plan Rows": 2,
+      "Plan Width": 8,
+      "Plans": [
+        {
+          "Node Type": "Future DWS Exchange Child",
+          "Synthetic Detail": "unknown node remains inspectable",
+          "Startup Cost": 0.1,
+          "Total Cost": 2.9,
+          "Plan Rows": 2,
+          "Plan Width": 8,
+          "Plans": [
+            {
+              "Node Type": "Values Scan",
+              "Startup Cost": 0,
+              "Total Cost": 1.2,
+              "Plan Rows": 2,
+              "Plan Width": 8
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

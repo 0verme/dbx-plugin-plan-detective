@@ -1,0 +1,21 @@
+{
+  "database": "gaussdb",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-authored shape-only plan fixture for generic DWS operator names; not a real database capture and no SQL was executed.",
+    "reference": null
+  },
+  "features": ["Streaming GATHER", "Hash Join", "Hash", "Aggregate", "Sort", "WindowAgg", "Append", "Values Scan", "Seq Scan", "unknown child subtree", "cost rows width"],
+  "expect": {
+    "rootNodeType": "Result",
+    "hasActualFields": false,
+    "minDepth": 6,
+    "findingRuleIds": []
+  }
+}

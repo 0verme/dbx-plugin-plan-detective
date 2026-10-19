@@ -17,7 +17,9 @@
  * `dbType` uses DBX's `db_type` vocabulary (for example `"postgres"` or
  * `"oceanbase-oracle"`); the adapter maps it to Plan Core's database family.
  * MySQL is mapped to `oceanbase-mysql` only when `dbVersion` independently
- * identifies OceanBase; the plan payload is never inspected to guess a family.
+ * identifies OceanBase; `gaussdb` is mapped to its own family only when the
+ * caller supplies a matching Host capability with `supports.estimatedPlan`.
+ * The plan payload is never inspected to guess a family.
  * The response carries no `mode`: #9692 only serves estimated plans, so this
  * adapter always emits `mode: "estimated"`. There is no actual-plan path and no
  * actual -> estimated fallback; actual plans need a separate contract.
@@ -33,13 +35,14 @@ import { SUPPORTED_FORMATS, createRawPlanInput } from "../raw-plan-input.js";
 /**
  * DBX `db_type` -> Plan Core database family.
  *
- * Mirrors `supports_explain_plan` / `estimated_plan_format` in
- * `crates/dbx-sql/src/query_execution_sql.rs`. A dbType that is absent here is
- * not a dialect the merged host contract can produce, so it fails closed
- * instead of being guessed into a family.
+ * Mirrors dialect families exposed by the Host plan contract. `gaussdb` is
+ * deliberately gated separately: only the Host's affirmative per-connection
+ * `supports.estimatedPlan` result can establish the DWS-enabled path. A plugin
+ * parser family does not imply Host capability.
  */
 const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
   postgres: "postgresql",
+  gaussdb: "gaussdb",
   mysql: "mysql",
   sqlserver: "sqlserver",
   oracle: "oracle",
@@ -56,9 +59,15 @@ const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
  *
  * @param {string} dbType
  * @param {string|undefined} dbVersion
+ * @param {{ dbType: string, supports: { estimatedPlan: boolean } }|null} capabilities
  * @returns {string|undefined}
  */
-function mapDatabaseFamily(dbType, dbVersion) {
+function mapDatabaseFamily(dbType, dbVersion, capabilities) {
+  if (dbType === "gaussdb") {
+    return capabilities?.dbType === "gaussdb" && capabilities.supports.estimatedPlan === true
+      ? "gaussdb"
+      : undefined;
+  }
   if (dbType === "mysql" && typeof dbVersion === "string" && /oceanbase/i.test(dbVersion)) {
     return "oceanbase-mysql";
   }
@@ -78,15 +87,17 @@ const WARNING_PLAN_NOT_JSON = "plan_not_json";
  * Validate one DBX estimated plan response and map it to a RawPlanInput.
  *
  * @param {unknown} response the plain object returned by the host plan call
- * @param {{ sql?: string | null }} [options] adapter-known display provenance the
- *   response does not carry. Only `sql` is consumed; unknown option keys are
- *   ignored on purpose, mirroring `createRawPlanInput` forward compatibility.
+ * @param {{ sql?: string | null, capabilities?: { dbType: string, supports: { estimatedPlan: boolean } }|null }} [options]
+ *   adapter-known provenance and the capability snapshot for the same connection.
+ *   GaussDB is never inferred from `dbType` / `dbVersion` without that affirmative
+ *   Host capability. Unknown option keys are ignored on purpose.
  * @returns {import("../raw-plan-input.js").RawPlanInput}
  * @throws {DbxPlanAdapterError} with a stable `code`; the message never includes
  *   the plan payload itself.
  */
 export function adaptDbxEstimatedPlanResponse(response, options) {
   const sql = readSqlOption(options);
+  const capabilities = readCapabilitiesOption(options);
 
   if (!isPlainObject(response)) {
     throw invalidResponse(`DBX plan response must be a plain object; got ${describeValue(response)}.`);
@@ -94,13 +105,19 @@ export function adaptDbxEstimatedPlanResponse(response, options) {
 
   assertResponseShape(response);
 
-  const database = mapDatabaseFamily(response.dbType, response.dbVersion);
-  if (database === undefined) {
-    throw new DbxPlanAdapterError(
-      "UNSUPPORTED_DB_TYPE",
-      `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
-        `supported dbTypes are ${Object.keys(DATABASE_BY_DBX_DB_TYPE).map((dbType) => JSON.stringify(dbType)).join(", ")}.`,
+  if (capabilities !== null && capabilities.dbType !== response.dbType) {
+    throw invalidResponse(
+      `plan result dbType ${JSON.stringify(response.dbType)} does not match getPlanCapabilities dbType ${JSON.stringify(capabilities.dbType)}.`,
     );
+  }
+
+  const database = mapDatabaseFamily(response.dbType, response.dbVersion, capabilities);
+  if (database === undefined) {
+    const detail = response.dbType === "gaussdb"
+      ? 'GaussDB is accepted only when getPlanCapabilities for the same connection reports dbType "gaussdb" and supports.estimatedPlan=true; the plugin will not infer Huawei DWS from dbType or dbVersion alone.'
+      : `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
+        `supported dbTypes are ${Object.keys(DATABASE_BY_DBX_DB_TYPE).map((dbType) => JSON.stringify(dbType)).join(", ")}.`;
+    throw new DbxPlanAdapterError("UNSUPPORTED_DB_TYPE", detail);
   }
 
   if (!SUPPORTED_FORMATS.includes(response.format)) {
@@ -179,9 +196,39 @@ function rejectTruncation(truncated, warnings) {
 }
 
 /**
- * Read the only adapter option Plan Core can use. `null` is treated as absent,
- * matching how `createRawPlanInput` treats the optional `sql` field.
- *
+ * Read the adapter capability snapshot. It is intentionally narrower than the
+ * full Host result and is not persisted in RawPlanInput.
+ * @param {unknown} options
+ * @returns {{ dbType: string, supports: { estimatedPlan: boolean } }|null}
+ */
+function readCapabilitiesOption(options) {
+  if (options === undefined || options === null) return null;
+  if (!isPlainObject(options)) {
+    throw new DbxPlanAdapterError(
+      "INVALID_ADAPTER_OPTIONS",
+      `Adapter options must be a plain object when provided; got ${describeValue(options)}.`,
+    );
+  }
+  if (options.capabilities === undefined || options.capabilities === null) return null;
+  const capabilities = options.capabilities;
+  if (
+    !isPlainObject(capabilities) ||
+    typeof capabilities.dbType !== "string" ||
+    capabilities.dbType.length === 0 ||
+    !isPlainObject(capabilities.supports) ||
+    typeof capabilities.supports.estimatedPlan !== "boolean"
+  ) {
+    throw new DbxPlanAdapterError(
+      "INVALID_ADAPTER_OPTIONS",
+      "options.capabilities must contain a non-empty dbType and boolean supports.estimatedPlan.",
+    );
+  }
+  return /** @type {{ dbType: string, supports: { estimatedPlan: boolean } }} */ (capabilities);
+}
+
+/**
+ * Read the only display provenance option Plan Core can use. `null` is treated
+ * as absent, matching how `createRawPlanInput` treats optional `sql`.
  * @param {unknown} options
  * @returns {string | undefined}
  */

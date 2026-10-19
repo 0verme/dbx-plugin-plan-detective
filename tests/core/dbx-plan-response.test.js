@@ -121,6 +121,29 @@ test("maps every dbType the merged host contract can return", () => {
   }
 });
 
+test("maps GaussDB only when the same Host capability affirmatively enables Estimated Plan", () => {
+  const response = dbxResponse({ dbType: "gaussdb", dbVersion: "GaussDB 9.1.1" });
+  const capabilities = { dbType: "gaussdb", supports: { estimatedPlan: true } };
+  const input = adaptDbxEstimatedPlanResponse(response, { capabilities });
+
+  assert.equal(input.database, "gaussdb");
+  assert.equal(input.mode, "estimated");
+  assert.equal(input.plan, response.rawPlan);
+  assert.deepEqual(validateRawPlanInput(input), []);
+
+  for (const unconfirmed of [
+    undefined,
+    { dbType: "gaussdb", supports: { estimatedPlan: false } },
+    { dbType: "postgres", supports: { estimatedPlan: true } },
+  ]) {
+    assertAdapterError(
+      `unconfirmed GaussDB capability ${JSON.stringify(unconfirmed)}`,
+      () => adaptDbxEstimatedPlanResponse(response, { capabilities: unconfirmed }),
+      unconfirmed?.dbType === "postgres" ? "INVALID_DBX_PLAN_RESPONSE" : "UNSUPPORTED_DB_TYPE",
+    );
+  }
+});
+
 test("accepts json, xml and text formats without parsing them", () => {
   const json = adaptDbxEstimatedPlanResponse(dbxResponse());
   assert.equal(json.format, "json");

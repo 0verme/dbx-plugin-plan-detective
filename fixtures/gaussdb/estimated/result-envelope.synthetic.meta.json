@@ -1,0 +1,21 @@
+{
+  "database": "gaussdb",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "Hand-authored minimal PostgreSQL-family JSON envelope shape; not a real database capture and no SQL was executed.",
+    "reference": null
+  },
+  "features": ["single-element array envelope", "Result", "cost rows width"],
+  "expect": {
+    "rootNodeType": "Result",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": []
+  }
+}

@@ -20,6 +20,8 @@ export {
 export { analyzeRawPlan, describeParserSupport, getParser } from "./parsers/index.js";
 export { parsePostgresJsonPlan } from "./postgres/parse-json-plan.js";
 export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";
+export { parseGaussdbJsonPlan } from "./gaussdb/parse-json-plan.js";
+export { normalizeGaussdbPlan } from "./normalize/normalize-gaussdb.js";
 export { parseMySqlJsonPlan } from "./mysql/parse-json-plan.js";
 export { normalizeMySqlPlan } from "./normalize/normalize-mysql.js";
 export { parseSqlServerShowPlanXml } from "./sqlserver/parse-showplan-xml.js";

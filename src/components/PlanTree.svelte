@@ -113,7 +113,7 @@
           {row.estimatedRows === null ? "" : t("tree.rows", { value: formatNumber(row.estimatedRows) })}
         </span>
         <span class="metric mono">
-          {row.totalCost === null ? "" : t("tree.cost", { value: formatNumber(row.totalCost) })}
+          {row.totalCost === null ? "" : t(row.costLabel, { value: formatNumber(row.totalCost) })}
         </span>
       </div>
     {/each}

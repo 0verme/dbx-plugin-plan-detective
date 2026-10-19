@@ -36,7 +36,7 @@ export const largeSequentialScanRule = {
       const estimatedRows = typeof node.estimatedRows === "number" ? node.estimatedRows : 0;
       // `null` means the plan reported no cost. It is not a cost of 0 and must
       // not be presented as one; only a real cost can reach a cost threshold.
-      const incrementalCost = incrementalCostOf(node);
+      const incrementalCost = normalized.database === "postgresql" ? incrementalCostOf(node) : null;
 
       const reachesWarning =
         estimatedRows >= LARGE_SEQUENTIAL_SCAN.warningEstimatedRows ||
@@ -86,7 +86,7 @@ export const largeSequentialScanRule = {
 /**
  * @param {import("../normalize/normalize-postgres.js").NormalizedNode} node
  * @param {number} estimatedRows
- * @param {number|null} incrementalCost own cost, or null when the plan reports none
+ * @param {number|null} incrementalCost own PostgreSQL-comparable cost, or null when withheld
  * @returns {string}
  */
 function summarize(node, estimatedRows, incrementalCost) {
@@ -97,7 +97,9 @@ function summarize(node, estimatedRows, incrementalCost) {
   // MySQL finding.
   const costNote =
     incrementalCost === null
-      ? " and this plan does not report a cost estimate for this node."
+      ? node.engineSpecific?.gaussdb !== undefined
+        ? " and DWS native cost is kept separately, not attributed as PostgreSQL incremental cost."
+        : " and this plan does not report a cost estimate for this node."
       : ` and accounts for an incremental cost of ${incrementalCost}.`;
   return (
     `${node.nodeType} on ${label}${filterNote} is estimated to read ${estimatedRows} rows` +

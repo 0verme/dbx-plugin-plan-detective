@@ -170,6 +170,27 @@
   const capabilityMatches = $derived(capabilitiesConnectionId !== null && capabilitiesConnectionId === effectiveConnectionId);
 
   let capabilityToken = 0;
+  let analysisRequestToken = 0;
+  let lastAnalyzedInputKey = null;
+
+  function currentAnalysisInputKey() {
+    return JSON.stringify([effectiveConnectionId, sqlText, contextView.database, contextView.schema]);
+  }
+
+  $effect(() => {
+    const currentKey = currentAnalysisInputKey();
+    if (lastAnalyzedInputKey === null || lastAnalyzedInputKey === currentKey) return;
+
+    // Editing SQL or changing the target invalidates the displayed plan and any
+    // still-pending response, so results cannot drift to a different request.
+    lastAnalyzedInputKey = null;
+    analysisRequestToken += 1;
+    session = idleAnalysis();
+    activeSnapshot = null;
+    selectedNodeId = "0";
+    collapsedIds = new Set();
+    copyState = "idle";
+  });
 
   async function refreshCapabilities() {
     const connectionId = effectiveConnectionId;
@@ -222,6 +243,8 @@
   async function analyze() {
     if (!analysisReady || effectiveConnectionId === null) return;
 
+    const requestToken = ++analysisRequestToken;
+    lastAnalyzedInputKey = currentAnalysisInputKey();
     activeSnapshot = null;
     session = loadingAnalysis();
     selectedNodeId = "0";
@@ -231,7 +254,7 @@
     const maxTimeoutMs = capabilities?.limits.maxTimeoutMs;
     const timeoutMs = typeof maxTimeoutMs === "number" ? Math.min(15_000, maxTimeoutMs) : null;
 
-    session = await runHostAnalysis({
+    const result = await runHostAnalysis({
       bridge,
       connectionId: effectiveConnectionId,
       sql: sqlText,
@@ -239,6 +262,8 @@
       schema: contextView.schema,
       timeoutMs,
     });
+    if (requestToken !== analysisRequestToken || lastAnalyzedInputKey !== currentAnalysisInputKey()) return;
+    session = result;
   }
 
   /* ------------------------------------------------------ active analysis -- */

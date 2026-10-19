@@ -142,7 +142,7 @@ export async function runHostAnalysis(input) {
     // 4. Map the host response into the Plan Core contract.
     let rawInput;
     try {
-      rawInput = adaptDbxEstimatedPlanResponse(hostResult, { sql: input.sql });
+      rawInput = adaptDbxEstimatedPlanResponse(hostResult, { sql: input.sql, capabilities });
     } catch (error) {
       if (error instanceof DbxPlanAdapterError && error.code === "PLAN_TRUNCATED") {
         return {

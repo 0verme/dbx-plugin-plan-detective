@@ -15,6 +15,7 @@ import { computeHotspots } from "../hotspots/compute-hotspots.js";
 import { damengParser } from "./dameng.js";
 import { dorisParser } from "./doris.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
+import { gaussdbParser } from "./gaussdb.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
 import { runRules } from "../rules/index.js";
 import { mysqlParser } from "./mysql.js";
@@ -32,6 +33,7 @@ import { sqlserverParser } from "./sqlserver.js";
  */
 const PARSERS = new Map([
   [postgresParser.database, postgresParser],
+  [gaussdbParser.database, gaussdbParser],
   [mysqlParser.database, mysqlParser],
   [sqlserverParser.database, sqlserverParser],
   [oceanBaseOracleParser.database, oceanBaseOracleParser],
