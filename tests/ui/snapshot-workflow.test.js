@@ -4,10 +4,11 @@ import test from "node:test";
 import { MESSAGE_CATALOG } from "../../src/lib/i18n/messages.js";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-const [app, manager, replay] = await Promise.all([
+const [app, manager, replay, saveAction] = await Promise.all([
   read("src/App.svelte"),
   read("src/components/SnapshotManager.svelte"),
   read("src/lib/plan-snapshot-view.js"),
+  read("src/lib/snapshot-save-action.js"),
 ]);
 
 test("snapshot manager is independent of the connection gate and uses only the Host Storage repository", () => {
@@ -17,7 +18,9 @@ test("snapshot manager is independent of the connection gate and uses only the H
   assert.match(app, /createPlanSnapshotRepository\(bridge\)/);
   assert.doesNotMatch(manager, /localStorage|indexedDB/);
   assert.match(manager, /target\.list\(/, "list uses the repository API");
-  for (const operation of ["get", "save", "rename", "delete", "clear"]) {
+  assert.match(manager, /createSnapshotSaveHandler\(/);
+  assert.match(saveAction, /state\.repository\.save\(snapshot\)/, "save uses the repository API");
+  for (const operation of ["get", "rename", "delete", "clear"]) {
     assert.match(manager, new RegExp(`repository\\.${operation}\\(`), `${operation} uses the repository API`);
   }
 });
@@ -52,10 +55,16 @@ test("history actions expose rename, delete, clear, and an explicit comparison-b
   assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
 });
 
-test("save form requires explicit user action and warns about local SQL/Raw Plan persistence", () => {
-  assert.match(manager, /createPlanSnapshot\(\{[\s\S]*?session: currentSession/);
+test("save form requires explicit user action and gives visible, actionable save feedback", () => {
+  assert.match(saveAction, /createSnapshot\(\{[\s\S]*?session: state\.currentSession/);
+  assert.match(saveAction, /if \(state\.repository === null \|\| state\.storageAvailable !== true\)/);
+  assert.match(saveAction, /if \(state\.currentSession\?\.status !== "structured"\)/);
+  assert.match(saveAction, /if \(inFlight\)[\s\S]*?setDuplicateMessage\(\)/);
+  assert.match(saveAction, /await refresh\(state\.repository\)/);
   assert.match(manager, /snapshot\.save\.localWarning/);
   assert.match(manager, /maxlength="120"/);
   assert.match(manager, /maxlength="2000"/);
-  assert.match(manager, /disabled=\{!canMutate \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
+  assert.match(manager, /disabled=\{!canMutate \|\| !canSave \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
+  assert.match(manager, /snapshot-save-gate/);
+  assert.match(manager, /snapshot-save-error/);
 });

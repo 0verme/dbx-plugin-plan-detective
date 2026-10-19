@@ -1,8 +1,8 @@
 <script>
   import { createTranslator } from "../lib/i18n/index.js";
-  import { createPlanSnapshot } from "../lib/plan-snapshot.js";
   import { formatPlanSnapshotTime } from "../lib/plan-snapshot-view.js";
   import { PlanSnapshotStoreError } from "../lib/plan-snapshot-store.js";
+  import { createSnapshotSaveHandler } from "../lib/snapshot-save-action.js";
 
   let {
     locale = "zh-CN",
@@ -39,6 +39,14 @@
 
   const canSave = $derived(currentSession?.status === "structured");
   const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready");
+  const saveGateMessage = $derived.by(() => {
+    if (!canSave) return t("snapshot.save.requiresStructured");
+    if (repository === null || storageState?.available !== true) return t("snapshot.storage.unavailable");
+    if (loadState === "loading" || loadState === "initializing") return t("snapshot.loading");
+    if (loadState === "error") return `${t("snapshot.loadFailed")} ${getErrorMessage(loadError)}`;
+    if (loadState !== "ready") return t("snapshot.storage.unavailable");
+    return null;
+  });
   const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
 
   $effect(() => {
@@ -86,32 +94,29 @@
     return localized === key ? t("snapshot.error.GENERIC") : localized;
   }
 
-  async function saveCurrent(event) {
-    event.preventDefault();
-    clearFeedback();
-    if (!canMutate || !canSave || saving) return;
-
-    saving = true;
-    try {
-      const snapshot = createPlanSnapshot({
-        session: currentSession,
-        title: saveTitle.trim(),
-        note: saveNote,
-        producerVersion,
-      });
-      await repository.save(snapshot);
+  const saveCurrent = createSnapshotSaveHandler({
+    getState: () => ({
+      repository,
+      storageAvailable: storageState?.available === true,
+      loadState,
+      loadError,
+      currentSession,
+      saveTitle,
+      saveNote,
+      producerVersion,
+    }),
+    setSaving: (value) => { saving = value; },
+    clearFeedback,
+    setDuplicateMessage: () => { statusMessage = t("snapshot.save.inProgress"); },
+    setError: (error) => { operationError = error; },
+    onSuccess: () => {
       showSaveForm = false;
       saveTitle = "";
       saveNote = "";
       statusMessage = t("snapshot.saved");
-      await refresh(repository);
-    } catch (error) {
-      operationError = error;
-      if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") await refresh(repository);
-    } finally {
-      saving = false;
-    }
-  }
+    },
+    refresh,
+  });
 
   async function openSnapshot(snapshotId) {
     clearFeedback();
@@ -218,14 +223,17 @@
     {/if}
   </header>
 
-  {#if operationError}
+  {#if saveGateMessage !== null}
+    <p id="snapshot-save-gate" class="snapshot-save-gate" role="status">{saveGateMessage}</p>
+  {/if}
+  {#if operationError && !showSaveForm}
     <p class="snapshot-feedback error" role="alert">{getErrorMessage(operationError)}</p>
   {/if}
   {#if statusMessage}
     <p class="snapshot-feedback success" role="status" aria-live="polite">{statusMessage}</p>
   {/if}
 
-  {#if showSaveForm && canSave}
+  {#if showSaveForm}
     <form class="snapshot-form" onsubmit={saveCurrent}>
       <p class="snapshot-privacy-note">{t("snapshot.save.localWarning")}</p>
       <label>
@@ -237,11 +245,14 @@
         <textarea bind:value={saveNote} maxlength="2000" rows="2"></textarea>
       </label>
       <div class="snapshot-actions">
-        <button type="submit" class="snapshot-primary" disabled={!canMutate || saving || saveTitle.trim().length === 0}>
+        <button type="submit" class="snapshot-primary" disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
           {saving ? t("snapshot.save.saving") : t("snapshot.save.confirm")}
         </button>
         <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>
       </div>
+      {#if operationError}
+        <p class="snapshot-feedback error snapshot-save-error" role="alert">{getErrorMessage(operationError)}</p>
+      {/if}
     </form>
   {/if}
 
@@ -387,6 +398,16 @@
     margin: 4px 0 0;
     color: var(--pd-warning-fg);
     font-size: 12px;
+  }
+
+  .snapshot-save-gate {
+    margin: 6px 0 0;
+    color: var(--pd-muted);
+    font-size: 12px;
+  }
+
+  .snapshot-save-error {
+    margin: 0;
   }
 
   .snapshot-primary,
