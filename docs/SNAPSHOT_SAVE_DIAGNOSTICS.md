@@ -1,29 +1,45 @@
-# Issue #72 / PR #93 快照保存诊断记录
+# Issue #72 / PR #93 快照保存端到端诊断
 
-此记录只包含源码、包元数据与自动化测试证据；不包含 SQL、Raw Plan、连接信息或用户快照内容。
+## 当前结论
 
-## 结论边界
+- **Windows DBX Desktop 故障根因：UNKNOWN / NOT VERIFIED。** 本次 Agent 环境为 Linux，不具备 Windows DBX Desktop GUI，也没有用户设备的安装记录、Host 权限状态或真实 Host Storage 调用日志。自动化模拟不能证明真实 Host 写入、历史读取或重启恢复成功。
+- 本轮不修改 Snapshot Schema v1、Storage key、数据一致性协议或 UI 入口结构；不重试 `storage.set`。仅增加运行会话内的诊断追踪、复制入口、包构建指纹及针对性模拟测试。
+- PR #93 当前基线为 `5dad75a59eea6857f5a45a2fdcf63cb10dc7aaf3`；该 HEAD 中 `manifest.json` 已声明 `host.storage`。这只证明仓库源码/候选包，不证明用户当前安装了该包或该权限已生效。
 
-- **Windows 安装环境的实际 Root Cause：NOT VERIFIED。** 当前运行环境是 Linux，未挂载 Windows 文件系统（`/mnt` 为空、`/mnt/c` 不存在），也没有 DBX Desktop / `dbx` CLI。因而无法检查用户当前已安装的 `.dbxp`、DBX 版本、Host Storage 权限授予状态或该次操作的 Host 日志。不得把模拟 Storage 测试写成真实 Host 写入成功。
-- 可确认的源码缺陷是：PR #93 前的 `SnapshotManager.svelte` 对失效保存前置条件直接 `return`，没有说明原因；保存成功后还要等待历史刷新才给成功反馈。它们可能造成“点击后没有可见结果”，但**没有证据证明它们就是 Windows 报告的唯一触发原因**。
-- PR #93 已把保存前置条件转为可见错误、分离保存错误与历史管理错误、在确认写入后先反馈成功而不等待列表刷新；后续修复也保证保存 pending 时不能关闭表单。Host 永不返回时页面保留 loading 并显示等待诊断，不会把 timeout/未知结果当作成功，也不会自动重发写入。
+## 诊断追踪行为
 
-## 当前源码保存链路
+- 每次确认保存创建唯一 `traceId`；会话生命周期和历史读取也有独立 trace。保存 trace 缓存最多 8 条，每条最多 128 个事件；会话事件最多 128 条；复制 JSON 上限 48 KiB。数据只驻留当前插件 UI 会话，不写入 Host Storage，不访问外部日志服务。
+- 每个异步阶段输出 `*_START` 与 `*_END` 事件。START 包含 `status: pending`、单调计时的相对 `started`；END 包含 `finished`、`durationMs`、`status`。Promise 保持 pending 时保留最后 START，可直接区分卡在 Store load、Host get、set、读回核验或历史 refresh。
+- 覆盖保存按钮点击/表单提交/原生校验/save gate、Snapshot 创建、Repository save、Store load/validate、Host Storage get/set、写后读回、历史初始化和手动刷新、Host bridge 初始化、Storage capability/manifest 权限声明、权限状态以及保存按钮 disabled 状态变化。
+- Host permission 状态由公开 Storage API 的结果推断：`not-verified`、`usable` 或 `denied`。Host 没有公开权限查询 API，因此不将 manifest 声明冒充为“已授予”。DBX 版本仅从明确的 Host version 字段或 User-Agent 版本标记提取；否则导出 `unknown`，需用户从 DBX Desktop About 页面确认。
+- 日志只包含插件版本、源码/构建 fingerprint、非敏感 manifest 权限、能力布尔值、稳定错误码、阶段和固定脱敏错误描述。不会包含 SQL、Raw Plan、用户名、连接凭据、用户备注、Storage key/value 或原始 Host 错误文本。
+- Host Storage 写入长时间无响应时 UI 显示 `UNKNOWN/PENDING` 并禁止重复提交。不会用 Promise race 将写入判为失败，也不会自动重试 set。set 已返回但读回不能确认时，现有安全只读历史核验路径仍生效。
 
-1. `SnapshotManager.svelte` 的 HTML `<form onsubmit={saveCurrent}>` 使用 Svelte 5 事件绑定；`snapshot-save-action.js` 的 handler 首先 `preventDefault()`。确认按钮受完整 structured session、Host Storage 能力和历史列表状态门控。
-2. `createPlanSnapshot()` 只接收当前 structured Estimated Plan session 与名称/说明；错误会落到表单内，不清除名称或说明。
-3. `createPlanSnapshotRepository()` 使用既有 key `plan-detective.snapshot-store.v1` 和 Storage Schema v1。`manifest.json` 声明 `host.storage`；`dbx-plugin-storage.js` 等待 Host init、检查 `capabilities.storage` 与 `get/set/delete` 方法，并在权限或容量错误时 fail closed。
-4. Repository 先读原文档、检查容量/冲突，然后对单个快照仓库 value 调用一次 `storage.set`；随后 `storage.get` 写后读回比较文档指纹。写后状态未知时只再读、不重复 set；匹配到候选文档才确认保存。
-5. 已确认保存后关闭表单、给成功反馈并将新记录加入已确认的列表计数；列表刷新在后台进行。失败时表单保持打开，显示稳定错误码对应说明及可用的 Host 原始错误文本，历史列表可手动刷新。
-6. 历史入口与 Host Plan / connection / SQL gate 分离。打开快照只用已保存的 `RawPlanInput` 在本地重新计算，不调用 Host Plan API，也不重新执行 SQL。历史列表自身由 DBX Host Storage 读取；未知计数显示为 `—`，不伪造为零。
+## 候选包证据（Linux 自动构建）
 
-## PR review 与包证据
+- 开发包：`dist/io.github.0verme.plan-detective-0.7.1-universal.dbxp`
+- 版本：`0.7.1`（unsigned review/development candidate，不是正式发布）
+- UI build fingerprint：`sha256:d57f3261ed062b233073fa6cc20bfd9c459488de8560710f5c95fa7d7cf9160b`
+- `.dbxp` SHA-256：`2ca450c20a26b9272f3bf8817c45f3684c9992bc8e0fb6d155878dc3b8bdadc0`
+- 包内 manifest permissions：`host.plans:read`、`host.storage`
+- 包含 UI entrypoint；无 backend entrypoint、Node runtime 或系统 Node.js 运行依赖。
+- `npm run package` 会重新计算源输入 fingerprint 并核对已生成 UI bundle。已验证候选包 UI bundle 含当前源码 fingerprint；用户复制的运行时 fingerprint 可与本节候选值比较。此核对不能识别用户设备当前安装了哪个包。
 
-- Codex P2 `4310908497`：非保存操作错误曾与保存错误共用反馈区。已分离 `saveError` / `operationError`，回复并解决。
-- Codex P2 `4311269389`：保存 pending 时曾能通过入口关闭表单，可能隐藏后续错误。已在 `5cca8b7` 禁止保存 pending 时关闭表单/进行历史操作，回复并解决；Codex 对 `5cca8b7` 的复审未发现其他问题。
-- 已保存的 review candidate `artifacts/issue-72-save-feedback-5cca8b7013f5797e84f975bdf6f6cb3b5f8d59b1/io.github.0verme.plan-detective-0.7.1-universal.dbxp` 对应源码 commit `5cca8b7`，SHA-256 `6558fc72925a59ee8ec9a29476849d8b3bd5639ac4241ed0e2aad5ec168ef30a`；其中 manifest 声明 `host.storage`，包内 UI 与该 commit 对齐。该证据只证明候选包内容，不证明 Windows 安装了此包。
-- 本次 UI 更新会产生新的构建包；新包亦只是 unsigned review candidate，不是 Release 或 Store 发布。更新候选包的 SHA-256 应在 build/package 后另行记录。
+## 验证状态
 
-## 真正完成环境诊断所需证据
+- 自动化模拟：`npm test` **1422/1422 PASS**。覆盖正常保存、Storage capability 缺失、权限拒绝、get/set pending、读回不匹配、历史刷新失败、UI 状态更新失败、并发重复提交、非 structured session、空历史、原生表单校验、脱敏及 fingerprint 不匹配。
+- `npm run build`：PASS。
+- `npm run package`：PASS；unsigned candidate；包内 manifest 与 build fingerprint 核对通过。
+- `npm audit --audit-level=high`：0 vulnerabilities。
+- `git diff --check`：PASS。
+- **真实 Windows Desktop 保存、历史读取及 DBX 重启恢复：NOT VERIFIED。** 不得据此标记修复成功或 READY TO MERGE。
 
-Windows 验收时仅需记录脱敏元数据：Installed 页面显示的插件版本、安装 `.dbxp` 的 SHA-256、DBX 版本、`host.storage` 是否已授予、点击保存时 UI 状态、Storage `get/set/get` 的结果与经过时间，以及脱敏后的错误 code/message。禁止采集或提交真实 SQL、Raw Plan、credential、connection ID 或整个 Storage value。只有安装包/权限与调用结果可核对后，才能将 Windows 故障 Root Cause 标记为已确认。
+## Windows 人工验证（不超过 5 步）
+
+1. 在 DBX Desktop 插件管理页安装/更新以上 `.dbxp`；记录 DBX Desktop About 版本，并确认已安装包 SHA-256 与上面的候选包一致。若客户端拒绝同版本替换，先不要绕过版本/签名保护，反馈安装页的安全错误。
+2. 打开 PostgreSQL 查询结果并完成一次成功的 structured Estimated Plan；打开快照保存，输入名称/备注并确认保存。等待 UI 成功或 `UNKNOWN/PENDING` 提示；pending 时不要重复点击。
+3. 点击快照区域的 **复制诊断日志 / Copy diagnostic log**。若复制按钮报告无事件或复制失败，记录反馈，不打开开发者工具也不要手动导出 Storage 内容。
+4. 打开历史并手动刷新，确认新记录可读；关闭并重启 DBX Desktop，再打开历史确认该记录恢复。
+5. 将复制的脱敏 JSON、DBX About 版本、Installed 页面显示版本及候选包 SHA 一并回复到 PR #93/Issue #72；不要附 SQL、Raw Plan、连接信息或备注原文。
+
+只有真实 Windows 证据同时确认保存成功、历史可读和 DBX 重启后恢复，才可解除 BLOCKED。

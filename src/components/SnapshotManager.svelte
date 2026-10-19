@@ -4,6 +4,20 @@
   import { formatPlanSnapshotTime } from "../lib/plan-snapshot-view.js";
   import { PlanSnapshotStoreError } from "../lib/plan-snapshot-store.js";
   import { createSnapshotSaveHandler } from "../lib/snapshot-save-action.js";
+  import { copyTextToClipboard } from "../lib/clipboard-copy.js";
+  import {
+    buildSnapshotDiagnosticLog,
+    createSnapshotDiagnosticTrace,
+    hasSnapshotDiagnosticEvents,
+    getSnapshotDiagnosticSessionTrace,
+    prepareSnapshotSaveTrace,
+    recordSnapshotDiagnosticEvent,
+    recordSnapshotFormValidationFailure,
+    snapshotDiagnosticErrorFields,
+    startSnapshotDiagnosticStage,
+    finishSnapshotDiagnosticStage,
+    withSnapshotDiagnosticStage,
+  } from "../lib/snapshot-diagnostic-trace.js";
 
   let {
     locale = "zh-CN",
@@ -13,6 +27,7 @@
     activeSnapshotId = null,
     baselineSnapshotId = null,
     producerVersion = null,
+    diagnosticBridge = null,
     onOpenSnapshot = () => {},
     onSelectBaseline = () => {},
     onDeleteSnapshot = () => {},
@@ -31,6 +46,8 @@
   let savingRename = $state(false);
   let savePendingLonger = $state(false);
   let loadPendingLonger = $state(false);
+  let diagnosticMessage = $state(null);
+  let previousSaveButtonState = null;
   let saveWaitTimer = null;
   let loadWaitTimer = null;
   let showHistory = $state(false);
@@ -61,6 +78,12 @@
     const currentRepository = repository;
     const currentStorageState = storageState;
     if (currentRepository === null) {
+      const trace = createSnapshotDiagnosticTrace({ kind: "history" });
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_HISTORY_INITIALIZATION", "blocked", {
+        storageAvailable: currentStorageState?.available === true,
+        storageAdvertised: currentStorageState?.advertised === true,
+        reasonCode: currentStorageState?.reasonCode,
+      });
       loadToken += 1;
       if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
       loadWaitTimer = null;
@@ -71,23 +94,65 @@
       loadState = currentStorageState?.state === "initializing" ? "initializing" : "unavailable";
       return;
     }
-    void refresh(currentRepository);
+    void refresh(currentRepository, { operation: "initial" });
   });
 
-  async function refresh(target = repository) {
+  $effect(() => {
+    const titlePresent = saveTitle.trim().length > 0;
+    const buttonState = {
+      saveDisabled: !canSave || !canMutate,
+      saveEntryDisabled: !canSave || !canMutate,
+      saveConfirmDisabled: !canMutate || !canSave || saving || !titlePresent,
+      sessionStructured: canSave,
+      storageAvailable: storageState?.available === true,
+      loadState,
+      titlePresent,
+      saving,
+    };
+    const serialized = JSON.stringify(buttonState);
+    if (serialized === previousSaveButtonState) return;
+    previousSaveButtonState = serialized;
+    recordSnapshotDiagnosticEvent(getSnapshotDiagnosticSessionTrace(), "SNAPSHOT_SAVE_BUTTON_STATE_CHANGE", "info", buttonState);
+  });
+
+  async function refresh(target = repository, options = {}) {
     if (target === null) return null;
+    const trace = options.trace ?? createSnapshotDiagnosticTrace({ kind: "history" });
+    const operation = options.operation ?? "manual";
+    const initializationStage = operation === "initial"
+      ? startSnapshotDiagnosticStage(trace, "SNAPSHOT_HISTORY_INITIALIZATION", {
+        storageAvailable: storageState?.available === true,
+        storageAdvertised: storageState?.advertised === true,
+      })
+      : null;
+    recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_HISTORY_REFRESH_REQUEST", "info", { operation });
     const token = ++loadToken;
     if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
     loadPendingLonger = false;
     loadState = "loading";
     loadError = null;
     const waitTimer = setTimeout(() => {
-      if (token === loadToken && loadState === "loading") loadPendingLonger = true;
+      if (token === loadToken && loadState === "loading") {
+        loadPendingLonger = true;
+        recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_HISTORY_REFRESH_PENDING", "pending", {
+          operation,
+          failedStage: "history.refresh",
+        });
+      }
     }, 10_000);
     loadWaitTimer = waitTimer;
     try {
-      const nextSnapshots = await target.list();
-      if (token !== loadToken) return null;
+      const nextSnapshots = await withSnapshotDiagnosticStage(
+        trace,
+        "SNAPSHOT_HISTORY_REFRESH",
+        () => target.list({ trace, readRole: "history" }),
+        { operation, failedStage: "history.refresh" },
+      );
+      if (token !== loadToken) {
+        finishSnapshotDiagnosticStage(initializationStage, "blocked", { operation });
+        return null;
+      }
+      finishSnapshotDiagnosticStage(initializationStage, "success", { operation });
       snapshots = nextSnapshots;
       hasConfirmedHistory = true;
       if (baselineSnapshotId !== null && !nextSnapshots.some((snapshot) => snapshot.snapshotId === baselineSnapshotId)) {
@@ -96,9 +161,14 @@
       loadState = "ready";
       return nextSnapshots;
     } catch (error) {
+      finishSnapshotDiagnosticStage(initializationStage, "failed", {
+        operation,
+        ...snapshotDiagnosticErrorFields(error, "history.refresh"),
+      });
       if (token !== loadToken) return null;
       loadError = error;
       loadState = "error";
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_HISTORY_REFRESH_ERROR", "failed", snapshotDiagnosticErrorFields(error, "history.refresh"));
       return null;
     } finally {
       if (loadWaitTimer === waitTimer) {
@@ -119,15 +189,32 @@
     statusMessage = null;
   }
 
-  function setSaving(value) {
+  function setSaving(value, trace = null) {
     saving = value;
+    if (trace) {
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_SAVE_BUTTON_STATE_CHANGE", "info", {
+        saveDisabled: !canSave || !canMutate,
+        saveEntryDisabled: !canSave || !canMutate,
+        saveConfirmDisabled: !canMutate || !canSave || value || saveTitle.trim().length === 0,
+        saving: value,
+        sessionStructured: currentSession?.status === "structured",
+        storageAvailable: storageState?.available === true,
+        loadState,
+        titlePresent: saveTitle.trim().length > 0,
+      });
+    }
     savePendingLonger = false;
     if (saveWaitTimer !== null) clearTimeout(saveWaitTimer);
     saveWaitTimer = null;
     if (value) {
       saveWaitTimer = setTimeout(() => {
         saveWaitTimer = null;
-        if (saving) savePendingLonger = true;
+        if (saving) {
+          savePendingLonger = true;
+          recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_SAVE_PENDING", "pending", {
+            failedStage: "repository.save",
+          });
+        }
       }, 10_000);
     }
   }
@@ -184,6 +271,43 @@
     refresh,
   });
 
+  function handleSaveClick() {
+    prepareSnapshotSaveTrace({
+      storageAvailable: storageState?.available === true,
+      sessionStructured: currentSession?.status === "structured",
+      loadState,
+      titlePresent: saveTitle.trim().length > 0,
+    });
+  }
+
+  function handleSaveInvalid() {
+    recordSnapshotFormValidationFailure({
+      storageAvailable: storageState?.available === true,
+      sessionStructured: currentSession?.status === "structured",
+      loadState,
+      titlePresent: saveTitle.trim().length > 0,
+    });
+  }
+
+  async function copyDiagnosticLog() {
+    diagnosticMessage = null;
+    if (!hasSnapshotDiagnosticEvents()) {
+      diagnosticMessage = t("snapshot.diagnostic.empty");
+      return;
+    }
+    const report = buildSnapshotDiagnosticLog();
+    if (report === null) {
+      diagnosticMessage = t("snapshot.diagnostic.empty");
+      return;
+    }
+    try {
+      const result = await copyTextToClipboard({ bridge: diagnosticBridge, text: report });
+      diagnosticMessage = result.ok ? t("snapshot.diagnostic.copied") : t("snapshot.diagnostic.copyFailed");
+    } catch {
+      diagnosticMessage = t("snapshot.diagnostic.copyFailed");
+    }
+  }
+
   function toggleHistory() {
     if (saving) return;
     clearOperationFeedback();
@@ -191,7 +315,7 @@
     showHistory = opening;
     if (!opening) return;
     showSaveForm = false;
-    if (repository !== null && loadState !== "loading") void refresh(repository);
+    if (repository !== null && loadState !== "loading") void refresh(repository, { operation: "open" });
   }
 
   function toggleSaveForm() {
@@ -301,7 +425,12 @@
       </svg>
       <span>{t("snapshot.save.open")}</span>
     </button>
+    <button type="button" class="snapshot-text-button" onclick={copyDiagnosticLog}>{t("snapshot.diagnostic.copy")}</button>
   </div>
+
+  {#if diagnosticMessage}
+    <p class="snapshot-feedback" role="status" aria-live="polite">{diagnosticMessage}</p>
+  {/if}
 
   {#if !canSave}
     <p id="snapshot-save-disabled-reason" class="snapshot-toolbar-help">{t("snapshot.save.requiresStructured")}</p>
@@ -324,14 +453,14 @@
         {/if}
         <label>
           <span>{t("snapshot.field.title")}</span>
-          <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} />
+          <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} oninvalid={handleSaveInvalid} />
         </label>
         <label>
           <span>{t("snapshot.field.note")}</span>
           <textarea bind:value={saveNote} maxlength="2000" rows="2" disabled={saving}></textarea>
         </label>
         <div class="snapshot-actions">
-          <button type="submit" class="snapshot-primary" disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
+          <button type="submit" class="snapshot-primary" onclick={handleSaveClick} disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
             {saving ? t("snapshot.save.saving") : t("snapshot.save.confirm")}
           </button>
           <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>

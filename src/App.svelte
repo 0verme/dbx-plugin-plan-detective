@@ -11,6 +11,15 @@
   import SqlInput from "./components/SqlInput.svelte";
   import { describePlanApi, describePluginStorage, resolvePlanBridge } from "./host/index.js";
   import pluginPackage from "../package.json";
+  import pluginManifest from "../manifest.json";
+  import {
+    detectDbxVersion,
+    finishSnapshotDiagnosticStage,
+    getSnapshotDiagnosticSessionTrace,
+    recordSnapshotDiagnosticEvent,
+    setSnapshotDiagnosticEnvironment,
+    startSnapshotDiagnosticStage,
+  } from "./lib/snapshot-diagnostic-trace.js";
   import { buildAiAnalysisPrompt } from "./lib/ai-analysis-prompt.js";
   import { idleAnalysis, loadPlanCapabilities, loadingAnalysis, runHostAnalysis } from "./lib/analysis-session.js";
   import { describeHostEntryState } from "./lib/host-entry-state.js";
@@ -57,8 +66,32 @@
    */
 
   const bridge = resolvePlanBridge();
+  const diagnosticSessionTrace = getSnapshotDiagnosticSessionTrace();
+  const buildFingerprint = typeof __PD_BUILD_FINGERPRINT__ === "string" ? __PD_BUILD_FINGERPRINT__ : "unknown";
   const initialPlanApi = describePlanApi(bridge);
   const initialStorageApi = describePluginStorage(bridge);
+  setSnapshotDiagnosticEnvironment({
+    pluginVersion: pluginPackage.version,
+    buildFingerprint,
+    dbxVersion: detectDbxVersion(bridge),
+    manifestPermissions: pluginManifest.permissions,
+    storage: initialStorageApi,
+  });
+  recordSnapshotDiagnosticEvent(diagnosticSessionTrace, "SNAPSHOT_HOST_BRIDGE_RESOLVE", "success", { bridgeAvailable: bridge !== null });
+  const initialStorageCheck = startSnapshotDiagnosticStage(diagnosticSessionTrace, "SNAPSHOT_STORAGE_CAPABILITY_CHECK", {
+    bridgeAvailable: bridge !== null,
+    initialized: initialStorageApi.state !== "initializing",
+  });
+  finishSnapshotDiagnosticStage(initialStorageCheck, "success", {
+    capabilityAdvertised: initialStorageApi.advertised === true,
+    capabilityAvailable: initialStorageApi.available === true,
+    permissionDeclared: pluginManifest.permissions.includes("host.storage"),
+    reasonCode: initialStorageApi.reasonCode,
+  });
+  recordSnapshotDiagnosticEvent(diagnosticSessionTrace, "SNAPSHOT_HOST_PERMISSION_STATUS", "info", {
+    permissionDeclared: pluginManifest.permissions.includes("host.storage"),
+    permissionStatus: "not-verified",
+  });
   /** Fixtures / host audit are development tools and stay out of production UI. */
   const isDev = import.meta.env.DEV;
 
@@ -129,23 +162,61 @@
     };
 
     const syncStorageApi = () => {
+      const capabilityCheck = startSnapshotDiagnosticStage(diagnosticSessionTrace, "SNAPSHOT_STORAGE_CAPABILITY_CHECK", {
+        bridgeAvailable: true,
+        initialized: true,
+      });
       storageApi = describePluginStorage(bridge, { initialized: true });
       snapshotRepository = storageApi.available ? createPlanSnapshotRepository(bridge) : null;
+      setSnapshotDiagnosticEnvironment({
+        pluginVersion: pluginPackage.version,
+        buildFingerprint,
+        dbxVersion: detectDbxVersion(bridge),
+        manifestPermissions: pluginManifest.permissions,
+        storage: storageApi,
+      });
+      finishSnapshotDiagnosticStage(capabilityCheck, "success", {
+        capabilityAdvertised: storageApi.advertised === true,
+        capabilityAvailable: storageApi.available === true,
+        permissionDeclared: pluginManifest.permissions.includes("host.storage"),
+        reasonCode: storageApi.reasonCode,
+      });
+      recordSnapshotDiagnosticEvent(diagnosticSessionTrace, "SNAPSHOT_HOST_PERMISSION_STATUS", "info", {
+        permissionDeclared: pluginManifest.permissions.includes("host.storage"),
+        permissionStatus: "not-verified",
+      });
     };
 
     let hostInitHandled = false;
+    let hostInitSettled = false;
+    const hostInitStage = startSnapshotDiagnosticStage(diagnosticSessionTrace, "SNAPSHOT_HOST_BRIDGE_INIT", {
+      bridgeAvailable: true,
+      initialized: false,
+    });
+    const settleHostInit = (status, fields = {}) => {
+      if (hostInitSettled) return;
+      hostInitSettled = true;
+      finishSnapshotDiagnosticStage(hostInitStage, status, fields);
+    };
     const handleInit = () => {
       if (!hostInitHandled) {
         hostInitHandled = true;
         syncPlanApi();
         syncStorageApi();
       }
+      settleHostInit("success", { bridgeAvailable: true, initialized: true });
       syncContext();
     };
 
     const offContext = typeof bridge.onContext === "function" ? bridge.onContext(syncContext) : null;
     const offInit = typeof bridge.onInit === "function" ? bridge.onInit(handleInit) : null;
-    Promise.resolve(bridge.ready).then(handleInit, handleInit);
+    Promise.resolve(bridge.ready).then(
+      handleInit,
+      () => {
+        settleHostInit("failed", { errorCode: "UNKNOWN_ERROR", failedStage: "host.initialize" });
+        handleInit();
+      },
+    );
 
     return () => {
       offContext?.();
@@ -447,6 +518,7 @@
       activeSnapshotId={activeSnapshot?.snapshot.snapshotId ?? null}
       {baselineSnapshotId}
       producerVersion={pluginPackage.version}
+      diagnosticBridge={bridge}
       onOpenSnapshot={openSnapshot}
       onSelectBaseline={selectBaseline}
       onDeleteSnapshot={handleSnapshotDeleted}

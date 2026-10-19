@@ -1,3 +1,5 @@
+import { withSnapshotDiagnosticStage } from "../lib/snapshot-diagnostic-trace.js";
+
 export const PLUGIN_STORAGE_PERMISSION = "host.storage";
 export const PLUGIN_STORAGE_MAX_VALUE_BYTES = 256 * 1024;
 export const PLUGIN_STORAGE_MAX_TOTAL_BYTES = 1024 * 1024;
@@ -84,20 +86,20 @@ export function describePluginStorage(bridge, options = {}) {
 }
 
 /** Read one JSON value through the DBX host. An unset key is returned as null by the host contract. */
-export async function getPluginStorageValue(bridge, key) {
-  const storage = requireAvailableStorage(bridge);
-  const normalizedKey = requireStorageKey(key);
-  try {
-    return await storage.get(normalizedKey);
-  } catch (error) {
-    throw mapStorageError(error, "read");
-  }
+export async function getPluginStorageValue(bridge, key, options = {}) {
+  return withSnapshotDiagnosticStage(options.trace, "SNAPSHOT_HOST_STORAGE_GET", async () => {
+    const storage = requireAvailableStorage(bridge);
+    const normalizedKey = requireStorageKey(key);
+    try {
+      return await storage.get(normalizedKey);
+    } catch (error) {
+      throw mapStorageError(error, "read");
+    }
+  }, { failedStage: "storage.get" });
 }
 
 /** Write one JSON value through the DBX host, preflighting its UTF-8 JSON byte size. */
-export async function setPluginStorageValue(bridge, key, value) {
-  const storage = requireAvailableStorage(bridge);
-  const normalizedKey = requireStorageKey(key);
+export async function setPluginStorageValue(bridge, key, value, options = {}) {
   const normalizedValue = value === undefined ? null : value;
   let serialized;
   try {
@@ -112,11 +114,15 @@ export async function setPluginStorageValue(bridge, key, value) {
   if (bytes > PLUGIN_STORAGE_MAX_VALUE_BYTES) {
     throw new HostStorageError("STORAGE_VALUE_TOO_LARGE", `Storage value exceeds the DBX ${PLUGIN_STORAGE_MAX_VALUE_BYTES}-byte limit.`);
   }
-  try {
-    await storage.set(normalizedKey, normalizedValue);
-  } catch (error) {
-    throw mapStorageError(error, "write");
-  }
+  return withSnapshotDiagnosticStage(options.trace, "SNAPSHOT_STORAGE_SET", async () => {
+    const storage = requireAvailableStorage(bridge);
+    const normalizedKey = requireStorageKey(key);
+    try {
+      await storage.set(normalizedKey, normalizedValue);
+    } catch (error) {
+      throw mapStorageError(error, "write");
+    }
+  }, { failedStage: "storage.set" });
 }
 
 /** Delete one key through the DBX host. */

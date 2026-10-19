@@ -4,11 +4,14 @@ import test from "node:test";
 import { MESSAGE_CATALOG } from "../../src/lib/i18n/messages.js";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-const [app, manager, replay, saveAction, manifest] = await Promise.all([
+const [app, manager, replay, saveAction, diagnostics, snapshotStore, storageAdapter, manifest] = await Promise.all([
   read("src/App.svelte"),
   read("src/components/SnapshotManager.svelte"),
   read("src/lib/plan-snapshot-view.js"),
   read("src/lib/snapshot-save-action.js"),
+  read("src/lib/snapshot-diagnostic-trace.js"),
+  read("src/lib/plan-snapshot-store.js"),
+  read("src/host/dbx-plugin-storage.js"),
   read("manifest.json"),
 ]);
 
@@ -74,7 +77,7 @@ test("opening history replays the saved RawPlanInput locally and never re-runs S
 test("save form is opt-in, guarded, privacy-aware, and keeps typed values on failure", () => {
   assert.match(manager, /\{#if showSaveForm\}[\s\S]*?<form class="snapshot-form" onsubmit=\{saveCurrent\}/);
   assert.match(saveAction, /event\.preventDefault\(\)/);
-  assert.match(saveAction, /state\.repository\.save\(snapshot\)/);
+  assert.match(saveAction, /state\.repository\.save\(snapshot,\s*\{\s*trace\s*\}\)/);
   assert.match(saveAction, /state\.currentSession\?\.status !== "structured"/);
   assert.match(saveAction, /if \(inFlight\)[\s\S]*?setDuplicateMessage\(\)/);
   assert.match(manager, /snapshot\.save\.localWarning/);
@@ -87,6 +90,27 @@ test("save form is opt-in, guarded, privacy-aware, and keeps typed values on fai
   assert.match(manager, /Repository\.save resolves only after Host Storage read-back confirms/);
   assert.match(manager, /statusMessage = t\("snapshot\.saved"\)/);
   assert.match(manager, /snapshot\.save\.pendingDiagnostic/);
+  assert.match(manager, /snapshot\.diagnostic\.copy/);
+  assert.match(manager, /buildSnapshotDiagnosticLog\(\)/);
+  assert.match(manager, /onclick=\{handleSaveClick\}/);
+  assert.match(manager, /oninvalid=\{handleSaveInvalid\}/);
+  assert.match(manager, /SNAPSHOT_SAVE_BUTTON_STATE_CHANGE/);
+  for (const step of [
+    "SNAPSHOT_UI_CLICK",
+    "SNAPSHOT_FORM_SUBMIT",
+    "SNAPSHOT_SAVE_GATE",
+    "SNAPSHOT_CREATE",
+    "SNAPSHOT_REPOSITORY_SAVE",
+    "SNAPSHOT_STORE_LOAD",
+    "SNAPSHOT_HOST_STORAGE_GET",
+    "SNAPSHOT_STORE_VALIDATE",
+    "SNAPSHOT_STORAGE_SET",
+    "SNAPSHOT_STORAGE_VERIFY",
+    "SNAPSHOT_HISTORY_REFRESH",
+    "SNAPSHOT_UI_SUCCESS",
+    "SNAPSHOT_UI_ERROR",
+  ]) assert.ok(diagnostics.includes(step) || saveAction.includes(step) || manager.includes(step) || snapshotStore.includes(step) || storageAdapter.includes(step), `diagnostics include ${step}`);
+  assert.doesNotMatch(diagnostics, /localStorage|indexedDB|hostMessage/);
   const successCallback = manager.match(/onSuccess: \(snapshot\) => \{[\s\S]*?\n    \},\n    refresh/)?.[0];
   assert.ok(successCallback, "confirmed save success callback exists");
   assert.match(successCallback, /saveTitle = ""/);
@@ -125,6 +149,10 @@ test("all new snapshot entry and baseline copy is localized", () => {
       "snapshot.baseline.windowOnly",
       "snapshot.save.open",
       "snapshot.save.localWarning",
+      "snapshot.diagnostic.copy",
+      "snapshot.diagnostic.copied",
+      "snapshot.diagnostic.empty",
+      "snapshot.diagnostic.copyFailed",
     ]) {
       assert.equal(typeof MESSAGE_CATALOG[locale][key], "string", `${locale} has ${key}`);
       assert.ok(MESSAGE_CATALOG[locale][key].length > 0, `${locale} has non-empty ${key}`);
@@ -135,6 +163,8 @@ test("all new snapshot entry and baseline copy is localized", () => {
   assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.localWarning"], /SQL 与完整 Raw Plan/);
   assert.match(MESSAGE_CATALOG.en["snapshot.save.localWarning"], /SQL and complete Raw Plan/);
   assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.manager.concurrentWarning"], /多个插件窗口/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.pendingDiagnostic"], /UNKNOWN\/PENDING/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.save.pendingDiagnostic"], /UNKNOWN\/PENDING/);
   assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
   assert.match(manifest, /不连接数据库直接浏览历史快照/);
   assert.match(manifest, /browse saved snapshot history without an active connection/);

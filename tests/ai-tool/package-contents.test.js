@@ -4,6 +4,7 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { assertBundleFingerprint } from "../../scripts/build-fingerprint.mjs";
 import { buildPluginPackage, inspectPluginZip } from "../../scripts/package-plugin.mjs";
 import { REPO_ROOT } from "../helpers/fixtures.js";
 
@@ -19,11 +20,19 @@ async function filesUnder(root, relative = "") {
   return files;
 }
 
+test("build fingerprint validation detects a package that does not match current source", () => {
+  const current = `sha256:${"a".repeat(64)}`;
+  const older = `sha256:${"b".repeat(64)}`;
+  assert.equal(assertBundleFingerprint(`bundle ${current}`, current), true);
+  assert.throws(() => assertBundleFingerprint(`bundle ${older}`, current), /fingerprint does not match/);
+});
+
 test("official .dbxp is frontend-only, complete, and integrity-checked", async (t) => {
   const outputDirectory = await mkdtemp(path.join(os.tmpdir(), "plan-detective-frontend-package-test-"));
   t.after(() => rm(outputDirectory, { recursive: true, force: true }));
 
   const result = await buildPluginPackage({ root: REPO_ROOT, outputDirectory });
+  assert.match(result.buildFingerprint, /^sha256:[a-f0-9]{64}$/);
   const archive = await readFile(result.packagePath);
   const entries = inspectPluginZip(archive);
   const names = [...entries.keys()].sort();
@@ -36,6 +45,11 @@ test("official .dbxp is frontend-only, complete, and integrity-checked", async (
   assert.deepEqual(packagedManifest.engines, { dbx: ">=0.6.23", host_api: "^1.2" });
   assert.deepEqual(packagedManifest.entrypoints, { ui: { root: "ui", entry: "ui/index.html" } });
   assert.deepEqual(packagedManifest.contributions, sourceManifest.contributions);
+  const packagedBundle = [...entries]
+    .filter(([name]) => name.startsWith("ui/assets/") && name.endsWith(".js"))
+    .map(([, entry]) => entry.data.toString("utf8"))
+    .join("\n");
+  assertBundleFingerprint(packagedBundle, result.buildFingerprint);
 
   for (const name of ["manifest.json", "checksums.json", "assets/plugin.svg", "ui/index.html"]) {
     assert.ok(entries.has(name), `package must include ${name}`);

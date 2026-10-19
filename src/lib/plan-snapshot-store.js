@@ -5,6 +5,7 @@ import {
   setPluginStorageValue,
 } from "../host/dbx-plugin-storage.js";
 import { validatePlanSnapshot } from "./plan-snapshot.js";
+import { recordSnapshotDiagnosticEvent, withSnapshotDiagnosticStage } from "./snapshot-diagnostic-trace.js";
 
 export const PLAN_SNAPSHOT_STORAGE_KEY = "plan-detective.snapshot-store.v1";
 export const PLAN_SNAPSHOT_STORE_SCHEMA_VERSION = 1;
@@ -40,19 +41,19 @@ export function createPlanSnapshotRepository(bridge) {
   }
 
   return Object.freeze({
-    list: () => serializeForBridge(bridge, async () => (await loadStore(bridge)).snapshots),
+    list: (options = {}) => serializeForBridge(bridge, async () => (await loadStore(bridge, options.trace, options.readRole ?? "history")).snapshots),
     get: (snapshotId) => serializeForBridge(bridge, async () => {
       requireSnapshotId(snapshotId);
       return (await loadStore(bridge)).snapshots.find((entry) => entry.snapshotId === snapshotId) ?? null;
     }),
-    save: (snapshot) => serializeForBridge(bridge, () => saveSnapshot(bridge, snapshot)),
+    save: (snapshot, options = {}) => serializeForBridge(bridge, () => saveSnapshot(bridge, snapshot, options.trace)),
     rename: (snapshotId, title, note) => serializeForBridge(bridge, () => renameSnapshot(bridge, snapshotId, title, note)),
     delete: (snapshotId) => serializeForBridge(bridge, () => deleteSnapshot(bridge, snapshotId)),
     clear: () => serializeForBridge(bridge, () => clearSnapshots(bridge)),
   });
 }
 
-async function saveSnapshot(bridge, candidate) {
+async function saveSnapshot(bridge, candidate, trace) {
   const snapshot = normalizeSnapshot(candidate);
   assertRecordSize(snapshot);
   return mutateStore(bridge, (snapshots) => {
@@ -60,7 +61,7 @@ async function saveSnapshot(bridge, candidate) {
       throw new PlanSnapshotStoreError("SNAPSHOT_ALREADY_EXISTS", "A snapshot with this identifier already exists; existing data was not overwritten.");
     }
     return { snapshots: [...snapshots, snapshot], result: snapshot };
-  });
+  }, trace);
 }
 
 async function renameSnapshot(bridge, snapshotId, title, note) {
@@ -96,8 +97,8 @@ async function clearSnapshots(bridge) {
   });
 }
 
-async function mutateStore(bridge, mutate) {
-  const base = await loadStore(bridge);
+async function mutateStore(bridge, mutate, trace) {
+  const base = await loadStore(bridge, trace, "base");
   const baseFingerprint = fingerprint(base);
   const change = mutate(base.snapshots);
   if (change.unchanged === true) return change.result;
@@ -124,18 +125,32 @@ async function mutateStore(bridge, mutate) {
   // Optimistically detect another window's completed update before writing.
   // DBX storage has no compare-and-swap operation, so this check narrows but
   // cannot mathematically eliminate a race between this read and the next set.
-  const observed = await loadStore(bridge);
+  const observed = await loadStore(bridge, trace, "prewrite");
   if (fingerprint(observed) !== baseFingerprint) {
     throw concurrentModification();
   }
 
   try {
-    await setPluginStorageValue(bridge, PLAN_SNAPSHOT_STORAGE_KEY, candidate);
+    await setPluginStorageValue(bridge, PLAN_SNAPSHOT_STORAGE_KEY, candidate, { trace });
   } catch (writeError) {
     // A transport failure may occur after the host committed the atomic value.
     // Re-read (read-only) to distinguish our exact commit, a competing update,
     // an unchanged document, and an outcome that the host still cannot confirm.
-    const outcome = await readMutationOutcome(bridge, candidateFingerprint, baseFingerprint);
+    const outcome = await withSnapshotDiagnosticStage(
+      trace,
+      "SNAPSHOT_STORAGE_VERIFY",
+      () => readMutationOutcome(bridge, candidateFingerprint, baseFingerprint, trace),
+      { failedStage: "storage.verify" },
+    );
+    recordSnapshotDiagnosticEvent(
+      trace,
+      "SNAPSHOT_STORAGE_VERIFY_RESULT",
+      outcome === "candidate" ? "success" : "failed",
+      outcome === "candidate" ? {} : {
+        errorCode: outcome === "other" ? "SNAPSHOT_STORAGE_CONFLICT" : "SNAPSHOT_WRITE_UNCONFIRMED",
+        failedStage: "storage.verify",
+      },
+    );
     if (outcome === "candidate") return change.result;
     if (outcome === "other") throw concurrentModification();
     throw wrapStorageError(writeError);
@@ -143,18 +158,32 @@ async function mutateStore(bridge, mutate) {
 
   // Even when set resolves, verify the host's persisted value. If the first
   // read is inconclusive, read once more; never retry the write itself.
-  const outcome = await readMutationOutcome(bridge, candidateFingerprint, baseFingerprint);
+  const outcome = await withSnapshotDiagnosticStage(
+    trace,
+    "SNAPSHOT_STORAGE_VERIFY",
+    () => readMutationOutcome(bridge, candidateFingerprint, baseFingerprint, trace),
+    { failedStage: "storage.verify" },
+  );
+  recordSnapshotDiagnosticEvent(
+    trace,
+    "SNAPSHOT_STORAGE_VERIFY_RESULT",
+    outcome === "candidate" ? "success" : "failed",
+    outcome === "candidate" ? {} : {
+      errorCode: outcome === "other" ? "SNAPSHOT_STORAGE_CONFLICT" : "SNAPSHOT_WRITE_UNCONFIRMED",
+      failedStage: "storage.verify",
+    },
+  );
   if (outcome === "candidate") return change.result;
   if (outcome === "other") throw concurrentModification();
   throw writeOutcomeUnknown();
 }
 
-async function readMutationOutcome(bridge, candidateFingerprint, baseFingerprint) {
+async function readMutationOutcome(bridge, candidateFingerprint, baseFingerprint, trace) {
   let lastReadError = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     let persisted;
     try {
-      persisted = await loadStore(bridge);
+      persisted = await loadStore(bridge, trace, "verify", attempt);
       lastReadError = null;
     } catch (error) {
       lastReadError = error;
@@ -169,15 +198,26 @@ async function readMutationOutcome(bridge, candidateFingerprint, baseFingerprint
   return "base";
 }
 
-async function loadStore(bridge) {
+async function loadStore(bridge, trace, readRole = "history", attempt = 0) {
   let value;
   try {
-    value = await getPluginStorageValue(bridge, PLAN_SNAPSHOT_STORAGE_KEY);
+    value = await withSnapshotDiagnosticStage(
+      trace,
+      "SNAPSHOT_STORE_LOAD",
+      () => getPluginStorageValue(bridge, PLAN_SNAPSHOT_STORAGE_KEY, { trace }),
+      { failedStage: "storage.get", readRole, attempt },
+    );
   } catch (error) {
     throw wrapStorageError(error);
   }
   if (value === null) return emptyStore();
-  return normalizeStore(value);
+  const store = await withSnapshotDiagnosticStage(
+    trace,
+    "SNAPSHOT_STORE_VALIDATE",
+    () => normalizeStore(value),
+    { failedStage: "store.validate", readRole, attempt },
+  );
+  return store;
 }
 
 function normalizeStore(value) {
