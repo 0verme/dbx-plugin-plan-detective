@@ -44,7 +44,7 @@
   let loadToken = 0;
 
   const canSave = $derived(currentSession?.status === "structured");
-  const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready");
+  const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving);
   const saveGateMessage = $derived.by(() => {
     if (!canSave) return t("snapshot.save.requiresStructured");
     if (repository === null || storageState?.available !== true) return t("snapshot.storage.unavailable");

@@ -65,6 +65,7 @@ test("save form requires explicit user action and gives visible, actionable save
   assert.match(manager, /maxlength="120"/);
   assert.match(manager, /maxlength="2000"/);
   assert.match(manager, /disabled=\{!canMutate \|\| !canSave \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
+  assert.match(manager, /const canMutate = \$derived\(repository !== null && storageState\?\.available === true && loadState === "ready" && !saving\)/, "no history action can close the form while a save is pending");
   assert.match(manager, /snapshot-save-gate/);
   assert.match(manager, /snapshot-save-error/);
 });
