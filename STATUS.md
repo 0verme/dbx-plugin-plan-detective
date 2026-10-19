@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-10-19 |
-| 当前阶段 | **v0.7.1 已发布；Issue #91 的 GaussDB/DWS parser 实现与回归完成，PR 待提交为 Open / Draft** |
+| 当前阶段 | **v0.7.1 已发布；Issue #91 插件实现与回归完成，PR [#92](https://github.com/0verme/dbx-plugin-plan-detective/pull/92) Open / Draft** |
 | 插件版本 | 已发布版本仍为 `0.7.1`；本分支不发布版本、不改插件 ID `io.github.0verme.plan-detective`、Host API `^1.2` 或 `host.plans:read` 权限 |
 | 当前范围 | 为明确 affirmative Host capability 的 `gaussdb` 增加 Estimated JSON 解析；普通 GaussDB / M-JDBC / 不支持的旧 Host 继续 fail closed；上游 DBX #12644 尚未合并 |
 | 验收边界 | `npm test` PASS（1395/1395）、`npm run build` PASS；fixtures 全为 synthetic。当前环境无 Windows mount、DBX Host 进程或可用 DWS 连接，真实 Host / GaussDB 9.1.1 / GUI 联调 **NOT RUN** |
@@ -11,7 +11,7 @@
 
 ## Issue #91 — GaussDB / Huawei DWS Estimated Plan（2026-10-19）
 
-- Plugin Issue: [#91](https://github.com/0verme/dbx-plugin-plan-detective/issues/91)；开发 worktree：`worktrees/issue-91-gaussdb-dws-plan`，分支 `feat/issue-91-gaussdb-dws-plan`，基线为 plugin `origin/main` `19b389257a56697461cd07cf80e61aa25d6c83b0`。
+- Plugin Issue: [#91](https://github.com/0verme/dbx-plugin-plan-detective/issues/91)；Open Draft PR: [#92](https://github.com/0verme/dbx-plugin-plan-detective/pull/92)。开发 worktree：`worktrees/issue-91-gaussdb-dws-plan`，分支 `feat/issue-91-gaussdb-dws-plan`，基线为 plugin `origin/main` `19b389257a56697461cd07cf80e61aa25d6c83b0`。
 - Host audit: 当前 DBX main `cb4406c715bc778d101f7ca3c9f8737b53392071` 对普通 `DatabaseType::Gaussdb` 仍不提供 Estimated Plan。上游 Issue [#12601](https://github.com/t8y2/dbx/issues/12601) 仍 Open；PR [#12644](https://github.com/t8y2/dbx/pull/12644) 仍 Open / Draft，尚未合并。插件只在同连接 `supports.estimatedPlan === true` 时映射 `gaussdb`，不凭版本或计划形状猜测 DWS。
 - Parser：复用 PostgreSQL-family envelope walker + 单独 GaussDB normalizer；Estimate-only、节点 / 深度限制、未知子树保留；DWS 原生 cost 仅用于展示，不进入 PostgreSQL cost signals。
 - Fixtures：3 个 hand-authored synthetic plan + goldens；没有真实 GaussDB 9.1.1 / Host API capture。
