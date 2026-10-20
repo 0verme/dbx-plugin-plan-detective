@@ -496,6 +496,62 @@ test("path id locators are not reported as diagnostic evidence changes", () => {
   assert.deepEqual(result.diagnostics.hotspots.evidenceChanged[0].changedFields, ["estimatedRows"]);
 });
 
+test("nested-loop and block node references are compared through the matched node mapping", () => {
+  const beforeOuter = scan("0.0", "orders", { alias: "o", estimatedRows: 100 });
+  const beforeInner = scan("0.1", "users", { alias: "u", estimatedRows: 1000 });
+  const afterOuter = scan("0.2", "orders", { alias: "o", estimatedRows: 100 });
+  const afterInner = scan("0.3", "users", { alias: "u", estimatedRows: 1000 });
+  const beforeLoop = node("0", { kind: "nested_loop", nodeType: "Nested Loop", children: [beforeOuter, beforeInner] });
+  const afterLoop = node("0", { kind: "nested_loop", nodeType: "Nested Loop", children: [afterOuter, afterInner] });
+  const beforeFinding = finding("nested-loop-large-inner", beforeLoop, {
+    outerNodeRef: beforeOuter.id,
+    innerNodeRef: beforeInner.id,
+    outerEstimatedRows: 100,
+    innerEstimatedRows: 1000,
+  });
+  const afterFinding = finding("nested-loop-large-inner", afterLoop, {
+    outerNodeRef: afterOuter.id,
+    innerNodeRef: afterInner.id,
+    outerEstimatedRows: 100,
+    innerEstimatedRows: 1000,
+  });
+  const beforeHotspot = hotspot(beforeLoop, "nested-loop-amplification", "warning", {
+    outerNodeRef: beforeOuter.id,
+    innerNodeRef: beforeInner.id,
+    blockNodeRef: beforeOuter.id,
+  });
+  const afterHotspot = hotspot(afterLoop, "nested-loop-amplification", "warning", {
+    outerNodeRef: afterOuter.id,
+    innerNodeRef: afterInner.id,
+    blockNodeRef: afterOuter.id,
+  });
+  beforeHotspot.evidence = {
+    nodeId: "0",
+    estimatedRows: 100,
+    outerNodeRef: beforeOuter.id,
+    innerNodeRef: beforeInner.id,
+    blockNodeRef: beforeOuter.id,
+  };
+  afterHotspot.evidence = {
+    nodeId: "0",
+    estimatedRows: 100,
+    outerNodeRef: afterOuter.id,
+    innerNodeRef: afterInner.id,
+    blockNodeRef: afterOuter.id,
+  };
+
+  const result = report(
+    session(beforeLoop, { version: "16", sql: "SELECT 1", findings: [beforeFinding], hotspots: { items: [beforeHotspot] } }),
+    session(afterLoop, { version: "16", sql: "SELECT 1", findings: [afterFinding], hotspots: { items: [afterHotspot] } }),
+  );
+
+  assert.equal(result.summary.matched, 3);
+  assert.deepEqual(result.diagnostics.findings.evidenceChanged, []);
+  assert.equal(result.diagnostics.findings.unchanged, 1);
+  assert.deepEqual(result.diagnostics.hotspots.evidenceChanged, []);
+  assert.equal(result.diagnostics.hotspots.unchanged, 1);
+});
+
 test("database version and source context: unknown is limited, mismatches are explicit, SQL text is informational", () => {
   const plan = scan("0", "orders");
   const base = report(

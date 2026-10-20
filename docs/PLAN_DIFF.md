@@ -93,7 +93,7 @@ Core 只消费当前 Plan Core 已经产生的 structured analysis，不获取�
 
 每个 group entry 都带 `beforeId` / `afterId`、两侧节点摘要、匹配 evidence、变化字段和原始值；`rows` group 额外提供 `rowsDelta`，但只在两侧都为有限数值时计算，否则为 `null`。`DIFF_GROUP_ORDER` 是固定展示顺序，未知类别追加到末尾。
 
-diagnostics 的 `evidenceChanged` 比较会忽略 `nodeId` 这类单计划 locator：同一个匹配节点在 Join 换序后移动到另一路径时，不会仅因 locator 变化就被误报为 evidence changed。Hotspot 仅热点级 evidence 变化时，实际变化字段也会写入 `changedFields`。
+diagnostics 的 `evidenceChanged` 比较会通过匹配映射归一化 `nodeId` / `outerNodeRef` / `innerNodeRef` / `blockNodeRef` 这类单计划 locator：同一个匹配节点在 Join 换序后移动到另一路径时，不会仅因 locator 变化就被误报为 evidence changed。Hotspot 仅热点级 evidence 变化时，实际变化字段也会写入 `changedFields`。
 
 ### 新增 / 消失的保守判定
 
