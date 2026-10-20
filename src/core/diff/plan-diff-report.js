@@ -500,7 +500,7 @@ function diffFindings(beforeFindings, afterFindings, beforeToAfter, afterToBefor
       result.resolved.push(findingEntry(finding, "resolved", finding.nodeRef, null));
       continue;
     }
-    const changedFields = changedTopLevelFields(finding.evidence, afterFinding.evidence);
+    const changedFields = changedEvidenceFields(finding.evidence, afterFinding.evidence);
     if (changedFields.length > 0) {
       result.evidenceChanged.push({
         ...findingEntry(finding, "evidence-changed", finding.nodeRef, afterNodeId),
@@ -557,8 +557,8 @@ function diffHotspots(beforeHotspots, afterHotspots, beforeToAfter, afterToBefor
       result.resolved.push(hotspotEntry(entry, "resolved", entry.nodeId, null));
       continue;
     }
-    const changedFields = changedTopLevelFields(entry.evidence, counterpart.evidence);
-    const hotspotChangedFields = changedTopLevelFields(entry.hotspotEvidence, counterpart.hotspotEvidence);
+    const changedFields = changedEvidenceFields(entry.evidence, counterpart.evidence);
+    const hotspotChangedFields = changedEvidenceFields(entry.hotspotEvidence, counterpart.hotspotEvidence);
     const levelChanged = entry.level !== counterpart.level;
     if (changedFields.length > 0 || hotspotChangedFields.length > 0 || levelChanged) {
       result.evidenceChanged.push({
@@ -661,6 +661,13 @@ function normalizeSource(value) {
 function sourceKey(source) {
   if (source === null) return null;
   return JSON.stringify([source.databaseName ?? null, source.schema ?? null]);
+}
+
+function changedEvidenceFields(left, right) {
+  // Path ids locate a node inside one plan; they are not evidence. A matched
+  // node can move to another path after a join reorder without its evidence
+  // changing, so the locator must never make a diagnostic look changed.
+  return changedTopLevelFields(left, right).filter((field) => field !== "nodeId");
 }
 
 function changedTopLevelFields(left, right) {

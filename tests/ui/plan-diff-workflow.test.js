@@ -89,6 +89,8 @@ test("the report keeps matching evidence, conservative unmatched nodes, and no s
   assert.match(report, /unmatched: \{ baseline: \[\], current: \[\] \}/);
   assert.match(report, /ambiguous: \[\]/);
   assert.match(report, /isConfidentOnlySide/);
+  assert.match(report, /changedEvidenceFields/);
+  assert.match(report, /filter\(\(field\) => field !== "nodeId"\)/);
   assert.match(report, /hotspotChangedFields/);
   assert.match(report, /changedFields: \[\.\.\.new Set\(\[\.\.\.changedFields, \.\.\.hotspotChangedFields\]\)\]\.sort\(\)/);
   assert.doesNotMatch(report, /faster|speedup|speed up|performance gain|optimization advice/i);

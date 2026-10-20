@@ -473,6 +473,29 @@ test("hotspot-level evidence changes include the changed field names", () => {
   assert.deepEqual(entry.changedFields, ["totalCost"]);
 });
 
+test("path id locators are not reported as diagnostic evidence changes", () => {
+  const beforeOrders = scan("0.0", "orders", { alias: "o", estimatedRows: 1000 });
+  const afterOrders = scan("0.1", "orders", { alias: "o", estimatedRows: 5000 });
+  const join = (children) => node("0", { kind: "hash_join", nodeType: "Hash Join", children });
+  const baseline = session(join([beforeOrders]), {
+    version: "16",
+    sql: "SELECT 1",
+    findings: [finding("large-sequential-scan", beforeOrders, { estimatedRows: 1000 })],
+    hotspots: { items: [hotspot(beforeOrders, "large-sequential-scan", "warning", { estimatedRows: 1000 })] },
+  });
+  const current = session(join([afterOrders]), {
+    version: "16",
+    sql: "SELECT 1",
+    findings: [finding("large-sequential-scan", afterOrders, { estimatedRows: 5000 })],
+    hotspots: { items: [hotspot(afterOrders, "large-sequential-scan", "warning", { estimatedRows: 5000 })] },
+  });
+
+  const result = report(baseline, current);
+  assert.equal(result.summary.matched, 2);
+  assert.deepEqual(result.diagnostics.findings.evidenceChanged[0].changedFields, ["estimatedRows"]);
+  assert.deepEqual(result.diagnostics.hotspots.evidenceChanged[0].changedFields, ["estimatedRows"]);
+});
+
 test("database version and source context: unknown is limited, mismatches are explicit, SQL text is informational", () => {
   const plan = scan("0", "orders");
   const base = report(
