@@ -454,6 +454,25 @@ test("Hotspots associate by matched node and reason code, including level/eviden
   assert.deepEqual(hotspots.evidenceChanged[0].changedFields, ["estimatedRows"]);
 });
 
+test("hotspot-level evidence changes include the changed field names", () => {
+  const beforeNode = scan("0", "orders", { estimatedRows: 1000, totalCost: 90 });
+  const afterNode = scan("0", "orders", { estimatedRows: 1000, totalCost: 10 });
+  const beforeHotspot = hotspot(beforeNode, "large-sequential-scan", "warning", { estimatedRows: 1000 });
+  const afterHotspot = hotspot(afterNode, "large-sequential-scan", "warning", { estimatedRows: 1000 });
+  beforeHotspot.evidence = { nodeId: "0", estimatedRows: 1000, totalCost: 90 };
+  afterHotspot.evidence = { nodeId: "0", estimatedRows: 1000, totalCost: 10 };
+
+  const result = report(
+    session(beforeNode, { version: "16", sql: "SELECT 1", hotspots: { items: [beforeHotspot] } }),
+    session(afterNode, { version: "16", sql: "SELECT 1", hotspots: { items: [afterHotspot] } }),
+  );
+  const [entry] = result.diagnostics.hotspots.evidenceChanged;
+
+  assert.equal(entry.reasonCode, "large-sequential-scan");
+  assert.equal(entry.levelChanged, false);
+  assert.deepEqual(entry.changedFields, ["totalCost"]);
+});
+
 test("database version and source context: unknown is limited, mismatches are explicit, SQL text is informational", () => {
   const plan = scan("0", "orders");
   const base = report(

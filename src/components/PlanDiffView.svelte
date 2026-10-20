@@ -125,6 +125,13 @@
     setFocus(entry.beforeIds[0] ?? null, entry.afterIds[0] ?? null, `ambiguous:${entry.beforeIds.join(",")}:${entry.afterIds.join(",")}`);
   }
 
+  function swapSides() {
+    focus = null;
+    collapsedBaseline = new Set();
+    collapsedCurrent = new Set();
+    onSwap();
+  }
+
   function selectBaselineNode(nodeId) {
     setFocus(nodeId, beforeToAfter.get(nodeId) ?? null, `baseline:${nodeId}`);
   }
@@ -189,7 +196,7 @@
     </div>
     <div class="diff-head-actions">
       {#if report?.status === "comparable"}
-        <button type="button" class="diff-secondary" onclick={onSwap}>{t("diff.swap")}</button>
+        <button type="button" class="diff-secondary" onclick={swapSides}>{t("diff.swap")}</button>
       {/if}
       <button type="button" class="diff-secondary" onclick={onExit}>{t("diff.exit")}</button>
     </div>

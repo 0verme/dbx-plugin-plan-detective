@@ -796,6 +796,8 @@ test("a baseline snapshot can be compared with the live plan and the diff is vis
   const swappedGroups = await frame.locator(".diff-group").first().innerText();
   assert.match(swappedGroups, /Seq Scan/);
   assert.match(swappedGroups, /Index Scan/);
+  assert.equal(await frame.locator(".diff-node-table").count(), 0, "swapping clears the previous side-specific focus");
+  await frame.getByText("Select a change on the left, or any node in either plan tree, to inspect both sides.", { exact: true }).waitFor();
 
   await frame.getByRole("button", { name: "Exit comparison", exact: true }).click();
   await frame.getByRole("heading", { name: "Plan Tree", exact: true }).waitFor();

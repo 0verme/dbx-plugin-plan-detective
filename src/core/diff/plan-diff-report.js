@@ -558,15 +558,15 @@ function diffHotspots(beforeHotspots, afterHotspots, beforeToAfter, afterToBefor
       continue;
     }
     const changedFields = changedTopLevelFields(entry.evidence, counterpart.evidence);
-    const hotspotEvidenceChanged = changedTopLevelFields(entry.hotspotEvidence, counterpart.hotspotEvidence);
+    const hotspotChangedFields = changedTopLevelFields(entry.hotspotEvidence, counterpart.hotspotEvidence);
     const levelChanged = entry.level !== counterpart.level;
-    if (changedFields.length > 0 || hotspotEvidenceChanged.length > 0 || levelChanged) {
+    if (changedFields.length > 0 || hotspotChangedFields.length > 0 || levelChanged) {
       result.evidenceChanged.push({
         ...hotspotEntry(entry, "evidence-changed", entry.nodeId, afterNodeId),
         afterHotspotId: counterpart.hotspotId,
         afterLevel: counterpart.level,
         levelChanged,
-        changedFields,
+        changedFields: [...new Set([...changedFields, ...hotspotChangedFields])].sort(),
       });
     } else {
       result.unchanged += 1;

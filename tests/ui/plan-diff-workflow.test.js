@@ -72,7 +72,8 @@ test("the diff view renders both plans, structural changes, and honest unknown/w
   assert.match(view, /diff\.unmatched\.title/);
   assert.match(view, /diff\.ambiguous\.title/);
   assert.match(view, /diff\.findings\.unlinked/);
-  assert.match(view, /onclick=\{onSwap\}/);
+  assert.match(view, /function swapSides\(\)[\s\S]*?focus = null/);
+  assert.match(view, /onclick=\{swapSides\}/);
   assert.match(view, /onclick=\{onExit\}/);
   assert.match(tree, /diffMarks = new Map\(\)/);
   assert.match(tree, /DIFF_SYMBOL/);
@@ -88,6 +89,8 @@ test("the report keeps matching evidence, conservative unmatched nodes, and no s
   assert.match(report, /unmatched: \{ baseline: \[\], current: \[\] \}/);
   assert.match(report, /ambiguous: \[\]/);
   assert.match(report, /isConfidentOnlySide/);
+  assert.match(report, /hotspotChangedFields/);
+  assert.match(report, /changedFields: \[\.\.\.new Set\(\[\.\.\.changedFields, \.\.\.hotspotChangedFields\]\)\]\.sort\(\)/);
   assert.doesNotMatch(report, /faster|speedup|speed up|performance gain|optimization advice/i);
   assert.match(diffCore, /export function describeEstimatedPlanDiffSupport/);
   assert.match(diffCore, /export function readPlanAnalysis/);
