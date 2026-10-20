@@ -60,6 +60,7 @@ Locale precedence is **manual selection for this session > saved user preference
 - **QuestDB Estimated EXPLAIN 文本结构化解析**：按相对缩进恢复 operator tree，保留原始行、inline / standalone properties 与未知 operator；PageFrame / Row / Frame pipeline 只将 relation-access Frame / Interval 节点计作一次扫描。
 - **Doris Estimated EXPLAIN text structured parser**：按 `Distributed Plan` → `PLAN FRAGMENT` → fragment-local operator tree 恢复结构；保留 Fragment / Sink / Exchange metadata、`cardinality → estimatedRows`、join / sort / aggregate normalization 与未知 operator / property。Sink → Exchange 跨 Fragment 关系只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；Doris cost 不映射 PostgreSQL cost。
 - **GaussDB / Huawei DWS Estimated JSON parser（有条件）**：Host 明确确认 Estimated Plan 能力后，解析 JSON envelope 与保留未知子树；DWS 原生 cost 仅展示，不作为 PostgreSQL cost / elapsed time。该分支没有真实 GaussDB 9.1.1 capture；上游 DBX Issue #12601 / PR #12644 尚未合并。
+- **计划快照与 Estimated Plan Diff**：将当前完整的 JSON Estimated Plan 保存为本地快照，选择一条快照作为比较基线，再与当前计划或另一条历史快照比较。Diff 只比较 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL，按保守匹配展示扫描、索引、Join、Sort、行数、谓词等字段变化，并关联 Findings / Hotspots；未知值不当 0，未匹配 / 歧义节点不会被称为新增或消失，成本只在 PostgreSQL 原生值可用时展示，不计算提速率。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
@@ -181,7 +182,7 @@ Plan Detective 不调用 LLM 或 AI SDK。`analyze_estimated_plan` 只接受已�
 - QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。
 - Doris parser 只接受 Estimated `format: "text"`；保留 Distributed Plan / PLAN FRAGMENT / fragment-local operator tree，Sink→Exchange link 只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；`cardinality` 映射 `estimatedRows`，scan 使用中性 `scan`，Doris cost 与 `avgRowSize` 不映射 PostgreSQL cost / shared width。官方文档转录与 synthetic fixtures 不是真实 Doris capture。
 - GaussDB/DWS parser 只接受 Estimated JSON；需要 DBX 同连接 capability 明确为 true，普通 GaussDB / M-JDBC / 旧 Host 均不据 parser 自动升级支持。原生 cost 放在 `engineSpecific.gaussdb` 展示，不进入 PostgreSQL cost attribution / cost findings；当前 fixtures 全为 synthetic，真实 GaussDB 9.1.1 与 Windows DBX Host GUI smoke 未运行。上游 DBX PR #12644 仍为 Open / Draft，运行时支持依赖其后续合入。
-- Plan Diff 尚无用户可用的比较视图：Issue #73 Phase 73.1 仅新增 PostgreSQL / Native MySQL 的纯 Estimated Plan Diff Core；比较 UI、可比性提示、诊断关联与真实 Desktop 验收仍未完成。计划快照历史已实现，但 Issue #72 的真实 DBX Desktop Storage 验收仍 **NOT VERIFIED**。AI SQL Rewrite 与自动调优未实现。
+- Plan Diff 的用户可见范围限于 **PostgreSQL ↔ PostgreSQL** 与 **Native MySQL ↔ Native MySQL** 的完整 JSON Estimated structured plan；OceanBase MySQL 不按 Native MySQL 处理。Actual、truncated、raw-only、分析失败与非 JSON format 不进入比较。缺失值保持未知、不当 0；未匹配或歧义节点不会被宣称为新增 / 消失；成本不计算差值、百分比或提速率。真实 DBX Desktop 端到端验收仍 **NOT VERIFIED**，Node / DOM 测试不等同于真实 Desktop 验收。计划快照历史已实现，但 Issue #72 的真实 DBX Desktop Storage 验收仍 **NOT VERIFIED**。AI SQL Rewrite 与自动调优未实现。
 - 当前 DBX 0.6.26 上游只从打开的 plugin-owned connection 发现 plugin tools；Plan Detective 没有数据库 connection provider，因而 `analyze_estimated_plan` 暂不能绑定普通 DBX 原生 Agent 连接。DBX `explain_query` 给模型的是 Markdown 表格文本，结构化 `explain_data` 只供 UI 使用；端到端交接需要上游提供普通 Agent connection tool binding 和可供后续 tool 消费的结构化 Estimated Plan 结果。插件不会用 Host API 重跑 EXPLAIN 绕过此限制。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 
@@ -238,7 +239,7 @@ manifest.json    DBX 插件清单
 - [v0.7.1 Release Notes](docs/RELEASE_NOTES_v0.7.1.md)：本版本变更、兼容性与验证边界。
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：架构边界、Host API 职责与数据链路。
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)：RawPlanInput、parser、NormalizedPlan、Metrics、Rules、Findings、Hotspots 与 fixture 约定。
-- [docs/PLAN_DIFF.md](docs/PLAN_DIFF.md)：Issue #73 Phase 73.1 纯 Diff Core 契约、保守匹配、限制与验证边界。
+- [docs/PLAN_DIFF.md](docs/PLAN_DIFF.md)：Issue #73 Estimated Plan Diff Core、展示报告契约、保守匹配、快照比较 UI 与验证边界。
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)：已确认决策、阶段划分与 Future 能力边界。
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)：历史 Host 能力审计记录。
 - [DBX 插件开发指南](https://dbxio.com/en/docs/plugin-development)。

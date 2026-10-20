@@ -9,7 +9,7 @@
  */
 
 const SUPPORTED_DATABASES = new Set(["postgresql", "mysql"]);
-const SCAN_KINDS = new Set([
+export const SCAN_KINDS = new Set([
   "seq_scan",
   "index_scan",
   "index_only_scan",
@@ -24,8 +24,9 @@ const SCAN_KINDS = new Set([
   "worktable_scan",
   "const_scan",
 ]);
-const JOIN_KINDS = new Set(["nested_loop", "hash_join", "merge_join", "join"]);
-const SORT_KINDS = new Set(["sort", "incremental_sort"]);
+export const JOIN_KINDS = new Set(["nested_loop", "hash_join", "merge_join", "join"]);
+export const SORT_KINDS = new Set(["sort", "incremental_sort"]);
+export const AGGREGATE_KINDS = new Set(["aggregate", "group"]);
 
 const CHANGE_FIELDS = Object.freeze([
   ["operator.kind", (node) => node.kind],
@@ -61,9 +62,9 @@ const CHANGE_FIELDS = Object.freeze([
  * @returns {object} A JSON-serializable comparison result.
  */
 export function diffEstimatedPlans(baseline, current) {
-  const baselineResult = readAnalysis(baseline);
+  const baselineResult = readPlanAnalysis(baseline);
   if (baselineResult.error !== null) return incompatible(baselineResult.error);
-  const currentResult = readAnalysis(current);
+  const currentResult = readPlanAnalysis(current);
   if (currentResult.error !== null) return incompatible(currentResult.error);
 
   const beforePlan = baselineResult.normalized;
@@ -161,37 +162,83 @@ export function diffEstimatedPlans(baseline, current) {
   };
 }
 
-/** @param {unknown} value */
-function readAnalysis(value) {
-  if (!isRecord(value)) return { normalized: null, error: "INVALID_ANALYSIS" };
+/**
+ * Read one rejected-or-structured analysis without acquiring a plan. This is
+ * the same boundary `diffEstimatedPlans` uses, exported so the diff report can
+ * reuse it instead of re-implementing input validation.
+ *
+ * @param {unknown} input
+ * @returns {{
+ *   error: string|null,
+ *   normalized: Record<string, any>|null,
+ *   analysis: Record<string, any>|null,
+ *   session: Record<string, any>|null,
+ *   rawInput: Record<string, any>|null,
+ * }}
+ */
+export function readPlanAnalysis(input) {
+  const rejected = (error) => ({ error, normalized: null, analysis: null, session: null, rawInput: null });
+  if (!isRecord(input)) return rejected("INVALID_ANALYSIS");
 
+  let value = input;
   // createPlanSnapshotView returns { snapshot, session }; accept either that
   // wrapper or the session itself, without examining the raw snapshot payload.
   if (isRecord(value.session) && value.status === undefined && value.analysis === undefined) {
     value = value.session;
   }
+  const session = value;
 
   if (value.truncated === true || value.status === "truncated" || value.hostResult?.truncated === true) {
-    return { normalized: null, error: "PLAN_TRUNCATED" };
+    return rejected("PLAN_TRUNCATED");
   }
-  if (value.status === "raw-only") return { normalized: null, error: "RAW_ONLY" };
-  if (value.status === "error") return { normalized: null, error: "ANALYSIS_FAILED" };
+  if (value.status === "raw-only") return rejected("RAW_ONLY");
+  if (value.status === "error") return rejected("ANALYSIS_FAILED");
   if (["idle", "loading", "unsupported"].includes(value.status)) {
-    return { normalized: null, error: "ANALYSIS_NOT_READY" };
+    return rejected("ANALYSIS_NOT_READY");
   }
   if (value.status !== undefined && value.status !== "structured") {
-    return { normalized: null, error: "INVALID_ANALYSIS" };
+    return rejected("INVALID_ANALYSIS");
   }
 
   const analysis = isRecord(value.analysis) ? value.analysis : value;
-  if (analysis.status === "raw-only") return { normalized: null, error: "RAW_ONLY" };
+  if (analysis.status === "raw-only") return rejected("RAW_ONLY");
   if (analysis.status !== undefined && analysis.status !== "structured") {
-    return { normalized: null, error: analysis.status === "error" ? "ANALYSIS_FAILED" : "INVALID_ANALYSIS" };
+    return rejected(analysis.status === "error" ? "ANALYSIS_FAILED" : "INVALID_ANALYSIS");
   }
   const normalized = analysis.normalized;
-  if (!isRecord(normalized)) return { normalized: null, error: "ANALYSIS_NOT_STRUCTURED" };
-  if (!isValidNormalizedPlan(normalized)) return { normalized: null, error: "INVALID_NORMALIZED_PLAN" };
-  return { normalized, error: null };
+  if (!isRecord(normalized)) return rejected("ANALYSIS_NOT_STRUCTURED");
+  if (!isValidNormalizedPlan(normalized)) return rejected("INVALID_NORMALIZED_PLAN");
+  return {
+    error: null,
+    normalized,
+    analysis,
+    session,
+    rawInput: isRecord(session.rawInput) ? session.rawInput : null,
+  };
+}
+
+/**
+ * Validate one side for the supported semantic diff without comparing it.
+ * UI entry points use this so an unsupported snapshot never renders a
+ * clickable control that cannot work.
+ *
+ * @param {unknown} input
+ * @returns {{ supported: boolean, reasonCode: string|null, database: string|null }}
+ */
+export function describeEstimatedPlanDiffSupport(input) {
+  const result = readPlanAnalysis(input);
+  if (result.error !== null) return { supported: false, reasonCode: result.error, database: null };
+  const plan = result.normalized;
+  if (!SUPPORTED_DATABASES.has(plan.database)) {
+    return { supported: false, reasonCode: "UNSUPPORTED_DATABASE", database: plan.database };
+  }
+  if (plan.format !== "json") {
+    return { supported: false, reasonCode: "UNSUPPORTED_FORMAT", database: plan.database };
+  }
+  if (plan.mode !== "estimated") {
+    return { supported: false, reasonCode: "MODE_NOT_ESTIMATED", database: plan.database };
+  }
+  return { supported: true, reasonCode: null, database: plan.database };
 }
 
 /**
@@ -315,11 +362,9 @@ const MYSQL_BRANCH_STRUCTURES = new Set([
 function collectSubplanContexts(root, database) {
   const contexts = new Map();
   function visit(node, inherited) {
-    const context = database === "postgresql"
-      ? postgresContext(node, inherited)
-      : database === "mysql"
-        ? mysqlContext(node, inherited)
-        : inherited;
+    let context = inherited;
+    if (database === "postgresql") context = postgresContext(node, inherited);
+    else if (database === "mysql") context = mysqlContext(node, inherited);
     contexts.set(node, JSON.stringify(context));
     for (const child of node.children) visit(child, context);
   }
@@ -400,11 +445,9 @@ function hasRelationIdentity(node) {
  * @param {string} database
  */
 function relationSchema(node, database) {
-  const schema = database === "postgresql"
-    ? node.engineSpecific?.extra?.Schema
-    : database === "mysql"
-      ? node.engineSpecific?.mysql?.schemaName
-      : null;
+  let schema = null;
+  if (database === "postgresql") schema = node.engineSpecific?.extra?.Schema;
+  else if (database === "mysql") schema = node.engineSpecific?.mysql?.schemaName;
   return typeof schema === "string" && schema.trim().length > 0 ? schema : null;
 }
 
@@ -429,9 +472,7 @@ function groupRelationScans(nodes, database, subplanContexts, subplanIdentityTok
 function matchRelationScans(context) {
   const {
     database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
-    beforeSubplanIdentityTokens, afterSubplanIdentityTokens,
-    beforeScanTokens, afterScanTokens, matchedBefore, matchedAfter,
-    ambiguousBefore, ambiguousAfter, matches, ambiguities,
+    beforeSubplanIdentityTokens, afterSubplanIdentityTokens, matchedBefore, matchedAfter,
   } = context;
   const beforeGroups = groupRelationScans(
     beforeNodes, database, beforeSubplanContexts, beforeSubplanIdentityTokens,
@@ -573,7 +614,6 @@ function matchNonScanNodes(context) {
     database, beforeNodes, afterNodes, beforeSubplanContexts, afterSubplanContexts,
     beforeSubplanIdentityTokens, afterSubplanIdentityTokens,
     beforeLineage, afterLineage, matchedBefore, matchedAfter,
-    ambiguousBefore, ambiguousAfter, matches, ambiguities,
   } = context;
   const beforeGroups = groupNonScanCandidates(
     beforeNodes, beforeLineage, matchedBefore, database,

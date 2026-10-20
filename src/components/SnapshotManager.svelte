@@ -1,5 +1,6 @@
 <script>
   import { onDestroy } from "svelte";
+  import { describeEstimatedPlanDiffSupport } from "../core/diff/estimated-plan-diff.js";
   import { createTranslator } from "../lib/i18n/index.js";
   import { formatPlanSnapshotTime } from "../lib/plan-snapshot-view.js";
   import { PlanSnapshotStoreError } from "../lib/plan-snapshot-store.js";
@@ -39,6 +40,8 @@
     diagnosticBridge = null,
     onOpenSnapshot = () => {},
     onSelectBaseline = () => {},
+    onCompareSnapshots = () => {},
+    onCompareCurrent = () => {},
     onDeleteSnapshot = () => {},
     onUpdateSnapshot = () => {},
   } = $props();
@@ -77,6 +80,13 @@
   let loadToken = 0;
 
   const canSave = $derived(currentSession?.status === "structured");
+  const baselineSnapshot = $derived(snapshots.find((snapshot) => snapshot.snapshotId === baselineSnapshotId) ?? null);
+  const currentDiffSupport = $derived(describeEstimatedPlanDiffSupport(currentSession));
+  const currentDiffHint = $derived(
+    currentDiffSupport.supported
+      ? null
+      : `${t("snapshot.compare.unsupported")} ${t(`diff.reason.${currentDiffSupport.reasonCode}`)}`,
+  );
   const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving && !savingRename);
   const saveConfirmDisabled = $derived(!canMutate || !canSave || saving);
   const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
@@ -428,10 +438,22 @@
     }
   }
 
-  function selectBaseline(snapshotId) {
+  function selectBaseline(snapshot) {
     clearOperationFeedback();
-    if (!canMutate) return;
-    onSelectBaseline(baselineSnapshotId === snapshotId ? null : snapshotId);
+    onSelectBaseline(snapshot === null || baselineSnapshotId === snapshot.snapshotId ? null : snapshot);
+  }
+
+  function compareSnapshot(snapshot) {
+    clearOperationFeedback();
+    if (baselineSnapshot === null || saving || savingRename) return;
+    onCompareSnapshots({ baseline: baselineSnapshot, current: snapshot });
+    showHistory = false;
+  }
+
+  function compareCurrent() {
+    clearOperationFeedback();
+    if (baselineSnapshot === null || currentSession === null || saving || savingRename || !currentDiffSupport.supported) return;
+    onCompareCurrent({ baseline: baselineSnapshot, current: currentSession });
   }
 
   function beginRename(snapshot) {
@@ -641,6 +663,36 @@
     <button type="button" class="snapshot-text-button" onclick={copyDiagnosticLog}>{t("snapshot.diagnostic.copy")}</button>
   </div>
 
+  {#if baselineSnapshot !== null}
+    <div class="snapshot-baseline-bar">
+      <span class="snapshot-baseline-title">{t("snapshot.baseline.bar", { title: baselineSnapshot.title })}</span>
+      {#if currentSession !== null}
+        <button
+          type="button"
+          class="snapshot-secondary"
+          disabled={saving || savingRename || !currentDiffSupport.supported}
+          title={currentDiffHint ?? undefined}
+          onclick={compareCurrent}
+        >{t("snapshot.baseline.compare")}</button>
+      {:else if activeSnapshotId !== null}
+        {@const activeSnapshot = snapshots.find((snapshot) => snapshot.snapshotId === activeSnapshotId) ?? null}
+        {#if activeSnapshot !== null && activeSnapshot.snapshotId !== baselineSnapshotId}
+          <button
+            type="button"
+            class="snapshot-secondary"
+            disabled={saving || savingRename}
+            onclick={() => compareSnapshot(activeSnapshot)}
+          >{t("snapshot.baseline.compareActive")}</button>
+        {:else}
+          <span class="snapshot-baseline-hint">{t("snapshot.compare.same")}</span>
+        {/if}
+      {:else}
+        <span class="snapshot-baseline-hint">{t("snapshot.compare.noCurrent")}</span>
+      {/if}
+      <button type="button" class="snapshot-text-button" onclick={() => selectBaseline(null)}>{t("snapshot.baseline.clearBar")}</button>
+    </div>
+  {/if}
+
   {#if diagnosticMessage}
     <p class="snapshot-feedback" role="status" aria-live="polite">{diagnosticMessage}</p>
   {/if}
@@ -788,10 +840,17 @@
                   <button
                     type="button"
                     class="snapshot-secondary"
-                    disabled={!canMutate}
                     aria-pressed={baselineSnapshotId === snapshot.snapshotId}
-                    onclick={() => selectBaseline(snapshot.snapshotId)}
+                    onclick={() => selectBaseline(snapshot)}
                   >{baselineSnapshotId === snapshot.snapshotId ? t("snapshot.baseline.selected") : t("snapshot.baseline.select")}</button>
+                  {#if baselineSnapshotId !== null && baselineSnapshotId !== snapshot.snapshotId}
+                    <button
+                      type="button"
+                      class="snapshot-secondary"
+                      disabled={saving || savingRename}
+                      onclick={() => compareSnapshot(snapshot)}
+                    >{t("snapshot.compare.action")}</button>
+                  {/if}
                   <button type="button" class="snapshot-secondary" disabled={!canMutate} onclick={() => beginRename(snapshot)}>{t("snapshot.rename.open")}</button>
                   <button
                     type="button"
@@ -812,6 +871,39 @@
 <style>
   .snapshot-manager {
     margin: -2px 0 var(--pd-layout-gap);
+  }
+
+  .snapshot-baseline-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid var(--pd-info-border);
+    border-radius: 6px;
+    background: var(--pd-info-bg);
+    font-size: 12px;
+  }
+
+  .snapshot-baseline-title {
+    min-width: 0;
+    flex: 1 1 200px;
+    color: var(--pd-info-fg);
+    overflow-wrap: anywhere;
+  }
+
+  .snapshot-baseline-bar .snapshot-baseline-hint {
+    flex: 1 1 220px;
+    font-size: 11px;
+  }
+
+  .snapshot-baseline-bar .snapshot-secondary {
+    min-height: 26px;
+    font-size: 11px;
+  }
+
+  .snapshot-baseline-bar .snapshot-text-button {
+    color: var(--pd-info-fg);
   }
 
   .snapshot-toolbar,

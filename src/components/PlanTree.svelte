@@ -15,11 +15,13 @@
     selectedId = null,
     findingsByNodeRef = new Map(),
     hotspotsByNodeRef = new Map(),
+    diffMarks = new Map(),
     onSelect = () => {},
     onToggle = () => {},
   } = $props();
 
   const visible = $derived(visibleTreeRows(rows, collapsed));
+  const DIFF_SYMBOL = Object.freeze({ added: "+", removed: "−", unmatched: "?", ambiguous: "!" });
   const activeTreeRowId = $derived(visible.some((row) => row.id === selectedId) ? selectedId : (visible[0]?.id ?? null));
   const t = $derived(createTranslator(locale).t);
   let treeElement = $state(null);
@@ -63,6 +65,7 @@
     {#each visible as row (row.id)}
       {@const finding = findingsByNodeRef.get(row.id)}
       {@const hotspot = hotspotsByNodeRef.get(row.id)}
+      {@const diff = diffMarks.get(row.id)}
       <div
         class="tree-row"
         class:selected={row.id === selectedId}
@@ -97,6 +100,12 @@
         </span>
 
         <span class="label">
+          {#if diff}
+            <span
+              class="diff-marker {diff.status}"
+              title={t(`tree.diff.${diff.status}`, { count: diff.count })}
+            >{diff.status === "changed" ? `≠${diff.count}` : DIFF_SYMBOL[diff.status]}</span>
+          {/if}
           {#if hotspot}
             <span class="hotspot-marker {hotspot.level}" title={t("tree.hotspots.tooltip", { count: hotspot.count })}>◆</span>
           {/if}
@@ -194,6 +203,41 @@
   .hotspot-marker {
     margin-right: 4px;
     font-size: 10px;
+  }
+
+  .diff-marker {
+    display: inline-flex;
+    min-width: 16px;
+    height: 16px;
+    margin-right: 5px;
+    padding: 0 3px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .diff-marker.changed {
+    background: var(--pd-accent-soft);
+    color: var(--pd-accent);
+  }
+
+  .diff-marker.added {
+    background: var(--pd-info-bg);
+    color: var(--pd-info-fg);
+  }
+
+  .diff-marker.removed {
+    background: var(--pd-danger-bg, #fdecec);
+    color: var(--pd-danger-fg, #a12626);
+  }
+
+  .diff-marker.unmatched,
+  .diff-marker.ambiguous {
+    background: var(--pd-warning-bg, #fff5dd);
+    color: var(--pd-warning-fg, #8a5a00);
   }
 
   .hotspot-marker.high {

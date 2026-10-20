@@ -6,7 +6,8 @@
  */
 
 export { analyzePlan } from "./analyze.js";
-export { diffEstimatedPlans } from "./diff/estimated-plan-diff.js";
+export { diffEstimatedPlans, describeEstimatedPlanDiffSupport, readPlanAnalysis } from "./diff/estimated-plan-diff.js";
+export { buildEstimatedPlanDiff, DIFF_GROUP_ORDER } from "./diff/plan-diff-report.js";
 export { adaptDbxEstimatedPlanResponse } from "./adapter/dbx-plan-response.js";
 export { DbxPlanAdapterError, PlanInputError, PlanParseError } from "./errors.js";
 export {
