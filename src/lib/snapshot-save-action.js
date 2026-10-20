@@ -27,15 +27,19 @@ export function createSnapshotSaveHandler({
   let inFlight = false;
 
   return async function saveCurrent(event) {
-    event.preventDefault();
-    const state = getState();
-    const trace = beginSnapshotSaveTrace({
-      storageAvailable: state.storageAvailable === true,
-      sessionStructured: state.currentSession?.status === "structured",
-      loadState: state.loadState,
-      titlePresent: typeof state.saveTitle === "string" && state.saveTitle.trim().length > 0,
-    });
-    clearFeedback();
+    // Record entry before any application callback can throw synchronously.
+    const trace = beginSnapshotSaveTrace();
+    let state;
+    try {
+      event.preventDefault();
+      state = getState();
+      clearFeedback();
+    } catch (error) {
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_EVENT_ERROR", "failed", snapshotDiagnosticErrorFields(error, "form.submit"));
+      finishSnapshotDiagnosticTrace(trace, "failed");
+      setError(error);
+      return { status: "failed", error };
+    }
 
     const gateStage = startSnapshotDiagnosticStage(trace, "SNAPSHOT_SAVE_GATE", {
       storageAvailable: state.storageAvailable === true,
@@ -82,9 +86,9 @@ export function createSnapshotSaveHandler({
     });
 
     inFlight = true;
-    setSaving(true, trace);
     let snapshot = null;
     try {
+      setSaving(true, trace);
       snapshot = await withSnapshotDiagnosticStage(trace, "SNAPSHOT_CREATE", () => createSnapshot({
         session: state.currentSession,
         title: state.saveTitle.trim(),
@@ -114,7 +118,9 @@ export function createSnapshotSaveHandler({
         sessionStructured: true,
       });
       finishSnapshotDiagnosticTrace(trace, "completed");
-      void refresh(state.repository, { trace, operation: "post-save" })?.catch?.(() => {});
+      // The confirmed save is complete; a new history trace owns this read,
+      // which may still be pending long after the UI has reported success.
+      void refresh(state.repository, { operation: "post-save" })?.catch?.(() => {});
       return { status: "saved", snapshot };
     } catch (error) {
       const errorFields = snapshotDiagnosticErrorFields(error, "repository.save");
@@ -141,7 +147,7 @@ export function createSnapshotSaveHandler({
         setError(error);
         recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_UI_ERROR", "failed", errorFields);
         finishSnapshotDiagnosticTrace(trace, "failed");
-        void refresh(state.repository, { trace, operation: "verification" })?.catch?.(() => {});
+        void refresh(state.repository, { operation: "verification" })?.catch?.(() => {});
         return { status: "failed", error };
       }
       setError(error);

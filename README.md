@@ -208,12 +208,15 @@ DBX Connection
 开发、测试与构建使用 Node.js 22+：
 
 ```bash
-npm ci
+npm ci --include=dev
+npx playwright install chromium # 首次运行真实 DOM 测试前安装；Linux CI 可加 --with-deps
 npm test
 npm run build
 dbx-plugin dev --path . --port 5190
 npm run package
 ```
+
+`npm test` 包含真实 Chromium DOM 回归（包括 DBX 的 `sandbox="allow-scripts"` iframe）；Host bridge 使用测试替身，不等于真实 DBX Desktop 验收。浏览器安装完成后，测试无需 DBX、数据库或网络。
 
 Node.js 仅作为开发 / CI 工具，不随插件包提供，也不是普通用户的安装后运行时依赖。`npm run package` 先构建静态 UI，再调用项目锁定版本的 DBX 官方 CLI 将 `assets/` 与 `ui/` 打成 universal frontend-only `.dbxp`；官方 CLI 能直接打包无 backend entrypoint 的插件，因此不再使用自有 ZIP packager。`ui/` 是必须入库的发布产物；`dist/` 是本地候选包目录，不入库。
 

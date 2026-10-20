@@ -28,11 +28,14 @@ const SAFE_ERROR_CODES = new Set([
   "INVALID_SNAPSHOT",
   "CORRUPT_SNAPSHOT",
   "FRONTEND_VALIDATION_REJECTED",
+  "FORM_SUBMIT_NOT_OBSERVED",
+  "FORM_ASSOCIATION_MISMATCH",
   "DUPLICATE_SUBMISSION",
   "UNKNOWN_ERROR",
 ]);
 const SAFE_FAILED_STAGES = new Set([
   "save.gate",
+  "form.submit",
   "snapshot.create",
   "repository.save",
   "storage.get",
@@ -49,6 +52,7 @@ const SAFE_PERMISSION_STATES = new Set(["not-verified", "usable", "denied"]);
 
 let traceCounter = 0;
 let preparedSaveTrace = null;
+let preparedSaveTimer = null;
 let runtimeEnvironment = {
   pluginVersion: "unknown",
   buildFingerprint: "unknown",
@@ -97,34 +101,68 @@ export function createSnapshotDiagnosticTrace({ kind = "save" } = {}) {
   return trace;
 }
 
-/** Called by the explicit confirm button so click-without-submit is visible. */
+/** Called by the confirm button; a click is not evidence of form submission. */
 export function prepareSnapshotSaveTrace(metadata = {}) {
-  const trace = createSnapshotDiagnosticTrace({ kind: "save" });
-  preparedSaveTrace = trace;
+  settleUnsubmittedSaveTrace();
+  const trace = prepareFormTrace();
   recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_UI_CLICK", "success", metadata);
   return trace;
 }
 
-/** Consume a click-prepared trace or create one for Enter/programmatic submit. */
+/** Capture runs before onsubmit, exposing propagation/handler interference. */
+export function recordSnapshotFormSubmitCapture(metadata = {}) {
+  const trace = preparedSaveTrace ?? prepareFormTrace();
+  recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT_CAPTURE", "success", metadata);
+  return trace;
+}
+
+/** Consume a click-prepared trace or create one for native/programmatic submit. */
 export function beginSnapshotSaveTrace(metadata = {}) {
-  const trace = preparedSaveTrace ?? createSnapshotDiagnosticTrace({ kind: "save" });
-  preparedSaveTrace = null;
-  trace.status = "pending";
+  const trace = preparedSaveTrace?.status === "pending" ? preparedSaveTrace : createSnapshotDiagnosticTrace({ kind: "save" });
+  clearPreparedFormTrace();
   recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT", "success", metadata);
   return trace;
 }
 
-/** Record browser-native input validation, which prevents the submit event. */
+/** invalid does not bubble: the form must listen in the capture phase. */
 export function recordSnapshotFormValidationFailure(metadata = {}) {
   const trace = preparedSaveTrace ?? createSnapshotDiagnosticTrace({ kind: "save" });
-  preparedSaveTrace = null;
-  recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_VALIDATION_REJECTED", "failed", {
+  recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_VALIDATION_REJECTED", "blocked", {
     ...metadata,
     errorCode: "FRONTEND_VALIDATION_REJECTED",
-    failedStage: "save.gate",
+    failedStage: "form.submit",
   });
-  finishSnapshotDiagnosticTrace(trace, "failed");
+  finishSnapshotDiagnosticTrace(trace, "blocked");
+  // Keep this trace until the end of this task so multiple invalid controls
+  // from one reportValidity() call remain part of the same attempt.
   return trace;
+}
+
+function prepareFormTrace() {
+  const trace = createSnapshotDiagnosticTrace({ kind: "save" });
+  preparedSaveTrace = trace;
+  // Native/default submission and our sandbox-safe dispatch are synchronous.
+  // Only an unconsumed UI attempt expires; a pending Host operation never does.
+  preparedSaveTimer = setTimeout(settleUnsubmittedSaveTrace, 0);
+  preparedSaveTimer?.unref?.();
+  return trace;
+}
+
+function settleUnsubmittedSaveTrace() {
+  const trace = preparedSaveTrace;
+  clearPreparedFormTrace();
+  if (trace?.status !== "pending") return;
+  recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT_MISSING", "blocked", {
+    errorCode: "FORM_SUBMIT_NOT_OBSERVED",
+    failedStage: "form.submit",
+  });
+  finishSnapshotDiagnosticTrace(trace, "blocked");
+}
+
+function clearPreparedFormTrace() {
+  if (preparedSaveTimer !== null) clearTimeout(preparedSaveTimer);
+  preparedSaveTimer = null;
+  preparedSaveTrace = null;
 }
 
 export function finishSnapshotDiagnosticTrace(trace, status = "success") {
@@ -351,6 +389,13 @@ function sanitizeFields(fields = {}) {
   if (typeof fields.saveConfirmDisabled === "boolean") safe.saveConfirmDisabled = fields.saveConfirmDisabled;
   if (typeof fields.saving === "boolean") safe.saving = fields.saving;
   if (typeof fields.titlePresent === "boolean") safe.titlePresent = fields.titlePresent;
+  for (const key of [
+    "formAssociated", "formConnected", "formNoValidate", "formValid",
+    "submitterDisabled", "disabledStateMismatch", "domTitlePresent", "framed",
+    "eventTrusted", "eventDefaultPrevented", "eventCancelBubble",
+    "valueMissing", "tooLong", "customError",
+  ]) if (typeof fields[key] === "boolean") safe[key] = fields[key];
+  if (["title", "note"].includes(fields.invalidField)) safe.invalidField = fields.invalidField;
   if (typeof fields.initialized === "boolean") safe.initialized = fields.initialized;
   if (typeof fields.bridgeAvailable === "boolean") safe.bridgeAvailable = fields.bridgeAvailable;
   if (typeof fields.capabilityAvailable === "boolean") safe.capabilityAvailable = fields.capabilityAvailable;
@@ -390,6 +435,8 @@ function diagnosticMessage(errorCode, failedStage) {
     SNAPSHOT_LIST_NOT_READY: "The history list was not ready when save was submitted.",
     SNAPSHOT_NOT_COMPARABLE: "The current session was not a structured analysis.",
     FRONTEND_VALIDATION_REJECTED: "Browser form validation prevented submission.",
+    FORM_SUBMIT_NOT_OBSERVED: "The click or capture event did not reach the submit handler; no write started.",
+    FORM_ASSOCIATION_MISMATCH: "The save button was not associated with the expected connected form.",
     DUPLICATE_SUBMISSION: "A save was already in progress; this submission did not write.",
     UNKNOWN_ERROR: "An unexpected error occurred; raw error text was omitted.",
   };

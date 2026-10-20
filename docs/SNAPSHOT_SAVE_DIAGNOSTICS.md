@@ -1,45 +1,82 @@
-# Issue #72 / PR #93 快照保存端到端诊断
+# PR #93：快照保存事件链诊断与验收
 
-## 当前结论
+## 根因（已在真实浏览器 DOM 复现，不代表 Desktop 已验收）
 
-- **Windows DBX Desktop 故障根因：UNKNOWN / NOT VERIFIED。** 本次 Agent 环境为 Linux，不具备 Windows DBX Desktop GUI，也没有用户设备的安装记录、Host 权限状态或真实 Host Storage 调用日志。自动化模拟不能证明真实 Host 写入、历史读取或重启恢复成功。
-- 本轮不修改 Snapshot Schema v1、Storage key、数据一致性协议或 UI 入口结构；不重试 `storage.set`。仅增加运行会话内的诊断追踪、复制入口、包构建指纹及针对性模拟测试。
-- PR #93 当前基线为 `5dad75a59eea6857f5a45a2fdcf63cb10dc7aaf3`；该 HEAD 中 `manifest.json` 已声明 `host.storage`。这只证明仓库源码/候选包，不证明用户当前安装了该包或该权限已生效。
+用户的 Windows 日志表明 Storage 可用、历史 GET 成功、按钮已启用，但两次 `SNAPSHOT_UI_CLICK` 后都没有 `SNAPSHOT_FORM_SUBMIT`。本轮没有修改 Storage Repository。
 
-## 诊断追踪行为
+**断点是 Host iframe 的 HTML sandbox，而非 Storage 或 Svelte 5 的 `onsubmit` 语法。** DBX 使用 `sandbox="allow-scripts"`，没有 `allow-forms`：
 
-- 每次确认保存创建唯一 `traceId`；会话生命周期和历史读取也有独立 trace。保存 trace 缓存最多 8 条，每条最多 128 个事件；会话事件最多 128 条；复制 JSON 上限 48 KiB。数据只驻留当前插件 UI 会话，不写入 Host Storage，不访问外部日志服务。
-- 每个异步阶段输出 `*_START` 与 `*_END` 事件。START 包含 `status: pending`、单调计时的相对 `started`；END 包含 `finished`、`durationMs`、`status`。Promise 保持 pending 时保留最后 START，可直接区分卡在 Store load、Host get、set、读回核验或历史 refresh。
-- 覆盖保存按钮点击/表单提交/原生校验/save gate、Snapshot 创建、Repository save、Store load/validate、Host Storage get/set、写后读回、历史初始化和手动刷新、Host bridge 初始化、Storage capability/manifest 权限声明、权限状态以及保存按钮 disabled 状态变化。
-- Host permission 状态由公开 Storage API 的结果推断：`not-verified`、`usable` 或 `denied`。Host 没有公开权限查询 API，因此不将 manifest 声明冒充为“已授予”。DBX 版本仅从明确的 Host version 字段或 User-Agent 版本标记提取；否则导出 `unknown`，需用户从 DBX Desktop About 页面确认。
-- 日志只包含插件版本、源码/构建 fingerprint、非敏感 manifest 权限、能力布尔值、稳定错误码、阶段和固定脱敏错误描述。不会包含 SQL、Raw Plan、用户名、连接凭据、用户备注、Storage key/value 或原始 Host 错误文本。
-- Host Storage 写入长时间无响应时 UI 显示 `UNKNOWN/PENDING` 并禁止重复提交。不会用 Promise race 将写入判为失败，也不会自动重试 set。set 已返回但读回不能确认时，现有安全只读历史核验路径仍生效。
+- 上游固定源码：[PluginWorkbenchHost.vue:920 @ d1e88ab4](https://github.com/t8y2/dbx/blob/d1e88ab4b5b196d8b920b56ee8bc1735dcdc6269/apps/desktop/src/components/plugins/PluginWorkbenchHost.vue#L920)。只读核查，没有修改 DBX 仓库。
+- 本插件故障基线 `be63bec`：`src/components/SnapshotManager.svelte:445` 只绑定 `onsubmit={saveCurrent}`；`:463` 的 `type="submit"` 按钮 `onclick` 仅记录点击（`:274–281`），依赖默认提交。沙箱在校验和 submit 事件**之前**禁止该默认动作，因而保存处理函数不可达；`form.requestSubmit()` 也一样被禁止。
+- 原生产 bundle 对照：顶层页面 `button.form` 正确、`disabled=false`、`checkValidity()=true`，click → submit → 一次 set；同一 bundle 放入 `allow-scripts` opaque iframe 后，相同状态下 click → **无 submit、零 set**。Chromium 控制台原文：`Blocked form submission to '' because the form's frame is sandboxed and the 'allow-forms' permission is not set.`
+- 复现是 Linux Chromium，不是用户设备的 Windows WebView2/DBX Desktop。源码与复现解释了日志断点，实际安装环境的修复结果仍需人工验收。
 
-## 候选包证据（Linux 自动构建）
+### 八项排查结果
 
-- 开发包：`dist/io.github.0verme.plan-detective-0.7.1-universal.dbxp`
-- 版本：`0.7.1`（unsigned review/development candidate，不是正式发布）
-- UI build fingerprint：`sha256:d57f3261ed062b233073fa6cc20bfd9c459488de8560710f5c95fa7d7cf9160b`
-- `.dbxp` SHA-256：`2ca450c20a26b9272f3bf8817c45f3684c9992bc8e0fb6d155878dc3b8bdadc0`
-- 包内 manifest permissions：`host.plans:read`、`host.storage`
-- 包含 UI entrypoint；无 backend entrypoint、Node runtime 或系统 Node.js 运行依赖。
-- `npm run package` 会重新计算源输入 fingerprint 并核对已生成 UI bundle。已验证候选包 UI bundle 含当前源码 fingerprint；用户复制的运行时 fingerprint 可与本节候选值比较。此核对不能识别用户设备当前安装了哪个包。
+| 检查项 | 结果 |
+| --- | --- |
+| 按钮 form 归属 | 原 DOM 正确；新诊断核对关联及 connected，错配明确报错 |
+| 原生 submit | 顶层触发；Host 同型 sandbox 中被浏览器拦截 |
+| constraint validation | 原复现合法输入为 true，不是此次断点；沙箱默认路径甚至不会进入原生校验 |
+| invalid 捕获 | 原来只监听标题；现在 form capture 同时覆盖 input/textarea（invalid 不冒泡） |
+| onsubmit | 实际收到 submit 时正常；新增 capture 与 handler 两个事件区分传播断点 |
+| 同步异常 | 原复现无应用异常；DOM 校验/派发及保存入口异常现在有脱敏 failed trace |
+| disabled | 原 DOM 与业务状态一致且 false；日志新增实际 DOM 值和 mismatch |
+| 渲染/Popover/传播 | 本组件没有 Popover/Portal；原复现是 iframe sandbox 限制；新增传播中断回归 |
 
-## 验证状态
+## 最小修复
 
-- 自动化模拟：`npm test` **1422/1422 PASS**。覆盖正常保存、Storage capability 缺失、权限拒绝、get/set pending、读回不匹配、历史刷新失败、UI 状态更新失败、并发重复提交、非 structured session、空历史、原生表单校验、脱敏及 fingerprint 不匹配。
-- `npm run build`：PASS。
-- `npm run package`：PASS；unsigned candidate；包内 manifest 与 build fingerprint 核对通过。
-- `npm audit --audit-level=high`：0 vulnerabilities。
-- `git diff --check`：PASS。
-- **真实 Windows Desktop 保存、历史读取及 DBX 重启恢复：NOT VERIFIED。** 不得据此标记修复成功或 READY TO MERGE。
+- **仍使用 `<form>` 和 `type="submit"`**，不改成普通按钮、不放宽 Host sandbox、不增加 `allow-forms`。
+- 按钮激活时先 `preventDefault()` 取消必定被禁止的导航路径，再调用原生 `form.reportValidity()`；合法时同步派发 `new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: button })`，仍由 form 的 `onsubmit` 进入同一个保存处理函数。这是应用派发的 DOM 事件，日志 `eventTrusted=false`，不冒充原生默认提交。
+- 保留浏览器原有 Enter 隐式激活和按钮 Enter/Space 键盘行为；没有全局 keydown/手工吞键，textarea Enter 仍换行。`requestSubmit()` 不是本沙箱的可行替代。
+- 空名称允许点击以获得 required 校验提示；表单错误既有原生反馈，也有本地化 `role=alert`。空白名称等仍由 `createPlanSnapshot` 的业务校验拒绝。
+- 原有 in-flight 防重复、保存中 disabled、失败保留名称/说明、写后只读核验全部保留；没有自动重试写入。
+- Snapshot Schema v1、`plan-detective.snapshot-store.v1` key、Storage 协议与历史无连接打开能力不变；`plan-snapshot-store.js`、`dbx-plugin-storage.js` 无修改。
 
-## Windows 人工验证（不超过 5 步）
+## Trace 状态与脱敏
 
-1. 在 DBX Desktop 插件管理页安装/更新以上 `.dbxp`；记录 DBX Desktop About 版本，并确认已安装包 SHA-256 与上面的候选包一致。若客户端拒绝同版本替换，先不要绕过版本/签名保护，反馈安装页的安全错误。
-2. 打开 PostgreSQL 查询结果并完成一次成功的 structured Estimated Plan；打开快照保存，输入名称/备注并确认保存。等待 UI 成功或 `UNKNOWN/PENDING` 提示；pending 时不要重复点击。
-3. 点击快照区域的 **复制诊断日志 / Copy diagnostic log**。若复制按钮报告无事件或复制失败，记录反馈，不打开开发者工具也不要手动导出 Storage 内容。
-4. 打开历史并手动刷新，确认新记录可读；关闭并重启 DBX Desktop，再打开历史确认该记录恢复。
-5. 将复制的脱敏 JSON、DBX About 版本、Installed 页面显示版本及候选包 SHA 一并回复到 PR #93/Issue #72；不要附 SQL、Raw Plan、连接信息或备注原文。
+- 点击 → `SNAPSHOT_UI_CLICK`（DOM form/disabled/关联状态）→ `SNAPSHOT_FORM_VALIDATION_RESULT` → `SNAPSHOT_FORM_SUBMIT_DISPATCH` → `SNAPSHOT_FORM_SUBMIT_CAPTURE` → `SNAPSHOT_FORM_SUBMIT` → 现有 gate/create/repository/get/set/verify/UI 事件。
+- `invalid` capture 记录 `invalidField`、`valueMissing`、`tooLong`、`customError`，终态 `blocked`；不记录字段值、原生错误消息或自定义校验文本。
+- click/capture 没有进入 handler 时，在本次事件任务结束后记录 `FORM_SUBMIT_NOT_OBSERVED` 并 `blocked`；同步异常为 `failed`。旧点击不会串到以后无关的 submit。
+- 历史初始化/刷新在真正的读操作结束后显式 `completed`；读取失败 `failed`；已过期的读取 `blocked`。不再出现初始化 END success 但顶层永久 pending。
+- 保存成功后的后台 refresh 使用**独立 history trace**：save 可以 completed，而真实未返回的后台 GET 保持 pending；不再把未完成的 Host 操作挂在已完成的 save trace 下。
+- click watchdog 在进入 submit 时撤销，**不会**给 Host get/set/read-back 加假超时，也不会把仍等待的操作标 completed。长时间写入仍显示 `UNKNOWN/PENDING` 并禁止重复写入。
+- 仍只保留会话内有界、白名单脱敏 JSON：最多 8 条 trace、每条 128 个事件、导出上限 48 KiB；不写日志到 Host Storage，不导出 SQL、Raw Plan、名称、说明、Storage key/value、连接信息或原始 Host/DOM 错误文本。
 
-只有真实 Windows 证据同时确认保存成功、历史可读和 DBX 重启后恢复，才可解除 BLOCKED。
+## 自动验证
+
+```bash
+npm ci --include=dev
+npx playwright install chromium # Linux 缺系统库时使用 --with-deps
+npm run test:dom
+npm test
+npm run build
+npm run package
+npm audit --audit-level=high
+git diff --check
+```
+
+`tests/ui/snapshot-dom.test.js` 构建并运行真实生产 App/Svelte bundle，不直接调用 `saveCurrent()`；使用 Chromium opaque `sandbox="allow-scripts"` iframe。仅公开 Host bridge 是测试替身，不是 DBX Desktop 验收。
+
+覆盖：原生沙箱断点与 requestSubmit 对照、真实点击进入 capture/handler、合法保存及历史增加、required/textarea invalid、Enter/Space、textarea 换行、双击仅一次写入、Host set pending/busy、失败保留输入、旧 v1 记录与其它 key 不变、无连接历史打开、历史 pending→completed、保存与后台刷新状态分离、submit 传播中断、form 归属错配、同步异常及业务校验不被绕过。
+
+本轮 Linux 验证：`npm test` **1442/1442 PASS**（其中 **17/17 真实 DOM 测试**，Chromium `153.0.8010.12` / Playwright `1.63.0`）；build、package、audit（0 vulnerabilities）、diff-check 全部 PASS。包内 UI 与本地生成 UI 逐字节一致，manifest/官方 artifact metadata/fingerprint 校验通过，无 backend/Node runtime。证据摘要与来源 commit 同时记录在开发包旁的验收报告。
+
+## 新开发包与 Windows 最短验收
+
+新 unsigned 开发包（仍为 `0.7.1`，**未发布版本**）：
+
+`dist/pr93-save-event-chain/io.github.0verme.plan-detective-0.7.1-universal.dbxp`
+
+- SHA-256：`bdc169e45e5d068d130afdb5bc696d13685ddbb263d8e617f82f53fbd2fcd3f1`
+- UI fingerprint：`sha256:5419fcb86e3c6236ea25fc3c5b60fab26ead9f5ed14aa7ffa9430c0d9c650c48`
+
+同目录的验收报告记录包 SHA-256、build fingerprint、来源 PR commit 与自动检查结果。manifest 保持 `host.plans:read`、`host.storage`；仅静态 UI，无 backend/Node runtime。
+
+**Windows DBX Desktop 实际保存：NOT VERIFIED。** 本 Agent 只有 Linux/headless Chromium，没有 Windows GUI 或用户设备操作通道。
+
+1. 在 Windows DBX Desktop 插件管理页安装/更新该开发包；记录 About 版本，核对包 SHA 与运行诊断 fingerprint。若同版本替换被拒绝，反馈错误，不绕过安全保护。
+2. 完成一次 structured Estimated Plan；打开保存，空名称确认应看到校验反馈；输入合法名称和说明，点击保存应成功且历史数 +1。再用 Enter 保存一次；快速双击只能增加一条。
+3. 打开历史确认新增记录和旧记录均可读；重启 DBX，在无连接状态再打开历史。复制脱敏诊断：保存应有 dispatch/capture/submit/create/set/verify/UI success，save 与已返回的 history 顶层应 completed。
+
+回传成功/失败结果、脱敏 JSON、DBX About 版本和包 SHA；不附 SQL/Raw Plan/连接信息/说明原文。实机证据返回前不声称 Windows 通过或 READY TO MERGE。本轮不新建 PR、不发布、不自动合并。

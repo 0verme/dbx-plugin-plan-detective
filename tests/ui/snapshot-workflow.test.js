@@ -75,7 +75,7 @@ test("opening history replays the saved RawPlanInput locally and never re-runs S
 });
 
 test("save form is opt-in, guarded, privacy-aware, and keeps typed values on failure", () => {
-  assert.match(manager, /\{#if showSaveForm\}[\s\S]*?<form class="snapshot-form" onsubmit=\{saveCurrent\}/);
+  assert.match(manager, /\{#if showSaveForm\}[\s\S]*?<form class="snapshot-form"[^>]*onsubmit=\{handleSaveSubmit\}/);
   assert.match(saveAction, /event\.preventDefault\(\)/);
   assert.match(saveAction, /state\.repository\.save\(snapshot,\s*\{\s*trace\s*\}\)/);
   assert.match(saveAction, /state\.currentSession\?\.status !== "structured"/);
@@ -83,7 +83,8 @@ test("save form is opt-in, guarded, privacy-aware, and keeps typed values on fai
   assert.match(manager, /snapshot\.save\.localWarning/);
   assert.match(manager, /maxlength="120"/);
   assert.match(manager, /maxlength="2000"/);
-  assert.match(manager, /disabled=\{!canMutate \|\| !canSave \|\| saving \|\| saveTitle\.trim\(\)\.length === 0\}/);
+  assert.match(manager, /const saveConfirmDisabled = \$derived\(!canMutate \|\| !canSave \|\| saving\)/);
+  assert.match(manager, /type="submit"[^>]*disabled=\{saveConfirmDisabled\}/);
   assert.match(manager, /setError: \(error\) => \{ saveError = error; \}/);
   assert.match(manager, /snapshot-save-error/);
   assert.match(saveAction, /if \(error\?\.code === "SNAPSHOT_WRITE_UNCONFIRMED"/);
@@ -93,7 +94,10 @@ test("save form is opt-in, guarded, privacy-aware, and keeps typed values on fai
   assert.match(manager, /snapshot\.diagnostic\.copy/);
   assert.match(manager, /buildSnapshotDiagnosticLog\(\)/);
   assert.match(manager, /onclick=\{handleSaveClick\}/);
-  assert.match(manager, /oninvalid=\{handleSaveInvalid\}/);
+  assert.match(manager, /oninvalidcapture=\{handleSaveInvalid\}/);
+  assert.match(manager, /onsubmitcapture=\{handleSaveSubmitCapture\}/);
+  assert.match(manager, /saveForm\.reportValidity\(\)/);
+  assert.match(manager, /new SubmitEvent\("submit", \{ bubbles: true, cancelable: true, submitter: button \}\)/);
   assert.match(manager, /SNAPSHOT_SAVE_BUTTON_STATE_CHANGE/);
   for (const step of [
     "SNAPSHOT_UI_CLICK",
@@ -153,6 +157,9 @@ test("all new snapshot entry and baseline copy is localized", () => {
       "snapshot.diagnostic.copied",
       "snapshot.diagnostic.empty",
       "snapshot.diagnostic.copyFailed",
+      "snapshot.error.FRONTEND_VALIDATION_REJECTED",
+      "snapshot.error.FORM_SUBMIT_NOT_OBSERVED",
+      "snapshot.error.FORM_ASSOCIATION_MISMATCH",
     ]) {
       assert.equal(typeof MESSAGE_CATALOG[locale][key], "string", `${locale} has ${key}`);
       assert.ok(MESSAGE_CATALOG[locale][key].length > 0, `${locale} has non-empty ${key}`);

@@ -13,6 +13,8 @@
     prepareSnapshotSaveTrace,
     recordSnapshotDiagnosticEvent,
     recordSnapshotFormValidationFailure,
+    recordSnapshotFormSubmitCapture,
+    finishSnapshotDiagnosticTrace,
     snapshotDiagnosticErrorFields,
     startSnapshotDiagnosticStage,
     finishSnapshotDiagnosticStage,
@@ -52,6 +54,8 @@
   let loadWaitTimer = null;
   let showHistory = $state(false);
   let showSaveForm = $state(false);
+  let saveForm = $state(null);
+  let saveSubmitCount = 0;
   let saveTitle = $state("");
   let saveNote = $state("");
   let renameId = $state(null);
@@ -62,6 +66,7 @@
 
   const canSave = $derived(currentSession?.status === "structured");
   const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving && !savingRename);
+  const saveConfirmDisabled = $derived(!canMutate || !canSave || saving);
   const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
   const historyCount = $derived(hasConfirmedHistory ? String(orderedSnapshots.length) : "—");
   const saveGateMessage = $derived.by(() => {
@@ -84,6 +89,7 @@
         storageAdvertised: currentStorageState?.advertised === true,
         reasonCode: currentStorageState?.reasonCode,
       });
+      finishSnapshotDiagnosticTrace(trace, "blocked");
       loadToken += 1;
       if (loadWaitTimer !== null) clearTimeout(loadWaitTimer);
       loadWaitTimer = null;
@@ -102,7 +108,7 @@
     const buttonState = {
       saveDisabled: !canSave || !canMutate,
       saveEntryDisabled: !canSave || !canMutate,
-      saveConfirmDisabled: !canMutate || !canSave || saving || !titlePresent,
+      saveConfirmDisabled,
       sessionStructured: canSave,
       storageAvailable: storageState?.available === true,
       loadState,
@@ -118,6 +124,7 @@
   async function refresh(target = repository, options = {}) {
     if (target === null) return null;
     const trace = options.trace ?? createSnapshotDiagnosticTrace({ kind: "history" });
+    let traceOutcome = "completed";
     const operation = options.operation ?? "manual";
     const initializationStage = operation === "initial"
       ? startSnapshotDiagnosticStage(trace, "SNAPSHOT_HISTORY_INITIALIZATION", {
@@ -149,6 +156,7 @@
         { operation, failedStage: "history.refresh" },
       );
       if (token !== loadToken) {
+        traceOutcome = "blocked";
         finishSnapshotDiagnosticStage(initializationStage, "blocked", { operation });
         return null;
       }
@@ -161,6 +169,7 @@
       loadState = "ready";
       return nextSnapshots;
     } catch (error) {
+      traceOutcome = "failed";
       finishSnapshotDiagnosticStage(initializationStage, "failed", {
         operation,
         ...snapshotDiagnosticErrorFields(error, "history.refresh"),
@@ -171,6 +180,9 @@
       recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_HISTORY_REFRESH_ERROR", "failed", snapshotDiagnosticErrorFields(error, "history.refresh"));
       return null;
     } finally {
+      // A shared save trace is owned by the save handler. Independent history
+      // traces settle only after the actual Host read has returned or failed.
+      if (options.trace == null) finishSnapshotDiagnosticTrace(trace, traceOutcome);
       if (loadWaitTimer === waitTimer) {
         clearTimeout(waitTimer);
         loadWaitTimer = null;
@@ -195,7 +207,7 @@
       recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_SAVE_BUTTON_STATE_CHANGE", "info", {
         saveDisabled: !canSave || !canMutate,
         saveEntryDisabled: !canSave || !canMutate,
-        saveConfirmDisabled: !canMutate || !canSave || value || saveTitle.trim().length === 0,
+        saveConfirmDisabled,
         saving: value,
         sessionStructured: currentSession?.status === "structured",
         storageAvailable: storageState?.available === true,
@@ -271,21 +283,77 @@
     refresh,
   });
 
-  function handleSaveClick() {
-    prepareSnapshotSaveTrace({
+  function saveFormDiagnosticFields(event) {
+    const button = event?.currentTarget?.type === "submit" ? event.currentTarget : event?.submitter;
+    return {
       storageAvailable: storageState?.available === true,
       sessionStructured: currentSession?.status === "structured",
       loadState,
       titlePresent: saveTitle.trim().length > 0,
-    });
+      domTitlePresent: (saveForm?.querySelector("input")?.value.trim().length ?? 0) > 0,
+      formAssociated: button == null ? undefined : button.form === saveForm,
+      formConnected: saveForm?.isConnected === true,
+      formNoValidate: saveForm?.noValidate === true,
+      submitterDisabled: button == null ? undefined : button.disabled === true,
+      disabledStateMismatch: button == null ? undefined : button.disabled !== saveConfirmDisabled,
+      framed: window.parent !== window,
+      eventTrusted: event?.isTrusted === true,
+      eventDefaultPrevented: event?.defaultPrevented === true,
+      eventCancelBubble: event?.cancelBubble === true,
+    };
   }
 
-  function handleSaveInvalid() {
+  function handleSaveClick(event) {
+    const trace = prepareSnapshotSaveTrace(saveFormDiagnosticFields(event));
+    // DBX renders plugins in sandbox="allow-scripts" (no allow-forms).
+    // Default submission AND requestSubmit() stop before validation/submit.
+    // Keep the submit button's implicit Enter/Space activation, explicitly run
+    // native validation, then dispatch a cancelable submit event without any
+    // navigation, sandbox relaxation, or bypass of createPlanSnapshot's guards.
+    event.preventDefault();
+    try {
+      clearSaveFeedback();
+      const button = event.currentTarget;
+      if (button.form !== saveForm || !saveForm?.isConnected) {
+        throw new PlanSnapshotStoreError("FORM_ASSOCIATION_MISMATCH", "The save form is not connected to its submit button.");
+      }
+      if (button.disabled || saveConfirmDisabled) {
+        finishSnapshotDiagnosticTrace(trace, "blocked");
+        return;
+      }
+      const formValid = saveForm.reportValidity();
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_VALIDATION_RESULT", formValid ? "success" : "blocked", { formValid });
+      if (!formValid) return;
+      const previousCount = saveSubmitCount;
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT_DISPATCH", "info", saveFormDiagnosticFields(event));
+      saveForm.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: button }));
+      if (saveSubmitCount === previousCount) {
+        throw new PlanSnapshotStoreError("FORM_SUBMIT_NOT_OBSERVED", "The submit event did not reach the save handler.");
+      }
+    } catch (error) {
+      saveError = error;
+      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_EVENT_ERROR", "failed", snapshotDiagnosticErrorFields(error, "form.submit"));
+      finishSnapshotDiagnosticTrace(trace, "failed");
+    }
+  }
+
+  function handleSaveSubmitCapture(event) {
+    recordSnapshotFormSubmitCapture(saveFormDiagnosticFields(event));
+  }
+
+  function handleSaveSubmit(event) {
+    saveSubmitCount += 1;
+    return saveCurrent(event);
+  }
+
+  function handleSaveInvalid(event) {
+    saveError = { code: "FRONTEND_VALIDATION_REJECTED" };
     recordSnapshotFormValidationFailure({
-      storageAvailable: storageState?.available === true,
-      sessionStructured: currentSession?.status === "structured",
-      loadState,
-      titlePresent: saveTitle.trim().length > 0,
+      ...saveFormDiagnosticFields(event),
+      invalidField: event.target.tagName === "TEXTAREA" ? "note" : "title",
+      valueMissing: event.target.validity?.valueMissing === true,
+      tooLong: event.target.validity?.tooLong === true,
+      customError: event.target.validity?.customError === true,
     });
   }
 
@@ -442,7 +510,7 @@
 
   {#if showSaveForm}
     <section class="snapshot-panel snapshot-save-panel" aria-labelledby="snapshot-save-title" aria-busy={saving}>
-      <form class="snapshot-form" onsubmit={saveCurrent}>
+      <form class="snapshot-form" bind:this={saveForm} onsubmitcapture={handleSaveSubmitCapture} onsubmit={handleSaveSubmit} oninvalidcapture={handleSaveInvalid}>
         <h2 id="snapshot-save-title">{t("snapshot.save.confirm")}</h2>
         <p class="snapshot-privacy-note">{t("snapshot.save.localWarning")}</p>
         {#if saveGateMessage !== null}
@@ -453,14 +521,14 @@
         {/if}
         <label>
           <span>{t("snapshot.field.title")}</span>
-          <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} oninvalid={handleSaveInvalid} />
+          <input bind:value={saveTitle} maxlength="120" required autocomplete="off" disabled={saving} />
         </label>
         <label>
           <span>{t("snapshot.field.note")}</span>
           <textarea bind:value={saveNote} maxlength="2000" rows="2" disabled={saving}></textarea>
         </label>
         <div class="snapshot-actions">
-          <button type="submit" class="snapshot-primary" onclick={handleSaveClick} disabled={!canMutate || !canSave || saving || saveTitle.trim().length === 0}>
+          <button type="submit" class="snapshot-primary" onclick={handleSaveClick} disabled={saveConfirmDisabled}>
             {saving ? t("snapshot.save.saving") : t("snapshot.save.confirm")}
           </button>
           <button type="button" class="snapshot-secondary" disabled={saving} onclick={() => (showSaveForm = false)}>{t("snapshot.cancel")}</button>

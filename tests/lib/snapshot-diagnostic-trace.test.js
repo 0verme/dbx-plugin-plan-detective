@@ -3,6 +3,7 @@ import test from "node:test";
 import { createPlanSnapshotRepository } from "../../src/lib/plan-snapshot-store.js";
 import { createSnapshotSaveHandler } from "../../src/lib/snapshot-save-action.js";
 import {
+  beginSnapshotSaveTrace,
   buildSnapshotDiagnosticLog,
   createSnapshotDiagnosticTrace,
   detectDbxVersion,
@@ -10,6 +11,7 @@ import {
   prepareSnapshotSaveTrace,
   recordSnapshotDiagnosticEvent,
   recordSnapshotFormValidationFailure,
+  recordSnapshotFormSubmitCapture,
   setSnapshotDiagnosticEnvironment,
   startSnapshotDiagnosticStage,
   withSnapshotDiagnosticStage,
@@ -71,14 +73,20 @@ function createHarness(overrides = {}) {
     setError: (error) => errors.push(error),
     onSuccess: (snapshot) => successes.push(snapshot),
     refresh: (repository, options = {}) => {
-      const refreshPromise = withSnapshotDiagnosticStage(
-        options.trace,
+      const trace = options.trace ?? createSnapshotDiagnosticTrace({ kind: "history" });
+      pendingRefresh = withSnapshotDiagnosticStage(
+        trace,
         "SNAPSHOT_HISTORY_REFRESH",
-        () => repository.list({ trace: options.trace, readRole: "history" }),
+        () => repository.list({ trace, readRole: "history" }),
         { operation: options.operation ?? "post-save", failedStage: "history.refresh" },
-      );
-      pendingRefresh = refreshPromise;
-      return refreshPromise;
+      ).then((items) => {
+        if (!options.trace) finishSnapshotDiagnosticTrace(trace, "completed");
+        return items;
+      }, (error) => {
+        if (!options.trace) finishSnapshotDiagnosticTrace(trace, "failed");
+        throw error;
+      });
+      return pendingRefresh;
     },
   });
   return {
@@ -142,6 +150,9 @@ test("confirmed save records a complete redacted end-to-end trace with a unique 
   const trace = latestTrace();
   assert.equal(trace.status, "completed");
   assert.match(trace.traceId, /^snapshot-/);
+  const historyTrace = readLog().recentTraces.findLast((entry) => entry.kind === "history");
+  assert.equal(historyTrace.status, "completed");
+  const events = [...trace.events, ...historyTrace.events];
   for (const step of [
     "SNAPSHOT_UI_CLICK",
     "SNAPSHOT_FORM_SUBMIT",
@@ -163,7 +174,7 @@ test("confirmed save records a complete redacted end-to-end trace with a unique 
     "SNAPSHOT_UI_SUCCESS",
     "SNAPSHOT_HISTORY_REFRESH_START",
     "SNAPSHOT_HISTORY_REFRESH_END",
-  ]) assert.ok(trace.events.some((event) => event.step === step), `missing ${step}`);
+  ]) assert.ok(events.some((event) => event.step === step), `missing ${step}`);
   const completed = trace.events.find((event) => event.step === "SNAPSHOT_STORAGE_SET_END");
   assert.equal(completed.status, "success");
   assert.equal(typeof completed.durationMs, "number");
@@ -247,35 +258,20 @@ test("write/read-back mismatch is reported as unconfirmed without a second set",
   assert.equal(getSetCalls(), 1);
 });
 
-test("a history refresh failure is traceable after save success without changing save success", async () => {
-  let refreshPromise;
+test("a history refresh failure has its own failed trace without changing confirmed save success", async () => {
   const repository = { async save() {}, async list() { throw new Error("history read SECRET"); } };
   const harness = createHarness({ repository });
-  const handler = createSnapshotSaveHandler({
-    getState: () => harness.state,
-    setSaving: () => {},
-    clearFeedback() {},
-    setDuplicateMessage() {},
-    setError: (error) => harness.errors.push(error),
-    onSuccess: (snapshot) => harness.successes.push(snapshot),
-    refresh: (target, options) => {
-      refreshPromise = withSnapshotDiagnosticStage(
-        options.trace,
-        "SNAPSHOT_HISTORY_REFRESH",
-        () => target.list({ trace: options.trace }),
-        { operation: "post-save", failedStage: "history.refresh" },
-      );
-      return refreshPromise;
-    },
-  });
-  assert.equal((await handler(harness.event())).status, "saved");
-  await refreshPromise.catch(() => {});
-  const trace = latestTrace();
-  assert.ok(trace.events.some((event) => event.step === "SNAPSHOT_UI_SUCCESS"));
-  const refreshEnd = trace.events.find((event) => event.step === "SNAPSHOT_HISTORY_REFRESH_END");
+  assert.equal((await harness.handler(harness.event())).status, "saved");
+  await harness.pendingRefresh.catch(() => {});
+  const report = readLog();
+  assert.equal(report.latestSaveTrace.status, "completed");
+  assert.ok(report.latestSaveTrace.events.some((event) => event.step === "SNAPSHOT_UI_SUCCESS"));
+  const historyTrace = report.recentTraces.findLast((entry) => entry.kind === "history");
+  assert.equal(historyTrace.status, "failed");
+  const refreshEnd = historyTrace.events.find((event) => event.step === "SNAPSHOT_HISTORY_REFRESH_END");
   assert.equal(refreshEnd.status, "failed");
   assert.equal(refreshEnd.failedStage, "history.refresh");
-  assert.equal(JSON.stringify(readLog()).includes("SECRET"), false);
+  assert.equal(JSON.stringify(report).includes("SECRET"), false);
 });
 
 test("UI success-state failure is distinguished from a confirmed persisted write", async () => {
@@ -348,6 +344,47 @@ test("native front-end validation is distinguishable from a missing submit event
   assert.ok(trace.events.some((event) => event.step === "SNAPSHOT_UI_CLICK"));
   assert.equal(trace.events.some((event) => event.step === "SNAPSHOT_FORM_SUBMIT"), false);
   assert.equal(trace.events.at(-1).errorCode, "FRONTEND_VALIDATION_REJECTED");
+  assert.equal(trace.status, "blocked");
+});
+
+test("a click without submit is bounded and cannot be consumed by a later unrelated submit", async () => {
+  const clicked = prepareSnapshotSaveTrace({ titlePresent: true });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(clicked.status, "blocked");
+  assert.ok(clicked.finishedAt);
+  assert.equal(clicked.events.at(-1).errorCode, "FORM_SUBMIT_NOT_OBSERVED");
+  const submitted = beginSnapshotSaveTrace();
+  assert.notEqual(submitted.traceId, clicked.traceId);
+  finishSnapshotDiagnosticTrace(submitted);
+});
+
+test("capture without handler also settles, while a consumed submit waiting for Host stays pending", async () => {
+  const captured = recordSnapshotFormSubmitCapture({ eventTrusted: true, formConnected: true });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(captured.status, "blocked");
+  assert.ok(captured.events.some((event) => event.step === "SNAPSHOT_FORM_SUBMIT_CAPTURE"));
+  prepareSnapshotSaveTrace();
+  const submitted = beginSnapshotSaveTrace();
+  startSnapshotDiagnosticStage(submitted, "SNAPSHOT_HOST_STORAGE_GET");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(submitted.status, "pending");
+  assert.equal(submitted.finishedAt, undefined);
+});
+
+test("synchronous submit-entry exceptions are traced before application state can throw", async () => {
+  const errors = [];
+  const handler = createSnapshotSaveHandler({
+    getState() { throw new Error("SENSITIVE_ENTRY_ERROR"); },
+    setSaving() {}, clearFeedback() {}, setDuplicateMessage() {},
+    setError(error) { errors.push(error); }, onSuccess() {}, refresh() {},
+  });
+  assert.equal((await handler({ preventDefault() {} })).status, "failed");
+  const trace = latestTrace();
+  assert.equal(trace.status, "failed");
+  assert.ok(trace.events.some((event) => event.step === "SNAPSHOT_FORM_SUBMIT"));
+  assert.equal(trace.events.at(-1).failedStage, "form.submit");
+  assert.equal(errors.length, 1);
+  assert.equal(JSON.stringify(readLog()).includes("SENSITIVE_ENTRY_ERROR"), false);
 });
 
 test("trace and export buffers stay bounded over a long plugin session", () => {
