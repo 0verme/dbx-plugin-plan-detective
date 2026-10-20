@@ -4,7 +4,7 @@ import test from "node:test";
 import { MESSAGE_CATALOG } from "../../src/lib/i18n/messages.js";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-const [app, manager, replay, saveAction, diagnostics, snapshotStore, storageAdapter, manifest] = await Promise.all([
+const [app, manager, replay, saveAction, diagnostics, snapshotStore, storageAdapter, manifest, sandboxSubmit] = await Promise.all([
   read("src/App.svelte"),
   read("src/components/SnapshotManager.svelte"),
   read("src/lib/plan-snapshot-view.js"),
@@ -13,6 +13,7 @@ const [app, manager, replay, saveAction, diagnostics, snapshotStore, storageAdap
   read("src/lib/plan-snapshot-store.js"),
   read("src/host/dbx-plugin-storage.js"),
   read("manifest.json"),
+  read("src/lib/sandbox-form-submit.js"),
 ]);
 
 test("snapshot tools are a compact host-page toolbar before connection and SQL gates", () => {
@@ -48,7 +49,7 @@ test("history records render compact metadata and all requested management actio
   assert.match(manager, /\{snapshot\.rawInput\.database\}/);
   assert.match(manager, /\{snapshot\.note \|\| t\("snapshot\.noNote"\)\}/);
   assert.match(manager, /repository\.get\(snapshotId\)/);
-  assert.match(manager, /repository\.rename\(snapshotId, renameTitle\.trim\(\), renameNote\)/);
+  assert.match(manager, /repository\.rename\(snapshotId, title, renameNote, \{ trace \}\)/);
   assert.match(manager, /repository\.delete\(snapshotId\)/);
   assert.match(manager, /onSelectBaseline\(baselineSnapshotId === snapshotId \? null : snapshotId\)/);
   assert.match(manager, /snapshot\.empty/);
@@ -96,8 +97,9 @@ test("save form is opt-in, guarded, privacy-aware, and keeps typed values on fai
   assert.match(manager, /onclick=\{handleSaveClick\}/);
   assert.match(manager, /oninvalidcapture=\{handleSaveInvalid\}/);
   assert.match(manager, /onsubmitcapture=\{handleSaveSubmitCapture\}/);
-  assert.match(manager, /saveForm\.reportValidity\(\)/);
-  assert.match(manager, /new SubmitEvent\("submit", \{ bubbles: true, cancelable: true, submitter: button \}\)/);
+  assert.match(sandboxSubmit, /form\.reportValidity\(\) === true/);
+  assert.match(sandboxSubmit, /new SubmitEvent\("submit", \{ bubbles: true, cancelable: true, submitter \}\)/);
+  assert.match(sandboxSubmit, /event\?\.preventDefault\?\.\(\)/);
   assert.match(manager, /SNAPSHOT_SAVE_BUTTON_STATE_CHANGE/);
   for (const step of [
     "SNAPSHOT_UI_CLICK",
@@ -119,6 +121,41 @@ test("save form is opt-in, guarded, privacy-aware, and keeps typed values on fai
   assert.ok(successCallback, "confirmed save success callback exists");
   assert.match(successCallback, /saveTitle = ""/);
   assert.match(successCallback, /saveNote = ""/);
+});
+
+test("rename reuses the same sandbox-safe submit path as save instead of a native form submit", () => {
+  // The pre-fix markup submitted natively; that path is blocked in DBX.
+  assert.doesNotMatch(manager, /onsubmit=\{\(event\) => saveRename\(event, snapshot\.snapshotId\)\}/);
+  assert.doesNotMatch(manager, /requestSubmit\(|\.submit\(\)/);
+  assert.match(manager, /bind:this=\{renameForm\}/);
+  assert.match(manager, /onsubmit=\{\(event\) => handleRenameSubmit\(event, snapshot\.snapshotId\)\}/);
+  assert.match(manager, /oninvalidcapture=\{handleRenameInvalid\}/);
+  assert.match(manager, /type="submit" class="snapshot-primary" onclick=\{handleRenameClick\} disabled=\{renameConfirmDisabled\}/);
+  assert.match(manager, /const renameConfirmDisabled = \$derived\(!canMutate \|\| savingRename\)/);
+  assert.match(manager, /submitSandboxedForm\(\{/);
+  assert.match(manager, /readSubmitCount: \(\) => renameSubmitCount/);
+  assert.match(manager, /const blockedError = renameInFlight/);
+  assert.match(manager, /if \(saving \|\| savingRename \|\| renameInFlight\)/);
+  assert.match(manager, /rejectRename\(trace, "DUPLICATE_SUBMISSION", "rename\.validate"\)/);
+  assert.match(manager, /title\.length === 0 \? \{ code: "INVALID_SNAPSHOT_METADATA" \} : null/);
+  assert.match(manager, /repository\.rename\(snapshotId, title, renameNote, \{ trace \}\)/);
+  assert.match(manager, /startSnapshotDiagnosticStage\(trace, "RENAME_REPOSITORY"\)/);
+  assert.match(manager, /maxlength="120" required autocomplete="off" disabled=\{savingRename\}/);
+  for (const step of ["RENAME_CLICK", "RENAME_VALIDATE", "RENAME_REPOSITORY", "RENAME_STORAGE_SET", "RENAME_STORAGE_VERIFY", "RENAME_SUCCESS", "RENAME_ERROR"]) {
+    assert.ok(manager.includes(step) || diagnostics.includes(step), `rename diagnostics include ${step}`);
+  }
+  assert.match(diagnostics, /kind === "rename" \? "rename"/);
+  // Only a confirmed Host Storage write may update the list, and the typed
+  // values survive a failure because renameId is reset on success only.
+  const renameHandler = manager.match(/async function saveRename\(snapshotId\) \{[\s\S]*?\n  \}\n/)?.[0];
+  assert.ok(renameHandler, "rename handler exists");
+  assert.match(renameHandler, /renameError = error/);
+  assert.match(renameHandler, /snapshots = snapshots\.map/);
+  assert.match(renameHandler, /onUpdateSnapshot\(updated\)/);
+  assert.ok(renameHandler.indexOf("renameId = null") > renameHandler.indexOf("repository.rename"), "the form closes only after the confirmed rename");
+  assert.match(manager, /snapshot-rename-error/);
+  assert.match(manager, /aria-busy=\{savingRename\}/);
+  assert.match(snapshotStore, /rename: \(snapshotId, title, note, options = \{\}\)/);
 });
 
 test("save and history failures are shown in their own action regions with storage diagnostics", () => {
@@ -160,6 +197,12 @@ test("all new snapshot entry and baseline copy is localized", () => {
       "snapshot.error.FRONTEND_VALIDATION_REJECTED",
       "snapshot.error.FORM_SUBMIT_NOT_OBSERVED",
       "snapshot.error.FORM_ASSOCIATION_MISMATCH",
+      "snapshot.error.SUBMITTER_DISABLED",
+      "snapshot.error.DUPLICATE_SUBMISSION",
+      "snapshot.error.INVALID_SNAPSHOT_METADATA",
+      "snapshot.rename.open",
+      "snapshot.rename.save",
+      "snapshot.rename.saving",
     ]) {
       assert.equal(typeof MESSAGE_CATALOG[locale][key], "string", `${locale} has ${key}`);
       assert.ok(MESSAGE_CATALOG[locale][key].length > 0, `${locale} has non-empty ${key}`);
@@ -173,6 +216,10 @@ test("all new snapshot entry and baseline copy is localized", () => {
   assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.save.pendingDiagnostic"], /UNKNOWN\/PENDING/);
   assert.match(MESSAGE_CATALOG.en["snapshot.save.pendingDiagnostic"], /UNKNOWN\/PENDING/);
   assert.match(MESSAGE_CATALOG.en["snapshot.manager.concurrentWarning"], /multiple plugin windows/);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.rename.save"], /保存修改/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.rename.save"], /save changes/i);
+  assert.match(MESSAGE_CATALOG["zh-CN"]["snapshot.error.INVALID_SNAPSHOT_METADATA"], /名称/);
+  assert.match(MESSAGE_CATALOG.en["snapshot.error.INVALID_SNAPSHOT_METADATA"], /name/i);
   assert.match(manifest, /不连接数据库直接浏览历史快照/);
   assert.match(manifest, /browse saved snapshot history without an active connection/);
   assert.match(manager, /@media \(max-width: 620px\)/);

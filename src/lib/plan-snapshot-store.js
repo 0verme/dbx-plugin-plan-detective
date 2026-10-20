@@ -47,7 +47,7 @@ export function createPlanSnapshotRepository(bridge) {
       return (await loadStore(bridge)).snapshots.find((entry) => entry.snapshotId === snapshotId) ?? null;
     }),
     save: (snapshot, options = {}) => serializeForBridge(bridge, () => saveSnapshot(bridge, snapshot, options.trace)),
-    rename: (snapshotId, title, note) => serializeForBridge(bridge, () => renameSnapshot(bridge, snapshotId, title, note)),
+    rename: (snapshotId, title, note, options = {}) => serializeForBridge(bridge, () => renameSnapshot(bridge, snapshotId, title, note, options.trace)),
     delete: (snapshotId) => serializeForBridge(bridge, () => deleteSnapshot(bridge, snapshotId)),
     clear: () => serializeForBridge(bridge, () => clearSnapshots(bridge)),
   });
@@ -64,7 +64,7 @@ async function saveSnapshot(bridge, candidate, trace) {
   }, trace);
 }
 
-async function renameSnapshot(bridge, snapshotId, title, note) {
+async function renameSnapshot(bridge, snapshotId, title, note, trace) {
   requireSnapshotId(snapshotId);
   return mutateStore(bridge, (snapshots) => {
     const index = snapshots.findIndex((entry) => entry.snapshotId === snapshotId);
@@ -78,7 +78,7 @@ async function renameSnapshot(bridge, snapshotId, title, note) {
     const next = [...snapshots];
     next[index] = renamed;
     return { snapshots: next, result: renamed };
-  });
+  }, trace);
 }
 
 async function deleteSnapshot(bridge, snapshotId) {

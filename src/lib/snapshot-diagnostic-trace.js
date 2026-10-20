@@ -32,9 +32,12 @@ const SAFE_ERROR_CODES = new Set([
   "FORM_ASSOCIATION_MISMATCH",
   "DUPLICATE_SUBMISSION",
   "UNKNOWN_ERROR",
+  "SUBMITTER_DISABLED",
 ]);
 const SAFE_FAILED_STAGES = new Set([
   "save.gate",
+  "rename.validate",
+  "rename.repository",
   "form.submit",
   "snapshot.create",
   "repository.save",
@@ -48,6 +51,19 @@ const SAFE_FAILED_STAGES = new Set([
   "host.initialize",
 ]);
 const SAFE_LOAD_STATES = new Set(["unavailable", "initializing", "available", "loading", "ready", "error"]);
+/**
+ * Host Storage mutations are shared by every snapshot operation, so the
+ * repository emits one stable set of stage names. A rename trace reports the
+ * same storage work under its own operation namespace instead of implying the
+ * save flow ran; nothing about the underlying write changes.
+ */
+const STAGE_ALIASES = Object.freeze({
+  rename: Object.freeze({
+    SNAPSHOT_STORAGE_SET: "RENAME_STORAGE_SET",
+    SNAPSHOT_STORAGE_VERIFY: "RENAME_STORAGE_VERIFY",
+    SNAPSHOT_STORAGE_VERIFY_RESULT: "RENAME_STORAGE_VERIFY_RESULT",
+  }),
+});
 const SAFE_PERMISSION_STATES = new Set(["not-verified", "usable", "denied"]);
 
 let traceCounter = 0;
@@ -92,7 +108,7 @@ export function setSnapshotDiagnosticEnvironment(environment = {}) {
   };
 }
 
-/** A low-overhead, unique trace for each save attempt. */
+/** A low-overhead, unique trace for each save or rename attempt. */
 export function createSnapshotDiagnosticTrace({ kind = "save" } = {}) {
   const trace = makeTrace(kind);
   retainedTraces.push(trace);
@@ -177,7 +193,7 @@ export function recordSnapshotDiagnosticEvent(trace, step, status = "info", fiel
   const safe = sanitizeFields(fields);
   const event = {
     traceId: trace.traceId,
-    step: safeStep(step),
+    step: resolveStep(trace, step),
     status: safeStatus(status),
     started: now,
     finished: now,
@@ -220,7 +236,7 @@ export function startSnapshotDiagnosticStage(trace, phase, fields = {}) {
   const { errorCode: _errorCode, failedStage: _failedStage, sanitizedMessage: _sanitizedMessage, ...startFields } = fields;
   const event = {
     traceId: trace.traceId,
-    step: `${safeStep(phase)}_START`,
+    step: `${resolveStep(trace, phase)}_START`,
     status: "pending",
     started,
     finished: null,
@@ -229,7 +245,7 @@ export function startSnapshotDiagnosticStage(trace, phase, fields = {}) {
     ...sanitizeFields(startFields),
   };
   appendEvent(trace, event);
-  return { trace, phase: safeStep(phase), startedAt, started, fields };
+  return { trace, phase: resolveStep(trace, phase), startedAt, started, fields };
 }
 
 export function finishSnapshotDiagnosticStage(stage, status = "success", fields = {}) {
@@ -269,7 +285,10 @@ export function buildSnapshotDiagnosticLog() {
 
   const saveTraces = retainedTraces.filter((trace) => trace.kind === "save");
   const latestSaveTrace = saveTraces.at(-1) ?? null;
-  const otherTraces = retainedTraces.filter((trace) => trace !== latestSaveTrace).slice(-2);
+  const latestRenameTrace = retainedTraces.filter((trace) => trace.kind === "rename").at(-1) ?? null;
+  const otherTraces = retainedTraces
+    .filter((trace) => trace !== latestSaveTrace && trace !== latestRenameTrace)
+    .slice(-2);
   const report = {
     format: "dbx-plan-detective-snapshot-diagnostics/v1",
     exportedAt: new Date().toISOString(),
@@ -282,6 +301,8 @@ export function buildSnapshotDiagnosticLog() {
     },
     latestSaveTraceId: latestSaveTrace?.traceId ?? null,
     latestSaveTrace: latestSaveTrace ? serializeTrace(latestSaveTrace) : null,
+    latestRenameTraceId: latestRenameTrace?.traceId ?? null,
+    latestRenameTrace: latestRenameTrace ? serializeTrace(latestRenameTrace) : null,
     recentTraces: otherTraces.map(serializeTrace),
     sessionEvents: sessionTrace.events.slice(-MAX_SESSION_EVENTS),
   };
@@ -301,6 +322,8 @@ export function buildSnapshotDiagnosticLog() {
     environment: report.environment,
     latestSaveTraceId: report.latestSaveTraceId,
     latestSaveTrace: report.latestSaveTrace,
+    latestRenameTraceId: report.latestRenameTraceId,
+    latestRenameTrace: report.latestRenameTrace,
     recentTraces: [],
     sessionEvents: [],
     truncated: true,
@@ -339,7 +362,7 @@ function makeTrace(kind) {
   const random = globalThis.crypto?.randomUUID?.().replaceAll("-", "") ?? `${Date.now().toString(36)}${traceCounter.toString(36)}`;
   return {
     traceId: `snapshot-${random}`,
-    kind: kind === "history" ? "history" : kind === "save" ? "save" : "session",
+    kind: kind === "history" ? "history" : kind === "save" ? "save" : kind === "rename" ? "rename" : "session",
     startedAt: new Date().toISOString(),
     monotonicStartedAt: monotonicNow(),
     status: "pending",
@@ -373,6 +396,11 @@ function monotonicNow() {
 
 function safeStep(step) {
   return /^[A-Z0-9_]{1,80}$/.test(step) ? step : "SNAPSHOT_DIAGNOSTIC_EVENT";
+}
+
+function resolveStep(trace, step) {
+  const alias = STAGE_ALIASES[trace?.kind]?.[step];
+  return safeStep(alias ?? step);
 }
 
 function safeStatus(status) {
@@ -437,7 +465,8 @@ function diagnosticMessage(errorCode, failedStage) {
     FRONTEND_VALIDATION_REJECTED: "Browser form validation prevented submission.",
     FORM_SUBMIT_NOT_OBSERVED: "The click or capture event did not reach the submit handler; no write started.",
     FORM_ASSOCIATION_MISMATCH: "The save button was not associated with the expected connected form.",
-    DUPLICATE_SUBMISSION: "A save was already in progress; this submission did not write.",
+    DUPLICATE_SUBMISSION: "A snapshot operation was already in progress; this submission did not write.",
+    SUBMITTER_DISABLED: "The submit button was disabled when the activation arrived; nothing was written.",
     UNKNOWN_ERROR: "An unexpected error occurred; raw error text was omitted.",
   };
   return messages[errorCode] ?? `The operation failed at ${failedStage}; raw error text was omitted.`;

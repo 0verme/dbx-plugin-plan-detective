@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createPlanSnapshot } from "../../src/lib/plan-snapshot.js";
 import { createPlanSnapshotRepository } from "../../src/lib/plan-snapshot-store.js";
 import { createSnapshotSaveHandler } from "../../src/lib/snapshot-save-action.js";
 import {
@@ -402,4 +403,132 @@ test("DBX version extraction is conservative and reports unknown when unavailabl
   assert.equal(detectDbxVersion({}, { userAgent: "DBX Desktop/1.4.2 Windows" }), "1.4.2");
   assert.equal(detectDbxVersion({}, { userAgent: "generic desktop" }), "unknown");
   assert.equal(detectDbxVersion({ version: "9.9.9" }, { userAgent: "" }), "unknown", "generic version fields are not mislabeled as DBX version");
+});
+
+test("rename reports its own stage namespace and exports separately from the latest save", async () => {
+  const RENAME_TITLE = "DO_NOT_EXPORT_RENAMED_TITLE";
+  const RENAME_NOTE = "DO_NOT_EXPORT_RENAMED_NOTE";
+  const { bridge, readDocument } = createBridge();
+  const repository = createPlanSnapshotRepository(bridge);
+  const seeded = createPlanSnapshot({
+    session: {
+      status: "structured",
+      capturedAt: "2026-10-19T10:20:00.000Z",
+      source: { databaseName: "analytics", schema: "public" },
+      rawInput: SESSION.rawInput,
+      analysis: { status: "structured" },
+      hostResult: { truncated: false },
+    },
+    title: "Original title",
+    note: NOTE_SENTINEL,
+    producerVersion: "0.7.1",
+    snapshotId: "rename-record",
+    now: new Date("2026-10-20T00:00:00.000Z"),
+  });
+  await repository.save(seeded);
+
+  const saveTrace = createSnapshotDiagnosticTrace({ kind: "save" });
+  recordSnapshotDiagnosticEvent(saveTrace, "SNAPSHOT_UI_CLICK", "info");
+  finishSnapshotDiagnosticTrace(saveTrace, "completed");
+
+  const trace = createSnapshotDiagnosticTrace({ kind: "rename" });
+  recordSnapshotDiagnosticEvent(trace, "RENAME_CLICK", "info", {
+    storageAvailable: true, loadState: "ready", titlePresent: true, framed: true,
+  });
+  recordSnapshotDiagnosticEvent(trace, "RENAME_VALIDATE", "success");
+  const renamed = await withSnapshotDiagnosticStage(
+    trace,
+    "RENAME_REPOSITORY",
+    () => repository.rename("rename-record", RENAME_TITLE, RENAME_NOTE, { trace }),
+    { failedStage: "rename.repository" },
+  );
+  recordSnapshotDiagnosticEvent(trace, "RENAME_SUCCESS", "success", { snapshotId: renamed.snapshotId });
+  finishSnapshotDiagnosticTrace(trace, "completed");
+
+  assert.equal(renamed.title, RENAME_TITLE);
+  assert.equal(renamed.note, RENAME_NOTE);
+  const document = readDocument();
+  assert.equal(document.storageSchemaVersion, 1, "Snapshot Schema v1 is unchanged by rename");
+  assert.equal(document.revision, 2);
+  assert.equal(document.snapshots.length, 1);
+  assert.deepEqual(document.snapshots[0].rawInput, seeded.rawInput, "the stored plan payload is untouched");
+
+  const steps = trace.events.map((event) => event.step);
+  for (const step of [
+    "RENAME_CLICK",
+    "RENAME_VALIDATE",
+    "RENAME_REPOSITORY_START",
+    "RENAME_STORAGE_SET_START",
+    "RENAME_STORAGE_SET_END",
+    "RENAME_STORAGE_VERIFY_START",
+    "RENAME_STORAGE_VERIFY_END",
+    "RENAME_STORAGE_VERIFY_RESULT",
+    "RENAME_REPOSITORY_END",
+    "RENAME_SUCCESS",
+  ]) {
+    assert.ok(steps.includes(step), `rename trace reports ${step}`);
+  }
+  assert.equal(
+    steps.some((step) => step.startsWith("SNAPSHOT_STORAGE_")),
+    false,
+    "a rename must not reuse the save flow's storage stage names",
+  );
+  assert.ok(
+    trace.events.filter((event) => !event.step.endsWith("_START")).every((event) => typeof event.durationMs === "number"),
+    "every completed event carries a duration",
+  );
+  assert.equal(eventByStep(trace, "RENAME_REPOSITORY_END").status, "success");
+
+  const report = readLog();
+  assert.equal(report.latestRenameTraceId, trace.traceId);
+  assert.equal(report.latestRenameTrace.status, "completed");
+  assert.equal(report.latestSaveTrace.traceId, saveTrace.traceId, "the save trace is still reported separately");
+  assert.equal(report.recentTraces.some((entry) => entry.traceId === trace.traceId), false, "the rename trace is not duplicated");
+  const serialized = JSON.stringify(report);
+  for (const secret of [RENAME_TITLE, RENAME_NOTE, NOTE_SENTINEL, SQL_SENTINEL, PLAN_SENTINEL]) {
+    assert.equal(serialized.includes(secret), false, `the export omits ${secret}`);
+  }
+});
+
+test("a failed rename records the host error code instead of the raw message", async () => {
+  const RENAME_TITLE = "DO_NOT_EXPORT_RENAMED_TITLE";
+  const seedBridge = createBridge();
+  const seedRepository = createPlanSnapshotRepository(seedBridge.bridge);
+  await seedRepository.save(createPlanSnapshot({
+    session: {
+      status: "structured",
+      capturedAt: "2026-10-19T10:20:00.000Z",
+      source: { databaseName: "analytics", schema: "public" },
+      rawInput: SESSION.rawInput,
+      analysis: { status: "structured" },
+      hostResult: { truncated: false },
+    },
+    title: "Original title",
+    note: "",
+    producerVersion: "0.7.1",
+    snapshotId: "rename-record",
+    now: new Date("2026-10-20T00:00:00.000Z"),
+  }));
+  const stored = seedBridge.readDocument();
+  const failing = createBridge({
+    get: () => structuredClone(stored),
+    onSet: async () => { throw new Error(`host rejected ${RENAME_TITLE}`); },
+  });
+  const repository = createPlanSnapshotRepository(failing.bridge);
+  const trace = createSnapshotDiagnosticTrace({ kind: "rename" });
+  let failure = null;
+  try {
+    await repository.rename("rename-record", RENAME_TITLE, "", { trace });
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure, "a rejected write must surface");
+  finishSnapshotDiagnosticTrace(trace, "failed");
+  assert.equal(eventByStep(trace, "RENAME_STORAGE_SET_END").status, "failed");
+  assert.equal(eventByStep(trace, "RENAME_STORAGE_SET_END").errorCode, "HOST_STORAGE_ERROR");
+  const verify = eventByStep(trace, "RENAME_STORAGE_VERIFY_RESULT");
+  assert.equal(verify.status, "failed");
+  assert.equal(verify.errorCode, "SNAPSHOT_WRITE_UNCONFIRMED");
+  assert.equal(trace.status, "failed");
+  assert.equal(JSON.stringify(readLog()).includes(RENAME_TITLE), false, "a failing name is still never exported");
 });

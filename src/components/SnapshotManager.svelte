@@ -6,6 +6,13 @@
   import { createSnapshotSaveHandler } from "../lib/snapshot-save-action.js";
   import { copyTextToClipboard } from "../lib/clipboard-copy.js";
   import {
+    SANDBOX_SUBMIT_DISPATCHED,
+    SANDBOX_SUBMIT_FAILED,
+    SANDBOX_SUBMIT_INVALID,
+    SANDBOX_SUBMIT_DISABLED,
+    submitSandboxedForm,
+  } from "../lib/sandbox-form-submit.js";
+  import {
     buildSnapshotDiagnosticLog,
     createSnapshotDiagnosticTrace,
     hasSnapshotDiagnosticEvents,
@@ -61,6 +68,11 @@
   let renameId = $state(null);
   let renameTitle = $state("");
   let renameNote = $state("");
+  let renameForm = $state(null);
+  let renameError = $state(null);
+  let renameInFlight = false;
+  let renameTrace = null;
+  let renameSubmitCount = 0;
   let deleteConfirmationId = $state(null);
   let loadToken = 0;
 
@@ -68,6 +80,7 @@
   const canMutate = $derived(repository !== null && storageState?.available === true && loadState === "ready" && !saving && !savingRename);
   const saveConfirmDisabled = $derived(!canMutate || !canSave || saving);
   const orderedSnapshots = $derived([...snapshots].sort((left, right) => right.savedAt.localeCompare(left.savedAt)));
+  const renameConfirmDisabled = $derived(!canMutate || savingRename);
   const historyCount = $derived(hasConfirmedHistory ? String(orderedSnapshots.length) : "—");
   const saveGateMessage = $derived.by(() => {
     if (!canSave) return t("snapshot.save.requiresStructured");
@@ -305,31 +318,33 @@
 
   function handleSaveClick(event) {
     const trace = prepareSnapshotSaveTrace(saveFormDiagnosticFields(event));
-    // DBX renders plugins in sandbox="allow-scripts" (no allow-forms).
-    // Default submission AND requestSubmit() stop before validation/submit.
-    // Keep the submit button's implicit Enter/Space activation, explicitly run
-    // native validation, then dispatch a cancelable submit event without any
-    // navigation, sandbox relaxation, or bypass of createPlanSnapshot's guards.
-    event.preventDefault();
+    // DBX renders plugins in sandbox="allow-scripts" (no allow-forms), where
+    // both native default submission and programmatic submission are stopped
+    // before validation or submit. Keep the submit button's implicit Enter/Space
+    // activation, explicitly run native validation, then dispatch a cancelable
+    // submit event without any navigation, sandbox relaxation, or bypass of
+    // createPlanSnapshot's guards.
     try {
-      clearSaveFeedback();
-      const button = event.currentTarget;
-      if (button.form !== saveForm || !saveForm?.isConnected) {
-        throw new PlanSnapshotStoreError("FORM_ASSOCIATION_MISMATCH", "The save form is not connected to its submit button.");
-      }
-      if (button.disabled || saveConfirmDisabled) {
+      const outcome = submitSandboxedForm({
+        event,
+        form: saveForm,
+        disabled: saveConfirmDisabled,
+        readSubmitCount: () => saveSubmitCount,
+        onValidationResult: (formValid) => {
+          recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_VALIDATION_RESULT", formValid ? "success" : "blocked", { formValid });
+        },
+        onBeforeDispatch: () => {
+          recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT_DISPATCH", "info", saveFormDiagnosticFields(event));
+        },
+      });
+      // A dispatched or natively invalid form is owned by the submit/invalid
+      // handlers; only a refused activation is settled here.
+      if (outcome.status === SANDBOX_SUBMIT_DISPATCHED || outcome.status === SANDBOX_SUBMIT_INVALID) return;
+      if (outcome.reason === SANDBOX_SUBMIT_DISABLED) {
         finishSnapshotDiagnosticTrace(trace, "blocked");
         return;
       }
-      const formValid = saveForm.reportValidity();
-      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_VALIDATION_RESULT", formValid ? "success" : "blocked", { formValid });
-      if (!formValid) return;
-      const previousCount = saveSubmitCount;
-      recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_SUBMIT_DISPATCH", "info", saveFormDiagnosticFields(event));
-      saveForm.dispatchEvent(new SubmitEvent("submit", { bubbles: true, cancelable: true, submitter: button }));
-      if (saveSubmitCount === previousCount) {
-        throw new PlanSnapshotStoreError("FORM_SUBMIT_NOT_OBSERVED", "The submit event did not reach the save handler.");
-      }
+      throw new PlanSnapshotStoreError(outcome.reason, "The save form did not dispatch its submit event.");
     } catch (error) {
       saveError = error;
       recordSnapshotDiagnosticEvent(trace, "SNAPSHOT_FORM_EVENT_ERROR", "failed", snapshotDiagnosticErrorFields(error, "form.submit"));
@@ -403,6 +418,7 @@
       }
       showSaveForm = false;
       renameId = null;
+      renameError = null;
       deleteConfirmationId = null;
       showHistory = false;
       onOpenSnapshot(snapshot);
@@ -420,27 +436,156 @@
 
   function beginRename(snapshot) {
     clearOperationFeedback();
+    renameError = null;
+    renameTrace = null;
     renameId = snapshot.snapshotId;
     renameTitle = snapshot.title;
     renameNote = snapshot.note;
   }
 
-  async function saveRename(event, snapshotId) {
-    event.preventDefault();
-    clearOperationFeedback();
-    if (!canMutate) return;
+  function renameFormDiagnosticFields(event) {
+    const button = event?.currentTarget?.type === "submit" ? event.currentTarget : event?.submitter;
+    return {
+      storageAvailable: storageState?.available === true,
+      loadState,
+      titlePresent: renameTitle.trim().length > 0,
+      domTitlePresent: (renameForm?.querySelector("input")?.value.trim().length ?? 0) > 0,
+      formAssociated: button == null ? undefined : button.form === renameForm,
+      formConnected: renameForm?.isConnected === true,
+      formNoValidate: renameForm?.noValidate === true,
+      submitterDisabled: button == null ? undefined : button.disabled === true,
+      disabledStateMismatch: button == null ? undefined : button.disabled !== renameConfirmDisabled,
+      framed: window.parent !== window,
+      eventTrusted: event?.isTrusted === true,
+      eventDefaultPrevented: event?.defaultPrevented === true,
+      eventCancelBubble: event?.cancelBubble === true,
+    };
+  }
 
-    savingRename = true;
+  function rejectRename(trace, errorCode, failedStage) {
+    renameError = { code: errorCode };
+    recordSnapshotDiagnosticEvent(trace, "RENAME_ERROR", "blocked", { errorCode, failedStage });
+    finishSnapshotDiagnosticTrace(trace, "blocked");
+  }
+
+  // Renaming inherits the save form's DBX constraint: in the allow-scripts
+  // frame a native submit never validates and never reaches saveRename, which
+  // is why "Save changes" appeared to do nothing. The click owns the dispatch.
+  function handleRenameClick(event) {
+    const trace = createSnapshotDiagnosticTrace({ kind: "rename" });
+    renameTrace = trace;
+    recordSnapshotDiagnosticEvent(trace, "RENAME_CLICK", "info", renameFormDiagnosticFields(event));
     try {
-      const updated = await repository.rename(snapshotId, renameTitle.trim(), renameNote);
+      if (saving || savingRename || renameInFlight) {
+        rejectRename(trace, "DUPLICATE_SUBMISSION", "rename.validate");
+        return;
+      }
+      if (repository === null || storageState?.available !== true) {
+        rejectRename(trace, "STORAGE_API_UNAVAILABLE", "rename.validate");
+        return;
+      }
+      if (loadState !== "ready") {
+        rejectRename(trace, "SNAPSHOT_LIST_NOT_READY", "rename.validate");
+        return;
+      }
+      const outcome = submitSandboxedForm({
+        event,
+        form: renameForm,
+        disabled: renameConfirmDisabled,
+        readSubmitCount: () => renameSubmitCount,
+        onValidationResult: (formValid) => {
+          recordSnapshotDiagnosticEvent(trace, "RENAME_VALIDATE", formValid ? "success" : "blocked", formValid ? {} : {
+            errorCode: "FRONTEND_VALIDATION_REJECTED",
+            failedStage: "rename.validate",
+          });
+        },
+      });
+      // A dispatched submit continues on this same trace inside saveRename.
+      if (outcome.status === SANDBOX_SUBMIT_DISPATCHED) return;
+      if (outcome.status === SANDBOX_SUBMIT_INVALID) {
+        renameError = { code: "FRONTEND_VALIDATION_REJECTED" };
+        finishSnapshotDiagnosticTrace(trace, "blocked");
+        return;
+      }
+      // A refused activation is a handled block; a dispatch that never reached
+      // the form's submit handler is a real failure.
+      const finishedStatus = outcome.status === SANDBOX_SUBMIT_FAILED ? "failed" : "blocked";
+      renameError = { code: outcome.reason };
+      recordSnapshotDiagnosticEvent(trace, "RENAME_ERROR", finishedStatus, { errorCode: outcome.reason, failedStage: "form.submit" });
+      finishSnapshotDiagnosticTrace(trace, finishedStatus);
+    } catch (error) {
+      renameError = error;
+      recordSnapshotDiagnosticEvent(trace, "RENAME_ERROR", "failed", snapshotDiagnosticErrorFields(error, "form.submit"));
+      finishSnapshotDiagnosticTrace(trace, "failed");
+    }
+  }
+
+  function handleRenameInvalid(event) {
+    renameError = { code: "FRONTEND_VALIDATION_REJECTED" };
+    const trace = renameTrace;
+    if (trace === null) return;
+    recordSnapshotDiagnosticEvent(trace, "RENAME_VALIDATE", "blocked", {
+      ...renameFormDiagnosticFields(event),
+      invalidField: event.target.tagName === "TEXTAREA" ? "note" : "title",
+      valueMissing: event.target.validity?.valueMissing === true,
+      tooLong: event.target.validity?.tooLong === true,
+      customError: event.target.validity?.customError === true,
+      errorCode: "FRONTEND_VALIDATION_REJECTED",
+      failedStage: "rename.validate",
+    });
+    finishSnapshotDiagnosticTrace(trace, "blocked");
+  }
+
+  function handleRenameSubmit(event, snapshotId) {
+    event.preventDefault();
+    renameSubmitCount += 1;
+    void saveRename(snapshotId);
+  }
+
+  async function saveRename(snapshotId) {
+    const trace = renameTrace ?? createSnapshotDiagnosticTrace({ kind: "rename" });
+    renameTrace = null;
+    clearOperationFeedback();
+    renameError = null;
+    const title = renameTitle.trim();
+    const blockedError = renameInFlight
+      ? { code: "DUPLICATE_SUBMISSION" }
+      : repository === null || storageState?.available !== true
+        ? { code: "STORAGE_API_UNAVAILABLE" }
+        : loadState !== "ready"
+          ? { code: "SNAPSHOT_LIST_NOT_READY" }
+          : title.length === 0 ? { code: "INVALID_SNAPSHOT_METADATA" } : null;
+    if (blockedError !== null) {
+      rejectRename(trace, blockedError.code, "rename.validate");
+      return { status: "blocked" };
+    }
+
+    renameInFlight = true;
+    savingRename = true;
+    const stage = startSnapshotDiagnosticStage(trace, "RENAME_REPOSITORY");
+    try {
+      const updated = await repository.rename(snapshotId, title, renameNote, { trace });
+      finishSnapshotDiagnosticStage(stage, "success");
+      // The repository resolves only after Host Storage read-back confirms the
+      // committed document, so the list can reflect the confirmed rename now.
       snapshots = snapshots.map((snapshot) => snapshot.snapshotId === snapshotId ? updated : snapshot);
       onUpdateSnapshot(updated);
       renameId = null;
       statusMessage = t("snapshot.updated");
+      recordSnapshotDiagnosticEvent(trace, "RENAME_SUCCESS", "success");
+      finishSnapshotDiagnosticTrace(trace, "completed");
+      return { status: "renamed", snapshot: updated };
     } catch (error) {
-      operationError = error;
+      const fields = snapshotDiagnosticErrorFields(error, "rename.repository");
+      finishSnapshotDiagnosticStage(stage, "failed", fields);
+      // The typed name and notes stay in the form; nothing was replayed.
+      renameError = error;
+      recordSnapshotDiagnosticEvent(trace, "RENAME_ERROR", "failed", fields);
+      finishSnapshotDiagnosticTrace(trace, "failed");
       if (error?.code === "SNAPSHOT_STORAGE_CONFLICT") void refresh(repository);
+      return { status: "failed", error };
     } finally {
+      renameInFlight = false;
       savingRename = false;
     }
   }
@@ -605,7 +750,13 @@
               </div>
 
               {#if renameId === snapshot.snapshotId}
-                <form class="snapshot-form snapshot-rename-form" onsubmit={(event) => saveRename(event, snapshot.snapshotId)}>
+                <form
+                  class="snapshot-form snapshot-rename-form"
+                  bind:this={renameForm}
+                  aria-busy={savingRename}
+                  onsubmit={(event) => handleRenameSubmit(event, snapshot.snapshotId)}
+                  oninvalidcapture={handleRenameInvalid}
+                >
                   <label>
                     <span>{t("snapshot.field.title")}</span>
                     <input bind:value={renameTitle} maxlength="120" required autocomplete="off" disabled={savingRename} />
@@ -615,11 +766,15 @@
                     <textarea bind:value={renameNote} maxlength="2000" rows="2" disabled={savingRename}></textarea>
                   </label>
                   <div class="snapshot-actions">
-                    <button type="submit" class="snapshot-primary" disabled={!canMutate || savingRename || renameTitle.trim().length === 0}>
+                    <button type="submit" class="snapshot-primary" onclick={handleRenameClick} disabled={renameConfirmDisabled}>
                       {savingRename ? t("snapshot.rename.saving") : t("snapshot.rename.save")}
                     </button>
                     <button type="button" class="snapshot-secondary" disabled={savingRename} onclick={() => (renameId = null)}>{t("snapshot.cancel")}</button>
                   </div>
+                  {#if renameError}
+                    <p class="snapshot-feedback error snapshot-rename-error" role="alert">{getErrorMessage(renameError)}</p>
+                    {#if getErrorDetail(renameError)}<p class="snapshot-error-detail">{getErrorDetail(renameError)}</p>{/if}
+                  {/if}
                 </form>
               {:else if deleteConfirmationId === snapshot.snapshotId}
                 <div class="snapshot-confirm-inline" role="group" aria-label={t("snapshot.delete.confirmLabel")}>
@@ -724,7 +879,8 @@
   }
 
   .snapshot-save-error,
-  .snapshot-save-pending {
+  .snapshot-save-pending,
+  .snapshot-rename-error {
     margin: 0;
   }
 

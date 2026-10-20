@@ -80,9 +80,18 @@ async function app(t, options = {}) {
   page.setDefaultTimeout(8000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  // The plugin must never ask the browser to submit a form: DBX's frame has no
+  // allow-forms, so such a request is a dead end by definition.
+  const blockedSubmissions = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && /allow-forms|Blocked form submission/.test(message.text())) {
+      blockedSubmissions.push(message.text());
+    }
+  });
   t.after(async () => {
     await page.close();
     assert.deepEqual(errors, [], "no uncaught event errors");
+    assert.deepEqual(blockedSubmissions, [], "no interaction relies on a sandbox-blocked native form submission");
   });
   const configuration = { key: PLAN_SNAPSHOT_STORAGE_KEY, ...options };
   const html = `<!doctype html><html><head><style>${css}</style></head><body><div id="app"></div><script>(${installTestHost})(${JSON.stringify(configuration)});</script><script type="module">${bundle.replaceAll("</script", "<\\/script")}</script></body></html>`;
@@ -114,6 +123,30 @@ async function log(frame) {
   await frame.getByRole("button", { name: "Copy diagnostic log", exact: true }).click();
   return frame.evaluate(() => window.snapshotTest.reports.at(-1));
 }
+
+async function openHistory(frame, count = 1) {
+  await historyButton(frame, count).click();
+  await frame.locator(".snapshot-list").waitFor();
+}
+
+async function openRename(frame) {
+  await frame.getByRole("button", { name: "Rename / edit notes", exact: true }).click();
+  const form = frame.locator(".snapshot-rename-form");
+  await form.waitFor();
+  return {
+    form,
+    title: form.locator("input"),
+    note: form.locator("textarea"),
+    submit: form.locator('button[type="submit"]'),
+    cancel: form.getByRole("button", { name: "Cancel", exact: true }),
+  };
+}
+
+const storedDocument = (frame) => frame.evaluate(
+  (key) => JSON.parse(JSON.stringify(window.snapshotTest.values[key] ?? null)),
+  PLAN_SNAPSHOT_STORAGE_KEY,
+);
+const writeCount = (frame) => frame.evaluate(() => window.snapshotTest.sets.length);
 
 const hasStep = (trace, step) => trace.events.some((event) => event.step === step);
 const historyButton = (frame, count) => frame.getByRole("button", { name: `History (${count})`, exact: true });
@@ -424,4 +457,247 @@ test("whitespace that passes native required still fails business validation bef
   assert.equal(trace.status, "failed");
   assert.equal(await frame.evaluate(() => window.snapshotTest.sets.length), 0);
   assert.equal(await title.inputValue(), "   ");
+});
+﻿
+// ---------------------------------------------------------------------------
+// Rename shares the save form's DBX sandbox constraint. These tests exercise
+// the real bundled UI in the same opaque sandbox; only the Host bridge is a
+// double, so they are NOT DBX Desktop acceptance.
+// ---------------------------------------------------------------------------
+
+test("a real rename click in the opaque DBX sandbox writes once, updates the list, and closes the form", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+  const { form, title, note, submit } = await openRename(frame);
+  assert.equal(await submit.evaluate((button) => button.form === document.querySelector(".snapshot-rename-form")), true);
+  assert.equal(await title.inputValue(), "Existing v1 snapshot");
+  assert.equal(await note.inputValue(), "Existing notes");
+  await title.fill("Renamed snapshot");
+  await note.fill("Renamed notes");
+  assert.equal(await submit.isDisabled(), false);
+  await submit.click();
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.equal(await form.count(), 0, "the rename form closes only after the confirmed write");
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Renamed snapshot"]);
+  assert.deepEqual(await frame.locator(".snapshot-note").allInnerTexts(), ["Renamed notes"]);
+  assert.equal(await writeCount(frame), 1);
+
+  const document = await storedDocument(frame);
+  assert.equal(document.storageSchemaVersion, 1, "Snapshot Schema v1 is unchanged");
+  assert.equal(document.revision, legacyStore.revision + 1);
+  assert.equal(document.snapshots[0].title, "Renamed snapshot");
+  assert.equal(document.snapshots[0].note, "Renamed notes");
+  assert.deepEqual(document.snapshots[0].rawInput, legacySnapshot.rawInput, "the stored plan payload is untouched");
+
+  const report = await log(frame);
+  const trace = report.latestRenameTrace;
+  assert.equal(trace.status, "completed");
+  assert.equal(report.latestRenameTraceId, trace.traceId);
+  const expected = [
+    "RENAME_CLICK", "RENAME_VALIDATE", "RENAME_REPOSITORY_START",
+    "RENAME_STORAGE_SET_START", "RENAME_STORAGE_SET_END",
+    "RENAME_STORAGE_VERIFY_START", "RENAME_STORAGE_VERIFY_END",
+    "RENAME_REPOSITORY_END", "RENAME_SUCCESS",
+  ];
+  const indices = expected.map((step) => trace.events.findIndex((event) => event.step === step));
+  assert.ok(indices.every((index, position) => index >= 0 && (position === 0 || index > indices[position - 1])), `ordered rename stages: ${indices}`);
+  assert.equal(trace.events.some((event) => event.step.startsWith("SNAPSHOT_STORAGE_")), false, "a rename trace does not claim save stages");
+  const click = trace.events.find((event) => event.step === "RENAME_CLICK");
+  assert.equal(click.formAssociated, true);
+  assert.equal(click.formConnected, true);
+  assert.equal(click.domTitlePresent, true);
+  assert.equal(click.disabledStateMismatch, false);
+  assert.equal(click.framed, true);
+  const end = trace.events.find((event) => event.step === "RENAME_REPOSITORY_END");
+  assert.equal(end.status, "success");
+  assert.equal(typeof end.durationMs, "number");
+  const serialized = JSON.stringify(report);
+  for (const secret of ["Renamed snapshot", "Renamed notes", "Existing notes", "SELECT * FROM orders"]) {
+    assert.equal(serialized.includes(secret), false, `the export omits ${secret}`);
+  }
+});
+
+test("Enter in the name field and Space on the focused button both rename inside the sandbox", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+  const first = await openRename(frame);
+  await first.title.fill("Entered rename");
+  await first.title.press("Enter");
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.equal(await writeCount(frame), 1);
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Entered rename"]);
+
+  const second = await openRename(frame);
+  await second.title.fill("Space rename");
+  await second.submit.focus();
+  await second.submit.press("Space");
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.equal(await writeCount(frame), 2);
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Space rename"]);
+  const trace = (await log(frame)).latestRenameTrace;
+  assert.equal(trace.status, "completed");
+  assert.equal(hasStep(trace, "RENAME_STORAGE_SET_START"), true);
+});
+
+test("an empty rename name is rejected by native validation and never writes", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+  const { form, title, note, submit } = await openRename(frame);
+  await note.fill("Keep this note");
+  await title.fill("");
+  await submit.click();
+  await form.getByRole("alert").filter({ hasText: "Check the snapshot name" }).waitFor();
+  assert.equal(await writeCount(frame), 0);
+  assert.equal(await title.inputValue(), "");
+  assert.equal(await note.inputValue(), "Keep this note");
+  const trace = (await log(frame)).latestRenameTrace;
+  assert.equal(trace.status, "blocked");
+  assert.ok(trace.events.some((event) => event.step === "RENAME_VALIDATE" && event.invalidField === "title" && event.valueMissing));
+  assert.equal(hasStep(trace, "RENAME_STORAGE_SET_START"), false);
+  assert.equal(await submit.isDisabled(), false, "the button stays actionable so validation feedback is reachable");
+});
+
+test("a whitespace-only rename name fails business validation before any write", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+  const { form, title, submit } = await openRename(frame);
+  await title.fill("   ");
+  await submit.click();
+  await form.getByRole("alert").filter({ hasText: "Snapshot metadata is invalid" }).waitFor();
+  assert.equal(await writeCount(frame), 0);
+  assert.equal(await title.inputValue(), "   ");
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Existing v1 snapshot"]);
+  const trace = (await log(frame)).latestRenameTrace;
+  assert.equal(trace.status, "blocked");
+  assert.ok(trace.events.some((event) => event.errorCode === "INVALID_SNAPSHOT_METADATA"));
+  assert.equal(hasStep(trace, "RENAME_STORAGE_SET_START"), false);
+});
+
+test("a real double click on Save changes writes once and keeps the form busy while the Host set is pending", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore, holdSet: true });
+  await openHistory(frame);
+  const { form, title, note, submit } = await openRename(frame);
+  await title.fill("Only one rename");
+  await submit.dblclick();
+  await frame.waitForFunction(() => window.snapshotTest.sets.length === 1);
+  assert.equal(await title.isDisabled(), true);
+  assert.equal(await note.isDisabled(), true);
+  assert.equal(await submit.isDisabled(), true);
+  assert.equal(await form.getAttribute("aria-busy"), "true");
+  const trace = (await log(frame)).latestRenameTrace;
+  assert.equal(trace.status, "pending");
+  assert.equal(trace.finishedAt, null);
+  await frame.evaluate(() => window.snapshotTest.releaseSet());
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.equal(await writeCount(frame), 1);
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Only one rename"]);
+});
+
+test("a failed rename keeps the typed values, reports the error, keeps old data, and only an explicit retry writes", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore, failSet: true });
+  await openHistory(frame);
+  const { form, title, note, submit } = await openRename(frame);
+  await title.fill("Keep title after error");
+  await note.fill("Keep notes after error");
+  await submit.click();
+  await form.getByRole("alert").waitFor();
+  assert.equal(await title.inputValue(), "Keep title after error");
+  assert.equal(await note.inputValue(), "Keep notes after error");
+  assert.equal(await submit.isDisabled(), false);
+  assert.equal(await form.getAttribute("aria-busy"), "false");
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Existing v1 snapshot"], "failed writes never mutate the list");
+  assert.equal((await storedDocument(frame)).snapshots[0].title, "Existing v1 snapshot");
+  assert.equal(await writeCount(frame), 1);
+  assert.equal((await log(frame)).latestRenameTrace.status, "failed");
+
+  await frame.evaluate(() => { window.snapshotTest.failSet = false; });
+  await submit.click();
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.equal(await writeCount(frame), 2, "only the user's explicit retry writes again");
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Keep title after error"]);
+  assert.equal((await storedDocument(frame)).snapshots[0].note, "Keep notes after error");
+});
+
+test("closing and reopening history keeps a rename, and a fresh session reads it back from Host Storage", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+  const { title, note, submit } = await openRename(frame);
+  await title.fill("Survives reopen");
+  await note.fill("Survives restart");
+  await submit.click();
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+
+  await frame.getByRole("button", { name: "Close", exact: true }).click();
+  await openHistory(frame);
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Survives reopen"]);
+  assert.deepEqual(await frame.locator(".snapshot-note").allInnerTexts(), ["Survives restart"]);
+  const readsBeforeRestart = await frame.evaluate(() => window.snapshotTest.gets.length);
+  assert.ok(readsBeforeRestart > 0, "reopening history re-reads Host Storage");
+
+  // A new plugin instance sees only what Host Storage persisted.
+  const persisted = await storedDocument(frame);
+  const restarted = await app(t, { initialDocument: persisted, connected: false });
+  await openHistory(restarted);
+  assert.deepEqual(await restarted.locator(".snapshot-item h3").allInnerTexts(), ["Survives reopen"]);
+  assert.deepEqual(await restarted.locator(".snapshot-note").allInnerTexts(), ["Survives restart"]);
+  assert.equal(await restarted.evaluate(() => window.snapshotTest.planCalls), 0, "reading history never re-runs SQL");
+  assert.equal(await writeCount(restarted), 0);
+});
+
+test("open, baseline, clear baseline and delete never depend on form submission", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await openHistory(frame);
+
+  const baseline = frame.getByRole("button", { name: "Set as baseline", exact: true });
+  await baseline.click();
+  const clearBaseline = frame.getByRole("button", { name: "Clear baseline", exact: true });
+  await clearBaseline.waitFor();
+  assert.equal(await clearBaseline.getAttribute("aria-pressed"), "true");
+  await clearBaseline.click();
+  await frame.getByRole("button", { name: "Set as baseline", exact: true }).waitFor();
+  assert.equal(await writeCount(frame), 0, "window-only baseline selection never writes");
+
+  await frame.getByRole("button", { name: "Open history", exact: true }).click();
+  await frame.locator(".snapshot-history h2").getByText("Existing v1 snapshot", { exact: true }).waitFor();
+  assert.equal(await frame.evaluate(() => window.snapshotTest.planCalls), 0);
+
+  await openHistory(frame);
+  await frame.getByRole("button", { name: "Delete", exact: true }).click();
+  await frame.getByRole("button", { name: "Confirm delete", exact: true }).click();
+  await frame.getByText("Snapshot deleted.", { exact: true }).waitFor();
+  await frame.getByText("No historical snapshots yet.", { exact: false }).waitFor();
+  await historyButton(frame, 0).waitFor();
+  assert.equal(await writeCount(frame), 1, "only delete performs one storage write");
+  assert.deepEqual(await storedDocument(frame).then((document) => document.snapshots), []);
+});
+
+test("rename copy and feedback are localized in Chinese and English", async (t) => {
+  const frame = await app(t, { initialDocument: legacyStore });
+  await frame.getByRole("button", { name: "中文", exact: true }).click();
+  await frame.getByRole("button", { name: "历史快照 (1)", exact: true }).click();
+  await frame.locator(".snapshot-list").waitFor();
+  await frame.getByRole("button", { name: "改名 / 说明", exact: true }).click();
+  const form = frame.locator(".snapshot-rename-form");
+  await form.waitFor();
+  const submit = form.locator('button[type="submit"]');
+  assert.equal(await submit.innerText(), "保存修改");
+  const title = form.locator("input");
+  await title.fill("");
+  await submit.click();
+  await form.getByRole("alert").filter({ hasText: "请检查快照名称" }).waitFor();
+  assert.equal(await writeCount(frame), 0);
+
+  await title.fill("中文改名");
+  await submit.click();
+  await frame.getByText("快照信息已更新。", { exact: true }).waitFor();
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["中文改名"]);
+
+  await frame.getByRole("button", { name: "English", exact: true }).click();
+  const second = await openRename(frame);
+  assert.equal(await second.submit.innerText(), "Save changes");
+  await second.title.fill("English rename");
+  await second.submit.click();
+  await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["English rename"]);
+  assert.equal(await writeCount(frame), 2);
 });
