@@ -500,7 +500,7 @@ function diffFindings(beforeFindings, afterFindings, beforeToAfter, afterToBefor
       result.resolved.push(findingEntry(finding, "resolved", finding.nodeRef, null));
       continue;
     }
-    const changedFields = changedTopLevelFields(finding.evidence, afterFinding.evidence);
+    const changedFields = changedEvidenceFields(finding.evidence, afterFinding.evidence, beforeToAfter);
     if (changedFields.length > 0) {
       result.evidenceChanged.push({
         ...findingEntry(finding, "evidence-changed", finding.nodeRef, afterNodeId),
@@ -557,8 +557,8 @@ function diffHotspots(beforeHotspots, afterHotspots, beforeToAfter, afterToBefor
       result.resolved.push(hotspotEntry(entry, "resolved", entry.nodeId, null));
       continue;
     }
-    const changedFields = changedTopLevelFields(entry.evidence, counterpart.evidence);
-    const hotspotChangedFields = changedTopLevelFields(entry.hotspotEvidence, counterpart.hotspotEvidence);
+    const changedFields = changedEvidenceFields(entry.evidence, counterpart.evidence, beforeToAfter);
+    const hotspotChangedFields = changedEvidenceFields(entry.hotspotEvidence, counterpart.hotspotEvidence, beforeToAfter);
     const levelChanged = entry.level !== counterpart.level;
     if (changedFields.length > 0 || hotspotChangedFields.length > 0 || levelChanged) {
       result.evidenceChanged.push({
@@ -661,6 +661,27 @@ function normalizeSource(value) {
 function sourceKey(source) {
   if (source === null) return null;
   return JSON.stringify([source.databaseName ?? null, source.schema ?? null]);
+}
+
+const NODE_LOCATOR_FIELDS = Object.freeze(new Set(["nodeId", "nodeRef", "outerNodeRef", "innerNodeRef", "blockNodeRef"]));
+
+function changedEvidenceFields(left, right, beforeToAfter) {
+  // Node references locate a node inside one plan; they are not semantic
+  // evidence. Compare them through the before/after match mapping so a matched
+  // nested loop or child moving after a join reorder is not reported changed.
+  return changedTopLevelFields(left, right).filter((field) =>
+    !isNodeLocatorField(field) || locatorChanged(left[field], right[field], beforeToAfter));
+}
+
+function isNodeLocatorField(field) {
+  return NODE_LOCATOR_FIELDS.has(field) || field.endsWith("NodeRef");
+}
+
+function locatorChanged(beforeValue, afterValue, beforeToAfter) {
+  const normalizedBefore = typeof beforeValue === "string" && beforeToAfter.has(beforeValue)
+    ? beforeToAfter.get(beforeValue)
+    : beforeValue;
+  return stableJson(normalizedBefore) !== stableJson(afterValue);
 }
 
 function changedTopLevelFields(left, right) {
