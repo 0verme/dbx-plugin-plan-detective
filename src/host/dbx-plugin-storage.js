@@ -1,3 +1,5 @@
+import { withSnapshotDiagnosticStage } from "../lib/snapshot-diagnostic-trace.js";
+
 export const PLUGIN_STORAGE_PERMISSION = "host.storage";
 export const PLUGIN_STORAGE_MAX_VALUE_BYTES = 256 * 1024;
 export const PLUGIN_STORAGE_MAX_TOTAL_BYTES = 1024 * 1024;
@@ -37,7 +39,7 @@ export function resolvePluginStorageBridge(target = globalThis) {
  */
 export function describePluginStorage(bridge, options = {}) {
   if (bridge === null || typeof bridge !== "object") {
-    return unavailable(["storage.get", "storage.set", "storage.delete"], "当前不在 DBX 宿主中：window.dbxPlugin 不存在。");
+    return unavailable(["storage.get", "storage.set", "storage.delete"], "当前不在 DBX 宿主中：window.dbxPlugin 不存在。", "BRIDGE_UNAVAILABLE");
   }
 
   const storage = bridge.storage;
@@ -61,6 +63,7 @@ export function describePluginStorage(bridge, options = {}) {
       advertised: true,
       missing,
       reason: `宿主声明 capabilities.storage，但缺少方法：${missing.join(", ")}。`,
+      reasonCode: "STORAGE_METHODS_MISSING",
     };
   }
 
@@ -71,30 +74,32 @@ export function describePluginStorage(bridge, options = {}) {
       advertised: false,
       missing,
       reason: "DBX 宿主尚未完成初始化，暂时无法确认 Host Storage 能力；不会调用 storage 方法。",
+      reasonCode: "INITIALIZING",
     };
   }
 
   return unavailable(
     missing,
     "宿主未声明 capabilities.storage；当前不会调用 Host Storage。请确认 DBX 版本与插件 host.storage 权限。",
+    "CAPABILITY_UNAVAILABLE",
   );
 }
 
 /** Read one JSON value through the DBX host. An unset key is returned as null by the host contract. */
-export async function getPluginStorageValue(bridge, key) {
-  const storage = requireAvailableStorage(bridge);
-  const normalizedKey = requireStorageKey(key);
-  try {
-    return await storage.get(normalizedKey);
-  } catch (error) {
-    throw mapStorageError(error, "read");
-  }
+export async function getPluginStorageValue(bridge, key, options = {}) {
+  return withSnapshotDiagnosticStage(options.trace, "SNAPSHOT_HOST_STORAGE_GET", async () => {
+    const storage = requireAvailableStorage(bridge);
+    const normalizedKey = requireStorageKey(key);
+    try {
+      return await storage.get(normalizedKey);
+    } catch (error) {
+      throw mapStorageError(error, "read");
+    }
+  }, { failedStage: "storage.get" });
 }
 
 /** Write one JSON value through the DBX host, preflighting its UTF-8 JSON byte size. */
-export async function setPluginStorageValue(bridge, key, value) {
-  const storage = requireAvailableStorage(bridge);
-  const normalizedKey = requireStorageKey(key);
+export async function setPluginStorageValue(bridge, key, value, options = {}) {
   const normalizedValue = value === undefined ? null : value;
   let serialized;
   try {
@@ -109,11 +114,15 @@ export async function setPluginStorageValue(bridge, key, value) {
   if (bytes > PLUGIN_STORAGE_MAX_VALUE_BYTES) {
     throw new HostStorageError("STORAGE_VALUE_TOO_LARGE", `Storage value exceeds the DBX ${PLUGIN_STORAGE_MAX_VALUE_BYTES}-byte limit.`);
   }
-  try {
-    await storage.set(normalizedKey, normalizedValue);
-  } catch (error) {
-    throw mapStorageError(error, "write");
-  }
+  return withSnapshotDiagnosticStage(options.trace, "SNAPSHOT_STORAGE_SET", async () => {
+    const storage = requireAvailableStorage(bridge);
+    const normalizedKey = requireStorageKey(key);
+    try {
+      await storage.set(normalizedKey, normalizedValue);
+    } catch (error) {
+      throw mapStorageError(error, "write");
+    }
+  }, { failedStage: "storage.set" });
 }
 
 /** Delete one key through the DBX host. */
@@ -146,8 +155,8 @@ function canStillInitialize(bridge) {
   return hasReady || typeof bridge.onInit === "function";
 }
 
-function unavailable(missing, reason) {
-  return { state: PLUGIN_STORAGE_STATES.unavailable, available: false, advertised: false, missing, reason };
+function unavailable(missing, reason, reasonCode) {
+  return { state: PLUGIN_STORAGE_STATES.unavailable, available: false, advertised: false, missing, reason, reasonCode };
 }
 
 function mapStorageError(error, operation) {
