@@ -6,6 +6,7 @@
   import FixtureSelector from "./components/FixtureSelector.svelte";
   import HostAudit from "./components/HostAudit.svelte";
   import PlanAnalysisLayout from "./components/PlanAnalysisLayout.svelte";
+  import PlanDiffView from "./components/PlanDiffView.svelte";
   import RawPlanViewer from "./components/RawPlanViewer.svelte";
   import SnapshotManager from "./components/SnapshotManager.svelte";
   import SqlInput from "./components/SqlInput.svelte";
@@ -29,6 +30,7 @@
   import { readLocalePreference, resolveLocalePreference, saveLocalePreference } from "./lib/i18n/locale-preference.js";
   import { createPlanSnapshotRepository } from "./lib/plan-snapshot-store.js";
   import { createPlanSnapshotView, formatPlanSnapshotTime } from "./lib/plan-snapshot-view.js";
+  import { buildEstimatedPlanDiff } from "./core/diff/plan-diff-report.js";
   import {
     describeAnalysisError,
     describeAnalysisNotice,
@@ -125,7 +127,8 @@
   let capabilityError = $state(null);
   let session = $state(idleAnalysis());
   let activeSnapshot = $state(null);
-  let baselineSnapshotId = $state(null);
+  let baselineSnapshot = $state(null);
+  let diffState = $state(null);
   /** `idle` | `copying` | `copied` | `failed` — see describeCopyPromptAction. */
   let copyState = $state("idle");
   let copyResetTimer = null;
@@ -258,6 +261,7 @@
     analysisRequestToken += 1;
     session = idleAnalysis();
     activeSnapshot = null;
+    diffState = null;
     selectedNodeId = "0";
     collapsedIds = new Set();
     copyState = "idle";
@@ -317,6 +321,7 @@
     const requestToken = ++analysisRequestToken;
     lastAnalyzedInputKey = currentAnalysisInputKey();
     activeSnapshot = null;
+    diffState = null;
     session = loadingAnalysis();
     selectedNodeId = "0";
     collapsedIds = new Set();
@@ -352,6 +357,30 @@
   const displaySession = $derived(activeSnapshot?.session ?? session);
   const hostStructured = $derived(displaySession.status === "structured" ? displaySession.analysis : null);
   const activeAnalysis = $derived(view === "host" ? hostStructured : (fixtureAnalysis?.result ?? null));
+
+  const diffReport = $derived.by(() => {
+    if (diffState === null || diffState.error || !diffState.baseline || !diffState.current) return null;
+    try {
+      return buildEstimatedPlanDiff({
+        baseline: diffState.baseline,
+        current: diffState.current,
+        baselineMeta: diffState.baselineMeta,
+        currentMeta: diffState.currentMeta,
+      });
+    } catch {
+      return null;
+    }
+  });
+  const diffBaselineSession = $derived.by(() => {
+    if (diffState === null || diffState.error || !diffState.baseline) return null;
+    const view = diffState.baseline;
+    return view.session?.analysis ?? view.analysis ?? null;
+  });
+  const diffCurrentSession = $derived.by(() => {
+    if (diffState === null || diffState.error || !diffState.current) return null;
+    const view = diffState.current;
+    return view.session?.analysis ?? view.analysis ?? null;
+  });
 
   const rows = $derived(activeAnalysis ? buildTreeRows(activeAnalysis.normalized.root) : []);
   const rowsById = $derived(indexRowsById(rows));
@@ -420,6 +449,7 @@
 
   function openSnapshot(snapshot) {
     activeSnapshot = createPlanSnapshotView(snapshot);
+    diffState = null;
     selectedNodeId = "0";
     collapsedIds = new Set();
     copyState = "idle";
@@ -427,24 +457,78 @@
 
   function returnToCurrentAnalysis() {
     activeSnapshot = null;
+    diffState = null;
     selectedNodeId = "0";
     collapsedIds = new Set();
     copyState = "idle";
   }
 
-  function selectBaseline(snapshotId) {
-    baselineSnapshotId = snapshotId;
+  function selectBaseline(snapshot) {
+    baselineSnapshot = snapshot ?? null;
+    diffState = null;
+  }
+
+  function snapshotMeta(snapshot) {
+    return {
+      kind: "snapshot",
+      id: snapshot.snapshotId,
+      title: snapshot.title,
+      savedAt: snapshot.savedAt,
+      capturedAt: snapshot.capturedAt,
+      producerVersion: snapshot.producerVersion,
+    };
+  }
+
+  /** Open a comparison without replacing the current analysis or active snapshot. */
+  function startDiff({ baseline = null, current = null } = {}) {
+    if (baseline === null || current === null) return;
+    try {
+      const baselineView = createPlanSnapshotView(baseline);
+      const currentIsSnapshot = typeof current.snapshotId === "string";
+      diffState = {
+        baseline: baselineView,
+        current: currentIsSnapshot ? createPlanSnapshotView(current) : current,
+        baselineMeta: snapshotMeta(baseline),
+        currentMeta: currentIsSnapshot ? snapshotMeta(current) : { kind: "current" },
+      };
+    } catch (error) {
+      diffState = {
+        error: { code: error?.code ?? "GENERIC", message: error instanceof Error ? error.message : String(error) },
+        baseline: null,
+        current: null,
+        baselineMeta: null,
+        currentMeta: null,
+      };
+    }
+  }
+
+  function swapDiff() {
+    if (diffState === null || diffState.error || !diffState.baseline || !diffState.current) return;
+    diffState = {
+      baseline: diffState.current,
+      current: diffState.baseline,
+      baselineMeta: diffState.currentMeta,
+      currentMeta: diffState.baselineMeta,
+    };
+  }
+
+  function exitDiff() {
+    diffState = null;
   }
 
   function updateActiveSnapshot(snapshot) {
     if (activeSnapshot?.snapshot.snapshotId === snapshot.snapshotId) {
       activeSnapshot = { ...activeSnapshot, snapshot };
     }
+    if (baselineSnapshot?.snapshotId === snapshot.snapshotId) {
+      baselineSnapshot = { ...baselineSnapshot, ...snapshot };
+    }
   }
 
   function handleSnapshotDeleted(snapshotId) {
     if (activeSnapshot?.snapshot.snapshotId === snapshotId) returnToCurrentAnalysis();
-    if (baselineSnapshotId === snapshotId) baselineSnapshotId = null;
+    if (baselineSnapshot?.snapshotId === snapshotId) baselineSnapshot = null;
+    if (diffState?.baselineMeta?.id === snapshotId || diffState?.currentMeta?.id === snapshotId) diffState = null;
   }
 
   function selectLocale(nextLocale) {
@@ -516,11 +600,13 @@
       repository={snapshotRepository}
       currentSession={activeSnapshot === null ? session : null}
       activeSnapshotId={activeSnapshot?.snapshot.snapshotId ?? null}
-      {baselineSnapshotId}
+      baselineSnapshotId={baselineSnapshot?.snapshotId ?? null}
       producerVersion={pluginPackage.version}
       diagnosticBridge={bridge}
       onOpenSnapshot={openSnapshot}
       onSelectBaseline={selectBaseline}
+      onCompareSnapshots={startDiff}
+      onCompareCurrent={startDiff}
       onDeleteSnapshot={handleSnapshotDeleted}
       onUpdateSnapshot={updateActiveSnapshot}
     />
@@ -557,7 +643,17 @@
       <p class="panel empty">{t("app.fixture.empty", { count: catalogCounts.total })}</p>
     {/if}
   {:else}
-    {#if activeSnapshot !== null}
+    {#if diffState !== null}
+      <PlanDiffView
+        {locale}
+        report={diffReport}
+        baselineAnalysis={diffBaselineSession}
+        currentAnalysis={diffCurrentSession}
+        error={diffState.error ?? null}
+        onSwap={swapDiff}
+        onExit={exitDiff}
+      />
+    {:else if activeSnapshot !== null}
       <section class="snapshot-history" aria-labelledby="snapshot-history-title">
         <div class="snapshot-history-head">
           <span class="badge info">{t("snapshot.history.label")}</span>

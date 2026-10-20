@@ -2,12 +2,22 @@
 
 | 项 | 值 |
 | --- | --- |
-| 最后更新 | 2026-10-19 |
-| 当前阶段 | **v0.7.1 已发布；Issue #91 插件实现与回归完成，PR [#92](https://github.com/0verme/dbx-plugin-plan-detective/pull/92) Open / Draft** |
+| 最后更新 | 2026-10-20 |
+| 当前阶段 | **Issue #73 Phase 73.2 Estimated Plan Diff 用户闭环完成，PR [#94](https://github.com/0verme/dbx-plugin-plan-detective/pull/94) 已创建** |
 | 插件版本 | 已发布版本仍为 `0.7.1`；本分支不发布版本、不改插件 ID `io.github.0verme.plan-detective`、Host API `^1.2` 或 `host.plans:read` 权限 |
-| 当前范围 | 为明确 affirmative Host capability 的 `gaussdb` 增加 Estimated JSON 解析；普通 GaussDB / M-JDBC / 不支持的旧 Host 继续 fail closed；上游 DBX #12644 尚未合并 |
-| 验收边界 | `npm test` PASS（1395/1395）、`npm run build` PASS；fixtures 全为 synthetic。当前环境无 Windows mount、DBX Host 进程或可用 DWS 连接，真实 Host / GaussDB 9.1.1 / GUI 联调 **NOT RUN** |
-| 当前不做 | 不执行真实数据库 SQL、不修改数据库、不改 DBX 上游、不合并 PR、不发布插件；Host 运行时能力依赖上游 DBX 后续合入 |
+| 当前范围 | 计划快照基线选择、当前 / 历史快照比较、`PlanDiffView`、可比性 / 成本 / 诊断报告与 DOM 回归 |
+| 验收边界 | `npm test` PASS（1486/1486）、`npm run test:dom` PASS（32/32）、`npm run build` / `npm run package` PASS；fixtures 为 synthetic。真实 DBX Desktop 比较验收 **NOT RUN** |
+| 当前不做 | 不执行真实数据库 SQL、不修改数据库、不改 DBX 上游、不发布插件；PR #94 仅在检查通过后合并，Host 运行时能力依赖上游 DBX 后续合入 |
+
+## Issue #73 — Estimated Plan Diff 用户闭环（2026-10-20）
+
+- Issue: [#73](https://github.com/0verme/dbx-plugin-plan-detective/issues/73)；PR: [#94](https://github.com/0verme/dbx-plugin-plan-detective/pull/94)。前置 Phase 73.1 Diff Core 已通过 PR [#90](https://github.com/0verme/dbx-plugin-plan-detective/pull/90) 合入 `main`（`19b3892`）。本分支：`feat/issue-73-diff-ui`，worktree `worktrees/issue-73-diff-ui`，基线 `origin/main` `0ce33c4`。
+- Core：新增纯报告层 `src/core/diff/plan-diff-report.js`（`buildEstimatedPlanDiff`），组合可比性、分组变化、节点集合与 Findings / Hotspots 关联；`describeEstimatedPlanDiffSupport` 统一支持门禁；修复“新增 Join 子扫描时把仍然存在的 Join 误报为 removed”的 added / removed 判定，改为匹配后代签名守恒。
+- UI：`SnapshotManager` 增加基线栏、“与基线比较”与“与当前计划比较”；`App` 以独立 `diffState` 打开比较，不替换当前 `session` / `activeSnapshot`；`PlanDiffView` 提供双计划树、节点比较表、分组变化、added / removed / unmatched / ambiguous、诊断差异、Swap / Exit。比较不调用 Host `explainPlan`、不重跑 SQL、不写 Storage。
+- 可比性：版本 / 来源未知或不同标为 `limited`；SQL 文本差异只作 info；成本只在两侧都是 PostgreSQL 有限原生 cost 时展示，MySQL / 缺值均 withheld；`null` 不当 0。新增 / 消失只在有可靠匹配后代签名或对侧不存在同名 relation scan 时确认，其余进入 unmatched；歧义不宣称新增 / 消失。
+- 文案：补充 zh-CN / en 的基线、比较、Diff、可比性、成本、诊断与树标记文案；区分基线栏“清除比较基线”与历史项“取消基线”的可访问名称。
+- 验证：`tests/core/plan-diff-report.test.js`、`tests/ui/plan-diff-workflow.test.js`、扩展后的 `tests/ui/snapshot-dom.test.js`；DOM 覆盖基线→当前 / 历史快照比较、空差异、Swap / Exit、删除基线、zh / en 与不写 Storage。
+- 边界：只支持 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL 的完整 JSON Estimated plan；OceanBase MySQL 不按 Native MySQL 处理。真实 DBX Desktop 端到端验收 **NOT RUN / NOT VERIFIED**，Node / DOM 结果不等于真实桌面验收，也不构成任何性能提升证明。
 
 ## Issue #91 — GaussDB / Huawei DWS Estimated Plan（2026-10-19）
 

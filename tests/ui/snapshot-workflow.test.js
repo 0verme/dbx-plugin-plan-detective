@@ -51,7 +51,7 @@ test("history records render compact metadata and all requested management actio
   assert.match(manager, /repository\.get\(snapshotId\)/);
   assert.match(manager, /repository\.rename\(snapshotId, title, renameNote, \{ trace \}\)/);
   assert.match(manager, /repository\.delete\(snapshotId\)/);
-  assert.match(manager, /onSelectBaseline\(baselineSnapshotId === snapshotId \? null : snapshotId\)/);
+  assert.match(manager, /function selectBaseline\(snapshot\)[\s\S]*?onSelectBaseline\(snapshot === null \|\| baselineSnapshotId === snapshot\.snapshotId \? null : snapshot\)/);
   assert.match(manager, /snapshot\.empty/);
   assert.match(manager, /snapshot\.history\.refresh/);
   assert.match(manager, /snapshot\.baseline\.windowOnly/);

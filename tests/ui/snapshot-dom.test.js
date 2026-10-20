@@ -31,7 +31,7 @@ after(async () => {
   if (output) await rm(output, { recursive: true, force: true });
 });
 
-function installTestHost({ key, initialDocument = null, connected = true, holdReads = false, holdSet = false, failSet = false, holdPostSaveRead = false }) {
+function installTestHost({ key, initialDocument = null, connected = true, holdReads = false, holdSet = false, failSet = false, holdPostSaveRead = false, currentPlan = null, currentDbType = "postgres" }) {
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const values = { [key]: initialDocument, "unrelated.preferences": { keep: "untouched" } };
   const control = window.snapshotTest = {
@@ -42,13 +42,13 @@ function installTestHost({ key, initialDocument = null, connected = true, holdRe
     locale: "en", ready: Promise.resolve(), capabilities: { planApi: true, storage: true },
     context: connected ? { connectionId: "test-connection", sql: "SELECT * FROM orders", database: "analytics", schema: "public" } : null,
     async getPlanCapabilities() {
-      return { dbType: "postgres", dbVersion: "17.2", supports: { estimatedPlan: true }, limits: { maxTimeoutMs: 60000, maxPlanBytes: 4194304 } };
+      return { dbType: currentDbType, dbVersion: "17.2", supports: { estimatedPlan: true }, limits: { maxTimeoutMs: 60000, maxPlanBytes: 4194304 } };
     },
     async explainPlan() {
       control.planCalls += 1;
       // Synthetic parser input, never represented as a real database capture.
-      return { dbType: "postgres", dbVersion: "17.2", format: "json", truncated: false, warnings: [], rawPlan: [
-        { Plan: { "Node Type": "Seq Scan", "Relation Name": "orders", "Plan Rows": 18, "Startup Cost": 0, "Total Cost": 10, "Plan Width": 8 } },
+      return { dbType: currentDbType, dbVersion: "17.2", format: "json", truncated: false, warnings: [], rawPlan: currentPlan ?? [
+        { Plan: { "Node Type": "Seq Scan", "Relation Name": "orders", "Alias": "o", "Plan Rows": 18, "Startup Cost": 0, "Total Cost": 10, "Plan Width": 8 } },
       ] };
     },
     async request(method, { text }) {
@@ -700,4 +700,188 @@ test("rename copy and feedback are localized in Chinese and English", async (t) 
   await frame.getByText("Snapshot details updated.", { exact: true }).waitFor();
   assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["English rename"]);
   assert.equal(await writeCount(frame), 2);
+});
+
+/* ---------------------------------------------------- estimated plan diff -- */
+
+const ORDERS_SEQ_PLAN = [{ Plan: {
+  "Node Type": "Seq Scan", "Relation Name": "orders", "Alias": "o",
+  "Plan Rows": 18, "Startup Cost": 0, "Total Cost": 10, "Plan Width": 8,
+} }];
+const ORDERS_INDEX_PLAN = [{ Plan: {
+  "Node Type": "Index Scan", "Relation Name": "orders", "Alias": "o",
+  "Index Name": "orders_status_idx", "Plan Rows": 3, "Startup Cost": 0.2, "Total Cost": 4.5,
+  "Plan Width": 8, "Index Cond": "(status = 'open')",
+} }];
+
+function estimatedSnapshot({ snapshotId, title, plan, savedAt }) {
+  return createPlanSnapshot({
+    session: {
+      status: "structured",
+      analysis: { status: "structured" },
+      capturedAt: null,
+      source: { databaseName: "analytics", schema: "public" },
+      hostResult: { truncated: false },
+      rawInput: {
+        database: "postgresql", mode: "estimated", format: "json", plan,
+        sql: "SELECT * FROM orders", databaseVersion: "17.2",
+      },
+    },
+    snapshotId, title, producerVersion: "0.9.0", now: new Date(savedAt),
+  });
+}
+
+const diffStore = {
+  storageSchemaVersion: 1,
+  revision: 4,
+  lastMutationId: "diff-fixture-mutation",
+  snapshots: [
+    estimatedSnapshot({ snapshotId: "snap-seq", title: "Seq baseline", plan: ORDERS_SEQ_PLAN, savedAt: "2026-10-15T01:00:00.000Z" }),
+    estimatedSnapshot({ snapshotId: "snap-index", title: "Index baseline", plan: ORDERS_INDEX_PLAN, savedAt: "2026-10-15T02:00:00.000Z" }),
+  ],
+};
+
+const snapshotItem = (frame, title) => frame.locator(".snapshot-item").filter({ hasText: title });
+
+async function setBaseline(frame, title) {
+  await snapshotItem(frame, title).getByRole("button", { name: "Set as baseline", exact: true }).click();
+  await frame.getByText(`Comparison baseline: ${title}`, { exact: true }).waitFor();
+}
+
+async function analyzeCurrent(frame) {
+  await frame.getByRole("button", { name: "Analyze Plan", exact: true }).click();
+  await frame.locator(".tree-panel").waitFor();
+}
+
+test("a baseline snapshot can be compared with the live plan and the diff is visibly rendered", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await analyzeCurrent(frame);
+  const planCalls = await frame.evaluate(() => window.snapshotTest.planCalls);
+  assert.ok(planCalls > 0, "the live side comes from one real (test-double) Host analysis");
+
+  await openHistory(frame, 2);
+  await setBaseline(frame, "Index baseline");
+  await frame.getByRole("button", { name: "Compare with current plan", exact: true }).click();
+  await frame.getByRole("heading", { name: "Plan comparison (Estimated)", exact: true }).waitFor();
+
+  assert.deepEqual(await frame.locator(".diff-side h3").allInnerTexts(), [
+    "Index baseline",
+    "Analysis in the current window",
+  ]);
+  assert.equal(await frame.evaluate(() => window.snapshotTest.planCalls), planCalls, "comparison never acquires another plan");
+  assert.equal(await writeCount(frame), 0, "comparison never writes Storage");
+
+  const summary = await frame.locator(".diff-summary").innerText();
+  assert.match(summary, /Matched 1/);
+  assert.match(summary, /Changed 1/);
+  const groups = await frame.locator(".diff-group h4").allInnerTexts();
+  assert.ok(groups.some((text) => text.startsWith("Access method")));
+  assert.ok(groups.some((text) => text.startsWith("Index usage")));
+  assert.ok(groups.some((text) => text.startsWith("Estimated rows")));
+  assert.ok(await frame.locator(".diff-tree .diff-marker.changed").count() >= 2);
+
+  await frame.locator(".diff-group .diff-entry").first().click();
+  const nodeTable = frame.locator(".diff-node-table");
+  await nodeTable.waitFor();
+  const details = await nodeTable.innerText();
+  assert.match(details, /Index Scan/);
+  assert.match(details, /Seq Scan/);
+
+  await frame.getByRole("button", { name: "Swap sides", exact: true }).click();
+  await frame.waitForFunction(() => document.querySelector(".diff-side h3")?.textContent?.includes("Analysis in the current window"));
+  assert.deepEqual(await frame.locator(".diff-side h3").allInnerTexts(), [
+    "Analysis in the current window",
+    "Index baseline",
+  ]);
+  const swappedGroups = await frame.locator(".diff-group").first().innerText();
+  assert.match(swappedGroups, /Seq Scan/);
+  assert.match(swappedGroups, /Index Scan/);
+  assert.equal(await frame.locator(".diff-node-table").count(), 0, "swapping clears the previous side-specific focus");
+  await frame.getByText("Select a change on the left, or any node in either plan tree, to inspect both sides.", { exact: true }).waitFor();
+
+  await frame.getByRole("button", { name: "Exit comparison", exact: true }).click();
+  await frame.getByRole("heading", { name: "Plan Tree", exact: true }).waitFor();
+  assert.equal(await frame.locator(".diff-panel").count(), 0);
+  assert.equal(await frame.evaluate(() => window.snapshotTest.planCalls), planCalls);
+  assert.equal(await writeCount(frame), 0);
+});
+
+test("identical live and snapshot plans show no invented difference", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await analyzeCurrent(frame);
+  await openHistory(frame, 2);
+  await setBaseline(frame, "Seq baseline");
+  await frame.getByRole("button", { name: "Compare with current plan", exact: true }).click();
+  await frame.getByRole("heading", { name: "Plan comparison (Estimated)", exact: true }).waitFor();
+
+  const summary = await frame.locator(".diff-summary").innerText();
+  assert.match(summary, /Matched 1/);
+  assert.match(summary, /Changed 0/);
+  assert.equal(await frame.locator(".diff-group").count(), 0);
+  await frame.getByText("No comparable field differences were detected between these plans.", { exact: true }).waitFor();
+});
+
+test("two history snapshots compare without any Host plan call and both sides are labeled as snapshots", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await openHistory(frame, 2);
+  await setBaseline(frame, "Seq baseline");
+  await snapshotItem(frame, "Index baseline").getByRole("button", { name: "Compare with baseline", exact: true }).click();
+  await frame.getByRole("heading", { name: "Plan comparison (Estimated)", exact: true }).waitFor();
+
+  assert.deepEqual(await frame.locator(".diff-side h3").allInnerTexts(), ["Seq baseline", "Index baseline"]);
+  assert.deepEqual(await frame.locator(".diff-side-kind").allInnerTexts(), [
+    "History snapshot (re-analyzed by the current Core)",
+    "History snapshot (re-analyzed by the current Core)",
+  ]);
+  assert.equal(await frame.evaluate(() => window.snapshotTest.planCalls), 0, "snapshot comparison never re-runs SQL");
+  assert.equal(await writeCount(frame), 0);
+  const summary = await frame.locator(".diff-summary").innerText();
+  assert.match(summary, /Matched 1/);
+  assert.match(summary, /Changed 1/);
+});
+
+test("an open snapshot can be compared with the selected baseline and the same snapshot is refused with a hint", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await openHistory(frame, 2);
+  await setBaseline(frame, "Seq baseline");
+  await snapshotItem(frame, "Index baseline").getByRole("button", { name: "Open history", exact: true }).click();
+  await frame.locator(".snapshot-history h2").getByText("Index baseline", { exact: true }).waitFor();
+  await frame.getByRole("button", { name: "Compare this snapshot with the baseline", exact: true }).click();
+  await frame.getByRole("heading", { name: "Plan comparison (Estimated)", exact: true }).waitFor();
+  assert.deepEqual(await frame.locator(".diff-side h3").allInnerTexts(), ["Seq baseline", "Index baseline"]);
+  await frame.getByRole("button", { name: "Exit comparison", exact: true }).click();
+
+  await openHistory(frame, 2);
+  await snapshotItem(frame, "Seq baseline").getByRole("button", { name: "Open history", exact: true }).click();
+  await frame.getByText("The open snapshot is the baseline; open another snapshot or choose a different baseline.", { exact: true }).waitFor();
+  assert.equal(await frame.getByRole("button", { name: "Compare this snapshot with the baseline", exact: true }).count(), 0);
+});
+
+test("plan diff copy is localized in Chinese and English", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await frame.getByRole("button", { name: "中文", exact: true }).click();
+  await frame.getByRole("button", { name: "历史快照 (2)", exact: true }).click();
+  await frame.locator(".snapshot-list").waitFor();
+  await snapshotItem(frame, "Seq baseline").getByRole("button", { name: "选作基线", exact: true }).click();
+  await frame.getByText("比较基线：Seq baseline", { exact: true }).waitFor();
+  await snapshotItem(frame, "Index baseline").getByRole("button", { name: "与基线比较", exact: true }).click();
+  await frame.getByRole("heading", { name: "计划比较（Estimated）", exact: true }).waitFor();
+
+  assert.deepEqual(await frame.locator(".diff-side .badge").allInnerTexts(), ["A · 基线", "B · 当前"]);
+  assert.equal(await frame.getByRole("heading", { name: "结构变化", exact: true }).count(), 1);
+  assert.equal(await frame.getByRole("button", { name: "退出比较", exact: true }).count(), 1);
+  assert.match(await frame.locator(".diff-summary").innerText(), /已匹配 1/);
+  assert.equal(await writeCount(frame), 0);
+});
+
+test("deleting the baseline snapshot clears the baseline bar without writing extra data", async (t) => {
+  const frame = await app(t, { initialDocument: diffStore });
+  await openHistory(frame, 2);
+  await setBaseline(frame, "Seq baseline");
+  await snapshotItem(frame, "Seq baseline").getByRole("button", { name: "Delete", exact: true }).click();
+  await frame.getByRole("button", { name: "Confirm delete", exact: true }).click();
+  await frame.getByText("Snapshot deleted.", { exact: true }).waitFor();
+  assert.equal(await frame.locator(".snapshot-baseline-bar").count(), 0);
+  assert.equal(await writeCount(frame), 1, "only the delete itself writes");
+  assert.deepEqual(await frame.locator(".snapshot-item h3").allInnerTexts(), ["Index baseline"]);
 });
