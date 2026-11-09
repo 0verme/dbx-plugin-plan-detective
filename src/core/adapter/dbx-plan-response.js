@@ -19,7 +19,10 @@
  * MySQL is mapped to `oceanbase-mysql` only when `dbVersion` independently
  * identifies OceanBase; `gaussdb` is mapped to its own family only when the
  * caller supplies a matching Host capability with `supports.estimatedPlan`.
- * The plan payload is never inspected to guess a family.
+ * DB2 responses are mapped by `dbType`; the acquisition session must first
+ * pass the same-connection capability gate, and an explicitly negative
+ * capability snapshot is rejected here as defense in depth. The plan payload
+ * is never inspected to guess a family.
  * The response carries no `mode`: #9692 only serves estimated plans, so this
  * adapter always emits `mode: "estimated"`. There is no actual-plan path and no
  * actual -> estimated fallback; actual plans need a separate contract.
@@ -37,11 +40,14 @@ import { SUPPORTED_FORMATS, createRawPlanInput } from "../raw-plan-input.js";
  *
  * Mirrors dialect families exposed by the Host plan contract. `gaussdb` is
  * deliberately gated separately: only the Host's affirmative per-connection
- * `supports.estimatedPlan` result can establish the DWS-enabled path. A plugin
- * parser family does not imply Host capability.
+ * `supports.estimatedPlan` result can establish the DWS-enabled path. DB2's
+ * request path is likewise capability-gated in the Host analysis session; an
+ * explicit negative DB2 snapshot cannot be adapted. A plugin parser family
+ * does not imply Host capability.
  */
 const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
   postgres: "postgresql",
+  db2: "db2",
   gaussdb: "gaussdb",
   mysql: "mysql",
   sqlserver: "sqlserver",
@@ -63,6 +69,9 @@ const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
  * @returns {string|undefined}
  */
 function mapDatabaseFamily(dbType, dbVersion, capabilities) {
+  if (dbType === "db2" && capabilities !== null && capabilities.supports.estimatedPlan !== true) {
+    return undefined;
+  }
   if (dbType === "gaussdb") {
     return capabilities?.dbType === "gaussdb" && capabilities.supports.estimatedPlan === true
       ? "gaussdb"
@@ -115,7 +124,9 @@ export function adaptDbxEstimatedPlanResponse(response, options) {
   if (database === undefined) {
     const detail = response.dbType === "gaussdb"
       ? 'GaussDB is accepted only when getPlanCapabilities for the same connection reports dbType "gaussdb" and supports.estimatedPlan=true; the plugin will not infer Huawei DWS from dbType or dbVersion alone.'
-      : `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
+      : response.dbType === "db2"
+        ? 'DB2 Estimated Plan is not advertised for this connection. Confirm a compatible DBX Desktop >= 0.6.38 and DB2 Agent >= 0.1.78, plus the connection/agent environment; the plugin will not bypass a negative Host capability.'
+        : `DBX dbType ${describeValue(response.dbType)} is not a dialect the merged plan contract serves; ` +
         `supported dbTypes are ${Object.keys(DATABASE_BY_DBX_DB_TYPE).map((dbType) => JSON.stringify(dbType)).join(", ")}.`;
     throw new DbxPlanAdapterError("UNSUPPORTED_DB_TYPE", detail);
   }

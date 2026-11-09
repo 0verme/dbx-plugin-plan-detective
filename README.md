@@ -30,7 +30,7 @@ DBX 当前连接
     → Hotspots / Findings
 ```
 
-PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、Dameng、QuestDB 和 Doris 会进入结构化分析。GaussDB/DWS 有独立 Estimated JSON parser，但只有同一连接的 DBX Host capability 明确报告支持时才会尝试；该 Host 能力尚未合入上游 DBX，当前主线连接仍不支持。普通 GaussDB 或 M-JDBC 不会因 `dbType` / 版本字符串被插件自动识别为 DWS。OceanBase MySQL 仅在 DBX `dbVersion` 明确包含 OceanBase 标识时与 Native MySQL 区分，并与 OceanBase Oracle 共享 OceanBase JSON plan pipeline。Doris 输出保留多个 Fragment-local operator tree 与仅用于 metadata 的跨 Fragment exchange link。
+PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL、Oracle、Dameng、QuestDB 和 Doris 会进入结构化分析。DB2 LUW Estimated JSON v1 也有插件侧结构化解析，但只有 DBX Host 对同一连接明确报告 `supports.estimatedPlan = true` 才会调用并解析；Host 不支持时会显示 unsupported，不会把 Raw Plan 伪装为成功。DB2 源码支持基线为 DBX Desktop ≥ 0.6.38、DB2 Agent ≥ 0.1.78；这是组件级最低基线，并非经端到端验证的安装组合。Db2 for z/OS 与 Db2 for i 未验证、不支持。GaussDB/DWS 有独立 Estimated JSON parser，但只有同一连接的 DBX Host capability 明确报告支持时才会尝试；普通 GaussDB 或 M-JDBC 不会因 `dbType` / 版本字符串被插件自动识别为 DWS。OceanBase MySQL 仅在 DBX `dbVersion` 明确包含 OceanBase 标识时与 Native MySQL 区分，并与 OceanBase Oracle 共享 OceanBase JSON plan pipeline。Doris 输出保留多个 Fragment-local operator tree 与仅用于 metadata 的跨 Fragment exchange link。
 
 ## 界面语言 / Interface language
 
@@ -59,6 +59,7 @@ Locale precedence is **manual selection for this session > saved user preference
 - **Dameng Estimated Plan 文本结构化解析**：支持 DBX Host 返回的 Dameng 原生 `EXPLAIN` 文本，按缩进恢复树结构、按 operation id 关联 predicate，保留 `[cost, rows, bytes-per-row]` 与未知算子原文；仅支持 Estimated Plan。
 - **QuestDB Estimated EXPLAIN 文本结构化解析**：按相对缩进恢复 operator tree，保留原始行、inline / standalone properties 与未知 operator；PageFrame / Row / Frame pipeline 只将 relation-access Frame / Interval 节点计作一次扫描。
 - **Doris Estimated EXPLAIN text structured parser**：按 `Distributed Plan` → `PLAN FRAGMENT` → fragment-local operator tree 恢复结构；保留 Fragment / Sink / Exchange metadata、`cardinality → estimatedRows`、join / sort / aggregate normalization 与未知 operator / property。Sink → Exchange 跨 Fragment 关系只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；Doris cost 不映射 PostgreSQL cost。
+- **DB2 LUW Estimated JSON v1 结构化解析**：按 `operators` / `streams` / `predicates` 建树，支持多个 root 与共享 producer 引用；保留精确十进制成本字符串（timerons、page I/Os、instructions）及 stream output cardinality，支持 TBSCAN / IXSCAN、表 / 索引对象与 predicate 展示。DB2 指标不进入 PostgreSQL 成本模型；目前不生成 DB2 专属 Finding / Hotspot，不把 stream cardinality 当作扫描行数，也不推断 NLJOIN outer / inner。
 - **GaussDB / Huawei DWS Estimated JSON parser（有条件）**：Host 明确确认 Estimated Plan 能力后，解析 JSON envelope 与保留未知子树；DWS 原生 cost 仅展示，不作为 PostgreSQL cost / elapsed time。该分支没有真实 GaussDB 9.1.1 capture；上游 DBX Issue #12601 / PR #12644 尚未合并。
 - **计划快照与 Estimated Plan Diff**：将当前完整的 JSON Estimated Plan 保存为本地快照，选择一条快照作为比较基线，再与当前计划或另一条历史快照比较。Diff 只比较 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL，按保守匹配展示扫描、索引、Join、Sort、行数、谓词等字段变化，并关联 Findings / Hotspots；未知值不当 0，未匹配 / 歧义节点不会被称为新增或消失，成本只在 PostgreSQL 原生值可用时展示，不计算提速率。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
@@ -154,9 +155,10 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 | Dameng | Structured (Estimated only) |
 | QuestDB | Structured (Estimated only) |
 | Doris | Structured (Estimated only) |
+| IBM Db2 LUW | Conditional structured parser (DB2 JSON v1, Estimated only; requires affirmative per-connection Host capability) |
 | GaussDB / Huawei DWS | Conditional parser (Estimated JSON; requires affirmative per-connection Host capability; upstream DBX support not merged) |
 
-`Structured` 表示 Plan Detective 会进一步解析为统一执行计划结构并进行 Metrics / Hotspot / Finding 分析。GaussDB/DWS 是条件支持：插件不凭 `dbType: "gaussdb"` 或 `dbVersion` 自行判断产品身份，旧版 / 未确认 Host capability 时不会绕过 Host 获取计划。其测试 fixtures 均为 synthetic，真实 9.1.1 / Windows DBX Host 联调未验证；Host 源码审计见 [GaussDB/DWS Host contract audit](docs/GAUSSDB_DWS_HOST_CONTRACT_AUDIT.md)。Oracle 仅声明支持 DBX 当前的 `TYPICAL +PREDICATE` 文本输出，不泛化到其他 DBMS_XPLAN display 格式；Dameng、QuestDB 与 Doris 仅支持 Estimated 原生文本，不支持 Actual / ANALYZE / PROFILE.
+`Structured` 表示 Plan Detective 会进一步解析为统一执行计划结构。DB2 的显示和 Metrics 以 DB2 原生 Estimated 指标为准；Findings / Hotspots 当前明确不适用，不会产生通用成本阈值误报。DB2 仅针对 DB2 LUW 的 JSON v1；源码最低基线为 DBX Desktop ≥ 0.6.38 与 DB2 Agent ≥ 0.1.78，但该版本组合尚未端到端验证。Fixture 包含一份 DBX 上游 unit-test 计划（原始 DB2 capture 来源未说明）与两个 synthetic 样本；未在真实 DB2 / DBX Desktop 环境验收。Db2 for z/OS、Db2 for i 不在支持范围。GaussDB/DWS 也是条件支持：插件不凭 `dbType: "gaussdb"` 或 `dbVersion` 自行判断产品身份，旧版 / 未确认 Host capability 时不会绕过 Host 获取计划。其测试 fixtures 均为 synthetic，真实 9.1.1 / Windows DBX Host 联调未验证；Host 源码审计见 [GaussDB/DWS Host contract audit](docs/GAUSSDB_DWS_HOST_CONTRACT_AUDIT.md)。Oracle 仅声明支持 DBX 当前的 `TYPICAL +PREDICATE` 文本输出，不泛化到其他 DBMS_XPLAN display 格式；Dameng、QuestDB 与 Doris 仅支持 Estimated 原生文本，不支持 Actual / ANALYZE / PROFILE.
 
 ## 安全边界
 
@@ -175,12 +177,13 @@ Plan Detective 不调用 LLM 或 AI SDK。`analyze_estimated_plan` 只接受已�
 ## 当前限制
 
 - 当前只支持 Estimated Plan，不支持 Actual Plan 或 `EXPLAIN ANALYZE`。
-- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL compatibility mode、Oracle、Dameng、QuestDB 和 Doris 提供 Estimated structured parser；GaussDB/DWS parser 仅在 DBX Host 对同一连接的 capability 为 true 时启用。OceanBase MySQL / Oracle 共享 JSON plan pipeline；Doris 的 Fragment wrappers 不计入 operator metrics，cost / width 不跨引擎推断。
+- 当前 PostgreSQL、MySQL、SQL Server、OceanBase Oracle、OceanBase MySQL compatibility mode、Oracle、Dameng、QuestDB 和 Doris 提供 Estimated structured parser；DB2 LUW JSON v1 与 GaussDB/DWS parser 仅在 DBX Host 对同一连接的 capability 为 true 时启用。DB2 源码最低组件基线为 DBX Desktop ≥ 0.6.38、DB2 Agent ≥ 0.1.78，但不代表该组合已端到端验证。OceanBase MySQL / Oracle 共享 JSON plan pipeline；Doris 的 Fragment wrappers 不计入 operator metrics，cost / width 不跨引擎推断。
 - OceanBase Oracle / MySQL 的 `EST.TIME(us)` / `COST` 属于 OceanBase 自己的估算模型，不会映射成 PostgreSQL 语义的代价，也不参与代价类 Hotspot / Finding；OceanBase JSON 的 `format: "text"` 降级计划仍只展示 Raw Plan。
 - Oracle parser 只接受 Estimated `DBMS_XPLAN.DISPLAY(..., 'TYPICAL +PREDICATE')`；Oracle `Cost` 只保留在 `engineSpecific.oracle`，不映射为共享 `startupCost` / `totalCost`，也不产生 PostgreSQL cost hotspot。
 - Dameng parser 只接受 Estimated 原生文本；`[cost, rows, bytes-per-row]` 的 `cost` 只保留在 `engineSpecific.dameng`，不伪装为 PostgreSQL `startupCost` / `totalCost`，热点与规则只使用可靠的行数信号。
 - QuestDB parser 只接受 Estimated `format: "text"`；计划未报告共享的 rows / PostgreSQL cost，相关字段保持 `null`，不据此生成性能信号；PageFrame / Row cursor 作为 pipeline 节点展示，不重复计算 relation scan。
 - Doris parser 只接受 Estimated `format: "text"`；保留 Distributed Plan / PLAN FRAGMENT / fragment-local operator tree，Sink→Exchange link 只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；`cardinality` 映射 `estimatedRows`，scan 使用中性 `scan`，Doris cost 与 `avgRowSize` 不映射 PostgreSQL cost / shared width。官方文档转录与 synthetic fixtures 不是真实 Doris capture。
+- DB2 LUW parser 只接受 DBX Agent JSON v1 Estimated Plan；需要 DBX 同连接 capability 明确为 true。Host capability 为 false 时返回 unsupported，并提示检查 DBX Desktop ≥ 0.6.38 / DB2 Agent ≥ 0.1.78 与当前环境；不会绕过 Host。`totalCost` / `firstRowCost`（timerons）、`ioCost`（page I/Os）、`cpuCost`（instructions）以原生精确字符串保留在 `engineSpecific.db2`，不映射为共享 `totalCost` / PostgreSQL cost；`rowCount` 是 producer stream 的估算输出基数，不代表扫描行数或实际行数。DB2 的通用规则 / Hotspot 明确停用；NLJOIN 的输入顺序不解释为 outer / inner。仅支持 LUW 证据范围，Db2 for z/OS / i 不支持；真实 DB2 / DBX Host E2E 尚未完成。
 - GaussDB/DWS parser 只接受 Estimated JSON；需要 DBX 同连接 capability 明确为 true，普通 GaussDB / M-JDBC / 旧 Host 均不据 parser 自动升级支持。原生 cost 放在 `engineSpecific.gaussdb` 展示，不进入 PostgreSQL cost attribution / cost findings；当前 fixtures 全为 synthetic，真实 GaussDB 9.1.1 与 Windows DBX Host GUI smoke 未运行。上游 DBX PR #12644 仍为 Open / Draft，运行时支持依赖其后续合入。
 - Plan Diff 的用户可见范围限于 **PostgreSQL ↔ PostgreSQL** 与 **Native MySQL ↔ Native MySQL** 的完整 JSON Estimated structured plan；OceanBase MySQL 不按 Native MySQL 处理。Actual、truncated、raw-only、分析失败与非 JSON format 不进入比较。缺失值保持未知、不当 0；未匹配或歧义节点不会被宣称为新增 / 消失；成本不计算差值、百分比或提速率。真实 DBX Desktop 端到端验收仍 **NOT VERIFIED**，Node / DOM 测试不等同于真实 Desktop 验收。计划快照历史已实现，但 Issue #72 的真实 DBX Desktop Storage 验收仍 **NOT VERIFIED**。AI SQL Rewrite 与自动调优未实现。
 - 当前 DBX 0.6.26 上游只从打开的 plugin-owned connection 发现 plugin tools；Plan Detective 没有数据库 connection provider，因而 `analyze_estimated_plan` 暂不能绑定普通 DBX 原生 Agent 连接。DBX `explain_query` 给模型的是 Markdown 表格文本，结构化 `explain_data` 只供 UI 使用；端到端交接需要上游提供普通 Agent connection tool binding 和可供后续 tool 消费的结构化 Estimated Plan 结果。插件不会用 Host API 重跑 EXPLAIN 绕过此限制。
@@ -201,6 +204,7 @@ DBX Connection
 
 - [架构与职责边界](docs/ARCHITECTURE.md)
 - [Plan Core 输入、parser 与 fixture 契约](docs/PLAN_INPUT_AND_FIXTURES.md)
+- [DB2 LUW JSON v1 解析、指标边界与验证状态](docs/PLAN_INPUT_AND_FIXTURES.md#410-db2-luw-estimated-json-v1)
 - [项目计划与 Future 边界](docs/PROJECT_PLAN.md)
 - [v0.7.0 AI Tool 契约、上游 gap 与 Runtime gate](docs/AI_TOOL_V0.7.0.md)
 

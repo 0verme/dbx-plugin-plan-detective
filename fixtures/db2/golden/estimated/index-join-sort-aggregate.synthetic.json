@@ -1,0 +1,1066 @@
+{
+  "parsed": {
+    "database": "db2",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "operatorId": null,
+      "referenceToOperatorId": null,
+      "nodeType": "DB2 Estimated Plan",
+      "totalCost": null,
+      "firstRowCost": null,
+      "ioCost": null,
+      "cpuCost": null,
+      "rowCount": null,
+      "objects": [],
+      "predicates": [],
+      "arguments": [],
+      "inputStreams": [],
+      "outputStreams": [],
+      "streamIds": [],
+      "structural": true,
+      "structuralType": "plan",
+      "children": [
+        {
+          "operatorId": "1",
+          "nodeType": "RETURN",
+          "totalCost": "0.12345678901234567890123456789",
+          "firstRowCost": "0.000000000000000000123",
+          "ioCost": null,
+          "cpuCost": null,
+          "rowCount": null,
+          "objects": [],
+          "predicates": [],
+          "arguments": [],
+          "inputStreams": [
+            {
+              "id": "7",
+              "sourceType": "O",
+              "sourceId": "2",
+              "targetType": "O",
+              "targetId": "1",
+              "rowCount": "2",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            }
+          ],
+          "outputStreams": [],
+          "childEdges": [
+            {
+              "operatorId": "2",
+              "streamIds": [
+                "7"
+              ]
+            }
+          ],
+          "extra": {},
+          "streamIds": [],
+          "structural": false,
+          "children": [
+            {
+              "operatorId": "2",
+              "nodeType": "GRPBY",
+              "totalCost": "0.1200000000000000000000001",
+              "firstRowCost": null,
+              "ioCost": "1.0000000000000000000000002",
+              "cpuCost": null,
+              "rowCount": "2",
+              "objects": [],
+              "predicates": [],
+              "arguments": [],
+              "inputStreams": [
+                {
+                  "id": "6",
+                  "sourceType": "O",
+                  "sourceId": "3",
+                  "targetType": "O",
+                  "targetId": "2",
+                  "rowCount": "22",
+                  "objectSchema": null,
+                  "objectName": null,
+                  "extra": {}
+                }
+              ],
+              "outputStreams": [
+                {
+                  "id": "7",
+                  "sourceType": "O",
+                  "sourceId": "2",
+                  "targetType": "O",
+                  "targetId": "1",
+                  "rowCount": "2",
+                  "objectSchema": null,
+                  "objectName": null,
+                  "extra": {}
+                }
+              ],
+              "childEdges": [
+                {
+                  "operatorId": "3",
+                  "streamIds": [
+                    "6"
+                  ]
+                }
+              ],
+              "extra": {},
+              "streamIds": [
+                "7"
+              ],
+              "structural": false,
+              "children": [
+                {
+                  "operatorId": "3",
+                  "nodeType": "SORT",
+                  "totalCost": "0.1100000000000000000000001",
+                  "firstRowCost": null,
+                  "ioCost": null,
+                  "cpuCost": "9007199254740993",
+                  "rowCount": "22",
+                  "objects": [],
+                  "predicates": [],
+                  "arguments": [],
+                  "inputStreams": [
+                    {
+                      "id": "5",
+                      "sourceType": "O",
+                      "sourceId": "4",
+                      "targetType": "O",
+                      "targetId": "3",
+                      "rowCount": "2.25000000000000000001",
+                      "objectSchema": null,
+                      "objectName": null,
+                      "extra": {}
+                    }
+                  ],
+                  "outputStreams": [
+                    {
+                      "id": "6",
+                      "sourceType": "O",
+                      "sourceId": "3",
+                      "targetType": "O",
+                      "targetId": "2",
+                      "rowCount": "22",
+                      "objectSchema": null,
+                      "objectName": null,
+                      "extra": {}
+                    }
+                  ],
+                  "childEdges": [
+                    {
+                      "operatorId": "4",
+                      "streamIds": [
+                        "5"
+                      ]
+                    }
+                  ],
+                  "extra": {},
+                  "streamIds": [
+                    "6"
+                  ],
+                  "structural": false,
+                  "children": [
+                    {
+                      "operatorId": "4",
+                      "nodeType": "NLJOIN",
+                      "totalCost": "0.1000000000000000000000001",
+                      "firstRowCost": null,
+                      "ioCost": null,
+                      "cpuCost": null,
+                      "rowCount": "2.25000000000000000001",
+                      "objects": [],
+                      "predicates": [
+                        {
+                          "text": "(O.CUSTOMER_ID = C.ID)",
+                          "howApplied": "JOIN",
+                          "extra": {}
+                        }
+                      ],
+                      "arguments": [],
+                      "inputStreams": [
+                        {
+                          "id": "3",
+                          "sourceType": "O",
+                          "sourceId": "5",
+                          "targetType": "O",
+                          "targetId": "4",
+                          "rowCount": "0.03999999910593033",
+                          "objectSchema": null,
+                          "objectName": null,
+                          "extra": {}
+                        },
+                        {
+                          "id": "4",
+                          "sourceType": "O",
+                          "sourceId": "6",
+                          "targetType": "O",
+                          "targetId": "4",
+                          "rowCount": "125000",
+                          "objectSchema": null,
+                          "objectName": null,
+                          "extra": {}
+                        }
+                      ],
+                      "outputStreams": [
+                        {
+                          "id": "5",
+                          "sourceType": "O",
+                          "sourceId": "4",
+                          "targetType": "O",
+                          "targetId": "3",
+                          "rowCount": "2.25000000000000000001",
+                          "objectSchema": null,
+                          "objectName": null,
+                          "extra": {}
+                        }
+                      ],
+                      "childEdges": [
+                        {
+                          "operatorId": "5",
+                          "streamIds": [
+                            "3"
+                          ]
+                        },
+                        {
+                          "operatorId": "6",
+                          "streamIds": [
+                            "4"
+                          ]
+                        }
+                      ],
+                      "extra": {},
+                      "streamIds": [
+                        "5"
+                      ],
+                      "structural": false,
+                      "children": [
+                        {
+                          "operatorId": "5",
+                          "nodeType": "IXSCAN",
+                          "totalCost": "0.0500000000000000000000001",
+                          "firstRowCost": null,
+                          "ioCost": "0.00000000000000000000000012345678901234567890",
+                          "cpuCost": null,
+                          "rowCount": "0.03999999910593033",
+                          "objects": [
+                            {
+                              "schema": "APP",
+                              "name": "IDX_CUSTOMER_STATUS",
+                              "endpoint": "source",
+                              "streamId": "1"
+                            }
+                          ],
+                          "predicates": [
+                            {
+                              "text": "(C.STATUS = 'ACTIVE')",
+                              "howApplied": "SARG",
+                              "extra": {}
+                            }
+                          ],
+                          "arguments": [],
+                          "inputStreams": [
+                            {
+                              "id": "1",
+                              "sourceType": "D",
+                              "sourceId": "-1",
+                              "targetType": "O",
+                              "targetId": "5",
+                              "rowCount": "0.03999999910593033",
+                              "objectSchema": "APP",
+                              "objectName": "IDX_CUSTOMER_STATUS",
+                              "extra": {}
+                            }
+                          ],
+                          "outputStreams": [
+                            {
+                              "id": "3",
+                              "sourceType": "O",
+                              "sourceId": "5",
+                              "targetType": "O",
+                              "targetId": "4",
+                              "rowCount": "0.03999999910593033",
+                              "objectSchema": null,
+                              "objectName": null,
+                              "extra": {}
+                            }
+                          ],
+                          "childEdges": [],
+                          "extra": {},
+                          "streamIds": [
+                            "3"
+                          ],
+                          "structural": false,
+                          "children": []
+                        },
+                        {
+                          "operatorId": "6",
+                          "nodeType": "TBSCAN",
+                          "totalCost": "0.0600000000000000000000001",
+                          "firstRowCost": null,
+                          "ioCost": null,
+                          "cpuCost": null,
+                          "rowCount": "125000",
+                          "objects": [
+                            {
+                              "schema": "APP",
+                              "name": "ORDERS",
+                              "endpoint": "source",
+                              "streamId": "2"
+                            }
+                          ],
+                          "predicates": [],
+                          "arguments": [],
+                          "inputStreams": [
+                            {
+                              "id": "2",
+                              "sourceType": "D",
+                              "sourceId": "-1",
+                              "targetType": "O",
+                              "targetId": "6",
+                              "rowCount": "125000",
+                              "objectSchema": "APP",
+                              "objectName": "ORDERS",
+                              "extra": {}
+                            }
+                          ],
+                          "outputStreams": [
+                            {
+                              "id": "4",
+                              "sourceType": "O",
+                              "sourceId": "6",
+                              "targetType": "O",
+                              "targetId": "4",
+                              "rowCount": "125000",
+                              "objectSchema": null,
+                              "objectName": null,
+                              "extra": {}
+                            }
+                          ],
+                          "childEdges": [],
+                          "extra": {},
+                          "streamIds": [
+                            "4"
+                          ],
+                          "structural": false,
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "db2": {
+        "statement": {
+          "EXPLAIN_LEVEL": "P",
+          "STMTNO": "1",
+          "SECTNO": "3"
+        },
+        "streams": [
+          {
+            "id": "1",
+            "sourceType": "D",
+            "sourceId": "-1",
+            "targetType": "O",
+            "targetId": "5",
+            "rowCount": "0.03999999910593033",
+            "objectSchema": "APP",
+            "objectName": "IDX_CUSTOMER_STATUS",
+            "extra": {}
+          },
+          {
+            "id": "2",
+            "sourceType": "D",
+            "sourceId": "-1",
+            "targetType": "O",
+            "targetId": "6",
+            "rowCount": "125000",
+            "objectSchema": "APP",
+            "objectName": "ORDERS",
+            "extra": {}
+          },
+          {
+            "id": "3",
+            "sourceType": "O",
+            "sourceId": "5",
+            "targetType": "O",
+            "targetId": "4",
+            "rowCount": "0.03999999910593033",
+            "objectSchema": null,
+            "objectName": null,
+            "extra": {}
+          },
+          {
+            "id": "4",
+            "sourceType": "O",
+            "sourceId": "6",
+            "targetType": "O",
+            "targetId": "4",
+            "rowCount": "125000",
+            "objectSchema": null,
+            "objectName": null,
+            "extra": {}
+          },
+          {
+            "id": "5",
+            "sourceType": "O",
+            "sourceId": "4",
+            "targetType": "O",
+            "targetId": "3",
+            "rowCount": "2.25000000000000000001",
+            "objectSchema": null,
+            "objectName": null,
+            "extra": {}
+          },
+          {
+            "id": "6",
+            "sourceType": "O",
+            "sourceId": "3",
+            "targetType": "O",
+            "targetId": "2",
+            "rowCount": "22",
+            "objectSchema": null,
+            "objectName": null,
+            "extra": {}
+          },
+          {
+            "id": "7",
+            "sourceType": "O",
+            "sourceId": "2",
+            "targetType": "O",
+            "targetId": "1",
+            "rowCount": "2",
+            "objectSchema": null,
+            "objectName": null,
+            "extra": {}
+          }
+        ],
+        "predicates": [
+          {
+            "operatorId": "4",
+            "text": "(O.CUSTOMER_ID = C.ID)",
+            "howApplied": "JOIN"
+          },
+          {
+            "operatorId": "5",
+            "text": "(C.STATUS = 'ACTIVE')",
+            "howApplied": "SARG"
+          }
+        ],
+        "arguments": [],
+        "extra": {}
+      }
+    }
+  },
+  "normalized": {
+    "database": "db2",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "DB2 Estimated Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "result",
+          "nodeType": "RETURN",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "aggregate",
+              "nodeType": "GRPBY",
+              "relation": null,
+              "estimatedRows": 2,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "sort",
+                  "nodeType": "SORT",
+                  "relation": null,
+                  "estimatedRows": 22,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "join",
+                      "nodeType": "NLJOIN",
+                      "relation": null,
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": null,
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [
+                        {
+                          "id": "0.0.0.0.0.0",
+                          "kind": "index_scan",
+                          "nodeType": "IXSCAN",
+                          "relation": {
+                            "name": null,
+                            "alias": null,
+                            "indexName": "APP.IDX_CUSTOMER_STATUS"
+                          },
+                          "estimatedRows": null,
+                          "actualRows": null,
+                          "actualStartupTime": null,
+                          "actualTotalTime": null,
+                          "loops": null,
+                          "startupCost": null,
+                          "totalCost": null,
+                          "width": null,
+                          "filter": null,
+                          "joinType": null,
+                          "joinCondition": null,
+                          "indexCondition": null,
+                          "sortKeys": null,
+                          "groupKeys": null,
+                          "children": [],
+                          "engineSpecific": {
+                            "database": "db2",
+                            "db2": {
+                              "operatorId": "5",
+                              "operatorType": "IXSCAN",
+                              "totalCost": "0.0500000000000000000000001",
+                              "firstRowCost": null,
+                              "ioCost": "0.00000000000000000000000012345678901234567890",
+                              "cpuCost": null,
+                              "rowCount": "0.03999999910593033",
+                              "objects": [
+                                {
+                                  "schema": "APP",
+                                  "name": "IDX_CUSTOMER_STATUS",
+                                  "endpoint": "source",
+                                  "streamId": "1"
+                                }
+                              ],
+                              "predicates": [
+                                {
+                                  "text": "(C.STATUS = 'ACTIVE')",
+                                  "howApplied": "SARG",
+                                  "extra": {}
+                                }
+                              ],
+                              "arguments": [],
+                              "inputStreams": [
+                                {
+                                  "id": "1",
+                                  "sourceType": "D",
+                                  "sourceId": "-1",
+                                  "targetType": "O",
+                                  "targetId": "5",
+                                  "rowCount": "0.03999999910593033",
+                                  "objectSchema": "APP",
+                                  "objectName": "IDX_CUSTOMER_STATUS",
+                                  "extra": {}
+                                }
+                              ],
+                              "outputStreams": [
+                                {
+                                  "id": "3",
+                                  "sourceType": "O",
+                                  "sourceId": "5",
+                                  "targetType": "O",
+                                  "targetId": "4",
+                                  "rowCount": "0.03999999910593033",
+                                  "objectSchema": null,
+                                  "objectName": null,
+                                  "extra": {}
+                                }
+                              ],
+                              "streamIds": [
+                                "3"
+                              ],
+                              "extra": {}
+                            },
+                            "extra": {}
+                          }
+                        },
+                        {
+                          "id": "0.0.0.0.0.1",
+                          "kind": "scan",
+                          "nodeType": "TBSCAN",
+                          "relation": {
+                            "name": "APP.ORDERS",
+                            "alias": null,
+                            "indexName": null
+                          },
+                          "estimatedRows": 125000,
+                          "actualRows": null,
+                          "actualStartupTime": null,
+                          "actualTotalTime": null,
+                          "loops": null,
+                          "startupCost": null,
+                          "totalCost": null,
+                          "width": null,
+                          "filter": null,
+                          "joinType": null,
+                          "joinCondition": null,
+                          "indexCondition": null,
+                          "sortKeys": null,
+                          "groupKeys": null,
+                          "children": [],
+                          "engineSpecific": {
+                            "database": "db2",
+                            "db2": {
+                              "operatorId": "6",
+                              "operatorType": "TBSCAN",
+                              "totalCost": "0.0600000000000000000000001",
+                              "firstRowCost": null,
+                              "ioCost": null,
+                              "cpuCost": null,
+                              "rowCount": "125000",
+                              "objects": [
+                                {
+                                  "schema": "APP",
+                                  "name": "ORDERS",
+                                  "endpoint": "source",
+                                  "streamId": "2"
+                                }
+                              ],
+                              "predicates": [],
+                              "arguments": [],
+                              "inputStreams": [
+                                {
+                                  "id": "2",
+                                  "sourceType": "D",
+                                  "sourceId": "-1",
+                                  "targetType": "O",
+                                  "targetId": "6",
+                                  "rowCount": "125000",
+                                  "objectSchema": "APP",
+                                  "objectName": "ORDERS",
+                                  "extra": {}
+                                }
+                              ],
+                              "outputStreams": [
+                                {
+                                  "id": "4",
+                                  "sourceType": "O",
+                                  "sourceId": "6",
+                                  "targetType": "O",
+                                  "targetId": "4",
+                                  "rowCount": "125000",
+                                  "objectSchema": null,
+                                  "objectName": null,
+                                  "extra": {}
+                                }
+                              ],
+                              "streamIds": [
+                                "4"
+                              ],
+                              "extra": {}
+                            },
+                            "extra": {}
+                          }
+                        }
+                      ],
+                      "engineSpecific": {
+                        "database": "db2",
+                        "db2": {
+                          "operatorId": "4",
+                          "operatorType": "NLJOIN",
+                          "totalCost": "0.1000000000000000000000001",
+                          "firstRowCost": null,
+                          "ioCost": null,
+                          "cpuCost": null,
+                          "rowCount": "2.25000000000000000001",
+                          "objects": [],
+                          "predicates": [
+                            {
+                              "text": "(O.CUSTOMER_ID = C.ID)",
+                              "howApplied": "JOIN",
+                              "extra": {}
+                            }
+                          ],
+                          "arguments": [],
+                          "inputStreams": [
+                            {
+                              "id": "3",
+                              "sourceType": "O",
+                              "sourceId": "5",
+                              "targetType": "O",
+                              "targetId": "4",
+                              "rowCount": "0.03999999910593033",
+                              "objectSchema": null,
+                              "objectName": null,
+                              "extra": {}
+                            },
+                            {
+                              "id": "4",
+                              "sourceType": "O",
+                              "sourceId": "6",
+                              "targetType": "O",
+                              "targetId": "4",
+                              "rowCount": "125000",
+                              "objectSchema": null,
+                              "objectName": null,
+                              "extra": {}
+                            }
+                          ],
+                          "outputStreams": [
+                            {
+                              "id": "5",
+                              "sourceType": "O",
+                              "sourceId": "4",
+                              "targetType": "O",
+                              "targetId": "3",
+                              "rowCount": "2.25000000000000000001",
+                              "objectSchema": null,
+                              "objectName": null,
+                              "extra": {}
+                            }
+                          ],
+                          "streamIds": [
+                            "5"
+                          ],
+                          "extra": {}
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "db2",
+                    "db2": {
+                      "operatorId": "3",
+                      "operatorType": "SORT",
+                      "totalCost": "0.1100000000000000000000001",
+                      "firstRowCost": null,
+                      "ioCost": null,
+                      "cpuCost": "9007199254740993",
+                      "rowCount": "22",
+                      "objects": [],
+                      "predicates": [],
+                      "arguments": [],
+                      "inputStreams": [
+                        {
+                          "id": "5",
+                          "sourceType": "O",
+                          "sourceId": "4",
+                          "targetType": "O",
+                          "targetId": "3",
+                          "rowCount": "2.25000000000000000001",
+                          "objectSchema": null,
+                          "objectName": null,
+                          "extra": {}
+                        }
+                      ],
+                      "outputStreams": [
+                        {
+                          "id": "6",
+                          "sourceType": "O",
+                          "sourceId": "3",
+                          "targetType": "O",
+                          "targetId": "2",
+                          "rowCount": "22",
+                          "objectSchema": null,
+                          "objectName": null,
+                          "extra": {}
+                        }
+                      ],
+                      "streamIds": [
+                        "6"
+                      ],
+                      "extra": {}
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "db2",
+                "db2": {
+                  "operatorId": "2",
+                  "operatorType": "GRPBY",
+                  "totalCost": "0.1200000000000000000000001",
+                  "firstRowCost": null,
+                  "ioCost": "1.0000000000000000000000002",
+                  "cpuCost": null,
+                  "rowCount": "2",
+                  "objects": [],
+                  "predicates": [],
+                  "arguments": [],
+                  "inputStreams": [
+                    {
+                      "id": "6",
+                      "sourceType": "O",
+                      "sourceId": "3",
+                      "targetType": "O",
+                      "targetId": "2",
+                      "rowCount": "22",
+                      "objectSchema": null,
+                      "objectName": null,
+                      "extra": {}
+                    }
+                  ],
+                  "outputStreams": [
+                    {
+                      "id": "7",
+                      "sourceType": "O",
+                      "sourceId": "2",
+                      "targetType": "O",
+                      "targetId": "1",
+                      "rowCount": "2",
+                      "objectSchema": null,
+                      "objectName": null,
+                      "extra": {}
+                    }
+                  ],
+                  "streamIds": [
+                    "7"
+                  ],
+                  "extra": {}
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "db2",
+            "db2": {
+              "operatorId": "1",
+              "operatorType": "RETURN",
+              "totalCost": "0.12345678901234567890123456789",
+              "firstRowCost": "0.000000000000000000123",
+              "ioCost": null,
+              "cpuCost": null,
+              "rowCount": null,
+              "objects": [],
+              "predicates": [],
+              "arguments": [],
+              "inputStreams": [
+                {
+                  "id": "7",
+                  "sourceType": "O",
+                  "sourceId": "2",
+                  "targetType": "O",
+                  "targetId": "1",
+                  "rowCount": "2",
+                  "objectSchema": null,
+                  "objectName": null,
+                  "extra": {}
+                }
+              ],
+              "outputStreams": [],
+              "streamIds": [],
+              "extra": {}
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "db2",
+        "structural": true,
+        "db2": {
+          "structuralType": "plan",
+          "statement": {
+            "EXPLAIN_LEVEL": "P",
+            "STMTNO": "1",
+            "SECTNO": "3"
+          },
+          "streams": [
+            {
+              "id": "1",
+              "sourceType": "D",
+              "sourceId": "-1",
+              "targetType": "O",
+              "targetId": "5",
+              "rowCount": "0.03999999910593033",
+              "objectSchema": "APP",
+              "objectName": "IDX_CUSTOMER_STATUS",
+              "extra": {}
+            },
+            {
+              "id": "2",
+              "sourceType": "D",
+              "sourceId": "-1",
+              "targetType": "O",
+              "targetId": "6",
+              "rowCount": "125000",
+              "objectSchema": "APP",
+              "objectName": "ORDERS",
+              "extra": {}
+            },
+            {
+              "id": "3",
+              "sourceType": "O",
+              "sourceId": "5",
+              "targetType": "O",
+              "targetId": "4",
+              "rowCount": "0.03999999910593033",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            },
+            {
+              "id": "4",
+              "sourceType": "O",
+              "sourceId": "6",
+              "targetType": "O",
+              "targetId": "4",
+              "rowCount": "125000",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            },
+            {
+              "id": "5",
+              "sourceType": "O",
+              "sourceId": "4",
+              "targetType": "O",
+              "targetId": "3",
+              "rowCount": "2.25000000000000000001",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            },
+            {
+              "id": "6",
+              "sourceType": "O",
+              "sourceId": "3",
+              "targetType": "O",
+              "targetId": "2",
+              "rowCount": "22",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            },
+            {
+              "id": "7",
+              "sourceType": "O",
+              "sourceId": "2",
+              "targetType": "O",
+              "targetId": "1",
+              "rowCount": "2",
+              "objectSchema": null,
+              "objectName": null,
+              "extra": {}
+            }
+          ],
+          "predicates": [
+            {
+              "operatorId": "4",
+              "text": "(O.CUSTOMER_ID = C.ID)",
+              "howApplied": "JOIN"
+            },
+            {
+              "operatorId": "5",
+              "text": "(C.STATUS = 'ACTIVE')",
+              "howApplied": "SARG"
+            }
+          ],
+          "arguments": [],
+          "referenceTo": null,
+          "streamIds": []
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 6,
+    "maxDepth": 5,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 2,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 1,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0.0.0.1",
+      "kind": "scan",
+      "nodeType": "TBSCAN",
+      "relation": "APP.ORDERS",
+      "estimatedRows": 125000
+    },
+    "costAttribution": {
+      "engine": "db2",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "db2",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

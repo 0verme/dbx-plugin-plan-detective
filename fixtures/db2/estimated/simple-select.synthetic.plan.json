@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "databaseType": "db2",
+  "requestTag": "00000000000000000001",
+  "statement": {
+    "EXPLAIN_LEVEL": "P",
+    "STMTNO": "1",
+    "SECTNO": "1"
+  },
+  "operators": [
+    { "id": "9", "type": "RETURN", "totalCost": "0.0200000000000000000000001" },
+    { "id": "10", "type": "TBSCAN", "totalCost": "0.0190000000000000000000001", "ioCost": "0.0", "cpuCost": "9007199254740993" }
+  ],
+  "streams": [
+    { "id": "1", "sourceType": "D", "sourceId": "-1", "targetType": "O", "targetId": "10", "rowCount": "1", "objectSchema": "APP", "objectName": "FEATURE_FLAGS" },
+    { "id": "2", "sourceType": "O", "sourceId": "10", "targetType": "O", "targetId": "9", "rowCount": "12.0000000000000000000001" },
+    { "id": "3", "sourceType": "O", "sourceId": "9", "targetType": "D", "targetId": "-1", "rowCount": "12.0000000000000000000001" }
+  ],
+  "predicates": [],
+  "arguments": []
+}
