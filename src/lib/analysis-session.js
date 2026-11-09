@@ -102,7 +102,9 @@ export async function runHostAnalysis(input) {
         hostResult: null,
         rawInput: null,
         analysis: null,
-        message: `DBX 报告该连接的方言（${capabilities.dbType}）没有 Estimated Plan 获取能力。`,
+        message: capabilities.dbType === "db2"
+          ? 'DBX Host 未为此 DB2 连接声明 Estimated Plan 能力；请确认 DBX Desktop >= 0.6.38、DB2 Agent >= 0.1.78 及当前连接/Agent 环境。组件版本仅为源码最低基线，不能替代 Host capability 或端到端验收。'
+          : `DBX 报告该连接的方言（${capabilities.dbType}）没有 Estimated Plan 获取能力。`,
       };
     }
 

@@ -105,6 +105,7 @@ test("does not infer OceanBase from Raw Plan shape when dbVersion has no OceanBa
 test("maps every dbType the merged host contract can return", () => {
   const cases = [
     ["postgres", "postgresql"],
+    ["db2", "db2"],
     ["mysql", "mysql"],
     ["sqlserver", "sqlserver"],
     ["oracle", "oracle"],
@@ -119,6 +120,22 @@ test("maps every dbType the merged host contract can return", () => {
     assert.equal(input.database, database, `${dbType} must map to ${database}`);
     assert.equal(input.mode, "estimated");
   }
+});
+
+test("DB2 capability false is rejected and never routed to structured analysis", () => {
+  const response = dbxResponse({ dbType: "db2", dbVersion: "DB2 LUW" });
+  const accepted = adaptDbxEstimatedPlanResponse(response);
+  assert.equal(accepted.database, "db2", "the DB2 response type maps without inspecting payload shape");
+
+  assertAdapterError(
+    "DB2 capability false",
+    () => adaptDbxEstimatedPlanResponse(response, { capabilities: { dbType: "db2", supports: { estimatedPlan: false } } }),
+    "UNSUPPORTED_DB_TYPE",
+  );
+  assert.throws(
+    () => adaptDbxEstimatedPlanResponse(response, { capabilities: { dbType: "db2", supports: { estimatedPlan: false } } }),
+    (error) => /DBX Desktop >= 0\.6\.38/.test(error.message) && /DB2 Agent >= 0\.1\.78/.test(error.message),
+  );
 });
 
 test("maps GaussDB only when the same Host capability affirmatively enables Estimated Plan", () => {

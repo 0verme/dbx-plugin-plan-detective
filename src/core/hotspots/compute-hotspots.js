@@ -26,7 +26,9 @@
  *   signal;
  * - Dameng signals read the `rows` member of the native
  *   `[cost, rows, bytes-per-row]` tuple; Dameng `cost` is copied only as
- *   evidence and never becomes a shared cost signal.
+ *   evidence and never becomes a shared cost signal;
+ * - DB2 LUW v1 currently emits no rule / hotspot signals: its cardinality is
+ *   output-stream cardinality and has no validated DB2 diagnostic threshold.
  *
  * There is no combined score and no cross-engine comparison: PostgreSQL,
  * GaussDB/DWS, MySQL, SQL Server, OceanBase Oracle / MySQL, Oracle, Dameng,
@@ -65,7 +67,7 @@ const LEVEL_RANK = Object.freeze({ high: 0, warning: 1, info: 2 });
  *
  * @typedef {Object} HotspotAnalysis
  * @property {{
- *   engine: "postgresql"|"gaussdb"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oceanbase-mysql"|"oracle"|"dameng"|"questdb"|"doris",
+ *   engine: "postgresql"|"db2"|"gaussdb"|"mysql"|"sqlserver"|"oceanbase-oracle"|"oceanbase-mysql"|"oracle"|"dameng"|"questdb"|"doris",
  *   status: "available"|"withheld"|"not-applicable",
  *   reason: string|null,
  * }} cost
@@ -89,7 +91,7 @@ export function computeHotspots(normalized, metrics) {
     if (database === "postgresql") collectPostgresReasons(node, cost, reasons);
     if (database === "mysql") collectMySqlReasons(node, cost, reasons);
     if (database === "sqlserver") collectSqlServerReasons(node, reasons);
-    collectNeutralReasons(node, database, reasons);
+    if (database !== "db2") collectNeutralReasons(node, database, reasons);
     if (reasons.length === 0) return;
 
     reasons.sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level]);

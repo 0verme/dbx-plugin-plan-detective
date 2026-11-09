@@ -143,7 +143,11 @@ export function describeAnalysisNotice(session, locale = DEFAULT_LOCALE) {
       return {
         tone: "warning",
         title: t("analysis.notice.unsupported"),
-        detail: session.capabilities?.dbType ? t("analysis.notice.unsupportedDetail", { database: session.capabilities.dbType }) : session.message ?? null,
+        detail: session.capabilities?.dbType === "db2"
+          ? t("analysis.notice.unsupportedDb2Detail")
+          : session.capabilities?.dbType
+            ? t("analysis.notice.unsupportedDetail", { database: session.capabilities.dbType })
+            : session.message ?? null,
       };
     case "truncated":
       return { tone: "warning", title: t("analysis.notice.truncated"), detail: t("analysis.notice.truncatedDetail") };

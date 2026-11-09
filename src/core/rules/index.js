@@ -18,6 +18,10 @@ export const RULES = Object.freeze([largeSequentialScanRule, expensiveSortRule, 
  * @returns {import("../findings/finding.js").Finding[]}
  */
 export function runRules(normalized, metrics) {
+  // DB2 LUW v1 exposes native costs and output-stream cardinality, but this
+  // project has no validated DB2 threshold / operator-side diagnosis contract.
+  if (normalized.database === "db2") return [];
+
   const findings = [];
   for (const rule of RULES) {
     findings.push(...rule.run(normalized, metrics));

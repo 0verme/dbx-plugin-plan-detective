@@ -12,6 +12,7 @@
 
 import { PlanInputError, PlanParseError } from "../errors.js";
 import { computeHotspots } from "../hotspots/compute-hotspots.js";
+import { db2Parser } from "./db2.js";
 import { damengParser } from "./dameng.js";
 import { dorisParser } from "./doris.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
@@ -33,6 +34,7 @@ import { sqlserverParser } from "./sqlserver.js";
  */
 const PARSERS = new Map([
   [postgresParser.database, postgresParser],
+  [db2Parser.database, db2Parser],
   [gaussdbParser.database, gaussdbParser],
   [mysqlParser.database, mysqlParser],
   [sqlserverParser.database, sqlserverParser],

@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "databaseType": "db2",
+  "requestTag": "00000000000000000002",
+  "statement": {
+    "EXPLAIN_LEVEL": "P",
+    "STMTNO": "1",
+    "SECTNO": "3"
+  },
+  "operators": [
+    { "id": "1", "type": "RETURN", "totalCost": "0.12345678901234567890123456789", "firstRowCost": "0.000000000000000000123" },
+    { "id": "2", "type": "GRPBY", "totalCost": "0.1200000000000000000000001", "ioCost": "1.0000000000000000000000002" },
+    { "id": "3", "type": "SORT", "totalCost": "0.1100000000000000000000001", "cpuCost": "9007199254740993" },
+    { "id": "4", "type": "NLJOIN", "totalCost": "0.1000000000000000000000001" },
+    { "id": "5", "type": "IXSCAN", "totalCost": "0.0500000000000000000000001", "ioCost": "0.00000000000000000000000012345678901234567890" },
+    { "id": "6", "type": "TBSCAN", "totalCost": "0.0600000000000000000000001" }
+  ],
+  "streams": [
+    { "id": "1", "sourceType": "D", "sourceId": "-1", "targetType": "O", "targetId": "5", "rowCount": "0.03999999910593033", "objectSchema": "APP", "objectName": "IDX_CUSTOMER_STATUS" },
+    { "id": "2", "sourceType": "D", "sourceId": "-1", "targetType": "O", "targetId": "6", "rowCount": "125000", "objectSchema": "APP", "objectName": "ORDERS" },
+    { "id": "3", "sourceType": "O", "sourceId": "5", "targetType": "O", "targetId": "4", "rowCount": "0.03999999910593033" },
+    { "id": "4", "sourceType": "O", "sourceId": "6", "targetType": "O", "targetId": "4", "rowCount": "125000" },
+    { "id": "5", "sourceType": "O", "sourceId": "4", "targetType": "O", "targetId": "3", "rowCount": "2.25000000000000000001" },
+    { "id": "6", "sourceType": "O", "sourceId": "3", "targetType": "O", "targetId": "2", "rowCount": "22" },
+    { "id": "7", "sourceType": "O", "sourceId": "2", "targetType": "O", "targetId": "1", "rowCount": "2" }
+  ],
+  "predicates": [
+    { "operatorId": "4", "text": "(O.CUSTOMER_ID = C.ID)", "howApplied": "JOIN" },
+    { "operatorId": "5", "text": "(C.STATUS = 'ACTIVE')", "howApplied": "SARG" }
+  ],
+  "arguments": []
+}

@@ -1,0 +1,26 @@
+{
+  "database": "db2",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-authored DB2 LUW v1 envelope for a simple SELECT; based on DBX upstream reader/viewer shape, not a database capture.",
+    "reference": "https://github.com/t8y2/dbx/blob/main/apps/desktop/src/lib/diagram/db2ExplainPlan.ts"
+  },
+  "features": [
+    "simple SELECT operator tree",
+    "TBSCAN and RETURN",
+    "output stream cardinality",
+    "missing native metrics remain unknown"
+  ],
+  "expect": {
+    "rootNodeType": "DB2 Estimated Plan",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": []
+  }
+}
