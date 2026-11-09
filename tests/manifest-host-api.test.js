@@ -6,8 +6,8 @@ import { REPO_ROOT } from "./helpers/fixtures.js";
 
 /**
  * The manifest is what makes the Host APIs reachable: plan acquisition needs
- * `host.plans:read` and persistence needs `host.storage`. Storage is advertised
- * independently from Plan API and is runtime-gated for older/partial hosts.
+ * `host.plans:read`. The plugin persists nothing, so it declares no other host
+ * permission.
  */
 
 async function readManifest() {
@@ -28,17 +28,17 @@ test("manifest declares host.plans:read", async () => {
   );
 });
 
-test("manifest declares both the Plan API and Host Storage permissions", async () => {
+test("manifest declares only the Plan API host permission", async () => {
   const manifest = await readManifest();
   const hostPermissions = manifest.permissions.filter((permission) => permission.startsWith("host."));
-  assert.deepEqual(hostPermissions, ["host.plans:read", "host.storage"]);
+  assert.deepEqual(hostPermissions, ["host.plans:read"]);
 });
 
 test("manifest is frontend-only and keeps both existing UI contributions", async () => {
   const manifest = await readManifest();
   assert.deepEqual(manifest.entrypoints, { ui: { root: "ui", entry: "ui/index.html" } });
   assert.equal(manifest.engines.dbx, ">=0.6.23");
-  assert.deepEqual(manifest.permissions, ["host.plans:read", "host.storage"]);
+  assert.deepEqual(manifest.permissions, ["host.plans:read"]);
 
   const types = manifest.contributions.map((contribution) => contribution.type).sort();
   assert.deepEqual(types, ["result-view", "workbench"]);
