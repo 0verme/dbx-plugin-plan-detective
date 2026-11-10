@@ -2,22 +2,19 @@
 
 | 项 | 值 |
 | --- | --- |
-| 最后更新 | 2026-10-20 |
-| 当前阶段 | **Issue #73 Phase 73.2 已通过 PR [#94](https://github.com/0verme/dbx-plugin-plan-detective/pull/94) / [#95](https://github.com/0verme/dbx-plugin-plan-detective/pull/95) 合入 `main`（`29e7626`）；真实 DBX Desktop 验收 NOT RUN** |
-| 插件版本 | 已发布版本仍为 `0.7.1`；本分支不发布版本、不改插件 ID `io.github.0verme.plan-detective`、Host API `^1.2` 或 `host.plans:read` 权限 |
-| 当前范围 | 计划快照基线选择、当前 / 历史快照比较、`PlanDiffView`、可比性 / 成本 / 诊断报告、诊断 evidence locator 过滤与 DOM 回归 |
-| 验收边界 | `npm test` PASS（1488/1488）、`npm run test:dom` PASS（32/32）、`npm run build` / `npm run package` PASS；fixtures 为 synthetic。真实 DBX Desktop 比较验收 **NOT RUN** |
-| 当前不做 | 不执行真实数据库 SQL、不修改数据库、不改 DBX 上游、不发布插件；Host 运行时能力依赖上游 DBX 后续合入，真实 Desktop 比较验收待执行 |
+| 最后更新 | 2026-11-09 |
+| 当前阶段 | **计划快照（#72）与 Estimated Plan Diff（#73）已从插件中整体移除**，待合入 `main`；其余能力不变 |
+| 插件版本 | 已发布版本仍为 `0.7.1`；本次改动不发布版本、不改插件 ID `io.github.0verme.plan-detective` 与 Host API `^1.2`；`manifest.json` 权限收窄为仅 `host.plans:read`（移除 `host.storage`） |
+| 验收边界 | `npm test` PASS（1339/1339）、`npm run build` / `npm run package` PASS；真实 DBX Desktop 验收 **NOT RUN** |
+| 当前不做 | 不执行真实数据库 SQL、不修改数据库、不改 DBX 上游、不发布插件 |
 
-## Issue #73 — Estimated Plan Diff 用户闭环（2026-10-20）
+## Issue #72 / #73 — 计划快照与 Estimated Plan Diff（已移除，2026-11-09）
 
-- Issue: [#73](https://github.com/0verme/dbx-plugin-plan-detective/issues/73)；PR: [#94](https://github.com/0verme/dbx-plugin-plan-detective/pull/94) 已合入 `main`（merge commit `94607df`），follow-up PR [#95](https://github.com/0verme/dbx-plugin-plan-detective/pull/95) 已合入 `main`（merge commit `29e7626`），修复诊断 evidence locator 误报。前置 Phase 73.1 Diff Core 已通过 PR [#90](https://github.com/0verme/dbx-plugin-plan-detective/pull/90) 合入 `main`（`19b3892`）。
-- Core：新增纯报告层 `src/core/diff/plan-diff-report.js`（`buildEstimatedPlanDiff`），组合可比性、分组变化、节点集合与 Findings / Hotspots 关联；`describeEstimatedPlanDiffSupport` 统一支持门禁；修复“新增 Join 子扫描时把仍然存在的 Join 误报为 removed”的 added / removed 判定，改为匹配后代签名守恒；诊断 evidence 比较通过匹配映射归一化 `nodeId` / `outerNodeRef` / `innerNodeRef` / `blockNodeRef` 等单计划 locator。
-- UI：`SnapshotManager` 增加基线栏、“与基线比较”与“与当前计划比较”；`App` 以独立 `diffState` 打开比较，不替换当前 `session` / `activeSnapshot`；`PlanDiffView` 提供双计划树、节点比较表、分组变化、added / removed / unmatched / ambiguous、诊断差异、Swap / Exit。比较不调用 Host `explainPlan`、不重跑 SQL、不写 Storage。
-- 可比性：版本 / 来源未知或不同标为 `limited`；SQL 文本差异只作 info；成本只在两侧都是 PostgreSQL 有限原生 cost 时展示，MySQL / 缺值均 withheld；`null` 不当 0。新增 / 消失只在有可靠匹配后代签名或对侧不存在同名 relation scan 时确认，其余进入 unmatched；歧义不宣称新增 / 消失。
-- 文案：补充 zh-CN / en 的基线、比较、Diff、可比性、成本、诊断与树标记文案；区分基线栏“清除比较基线”与历史项“取消基线”的可访问名称。
-- 验证：`tests/core/plan-diff-report.test.js`、`tests/ui/plan-diff-workflow.test.js`、扩展后的 `tests/ui/snapshot-dom.test.js`；DOM 覆盖基线→当前 / 历史快照比较、空差异、Swap / Exit、删除基线、zh / en 与不写 Storage；Core 覆盖路径 ID 漂移、嵌套循环 / block 引用不产生虚假 evidence change。
-- 边界：只支持 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL 的完整 JSON Estimated plan；OceanBase MySQL 不按 Native MySQL 处理。真实 DBX Desktop 端到端验收 **NOT RUN / NOT VERIFIED**，Node / DOM 结果不等于真实桌面验收，也不构成任何性能提升证明。
+- 原因：作者评估现有 Diff 设计价值不足，且其未收口状态阻塞发版，决定整体移除而不是隐藏；快照功能同样不保留。已记录在设计文档中的局限包括：匹配策略保守（歧义 / 无锚点时留作 unmatched / ambiguous）、不计算成本差值或提速率、Diff 仅覆盖 PostgreSQL / Native MySQL（见 git 历史中的 `docs/PLAN_DIFF.md`）。
+- 移除范围：`SnapshotManager` / `PlanDiffView` 组件，`src/lib/plan-snapshot*`、`snapshot-save-action`、`snapshot-diagnostic-trace`、`plan-diff-view`、`sandbox-form-submit`，`src/host/dbx-plugin-storage.js`，`src/core/diff/**`，`fixtures/diff/**`，相关 i18n 文案（460 条）、测试，以及 `docs/PLAN_DIFF.md` / `PLAN_SNAPSHOTS.md` / `SNAPSHOT_SAVE_DIAGNOSTICS.md`；`PlanTree` 的 diff 标记同步删除。
+- 连带变化：`manifest.json` 不再声明 `host.storage`；只服务于快照 DOM 测试的 `playwright` 依赖与 `test:dom` 脚本一并移除（真实 Chromium DOM 回归随之不再存在）。
+- 保留的构建约束：`npm run package` 会校验 UI bundle 内含构建指纹，故 `App.svelte` 在 `<head>` 中保留 `pd-build-fingerprint` meta，避免指纹被摇树优化掉。
+- 历史：设计、实现与验证记录见 git 历史（移除前最后一个提交 `afbd36b`，PR [#94](https://github.com/0verme/dbx-plugin-plan-detective/pull/94) / [#95](https://github.com/0verme/dbx-plugin-plan-detective/pull/95) 等）。
 
 ## Issue #91 — GaussDB / Huawei DWS Estimated Plan（2026-10-19）
 

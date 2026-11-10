@@ -61,7 +61,6 @@ Locale precedence is **manual selection for this session > saved user preference
 - **Doris Estimated EXPLAIN text structured parser**：按 `Distributed Plan` → `PLAN FRAGMENT` → fragment-local operator tree 恢复结构；保留 Fragment / Sink / Exchange metadata、`cardinality → estimatedRows`、join / sort / aggregate normalization 与未知 operator / property。Sink → Exchange 跨 Fragment 关系只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；Doris cost 不映射 PostgreSQL cost。
 - **DB2 LUW Estimated JSON v1 结构化解析**：按 `operators` / `streams` / `predicates` 建树，支持多个 root 与共享 producer 引用；保留精确十进制成本字符串（timerons、page I/Os、instructions）及 stream output cardinality，支持 TBSCAN / IXSCAN、表 / 索引对象与 predicate 展示。DB2 指标不进入 PostgreSQL 成本模型；目前不生成 DB2 专属 Finding / Hotspot，不把 stream cardinality 当作扫描行数，也不推断 NLJOIN outer / inner。
 - **GaussDB / Huawei DWS Estimated JSON parser（有条件）**：Host 明确确认 Estimated Plan 能力后，解析 JSON envelope 与保留未知子树；DWS 原生 cost 仅展示，不作为 PostgreSQL cost / elapsed time。该分支没有真实 GaussDB 9.1.1 capture；上游 DBX Issue #12601 / PR #12644 尚未合并。
-- **计划快照与 Estimated Plan Diff**：将当前完整的 JSON Estimated Plan 保存为本地快照，选择一条快照作为比较基线，再与当前计划或另一条历史快照比较。Diff 只比较 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL，按保守匹配展示扫描、索引、Join、Sort、行数、谓词等字段变化，并关联 Findings / Hotspots；未知值不当 0，未匹配 / 歧义节点不会被称为新增或消失，成本只在 PostgreSQL 原生值可用时展示，不计算提速率。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
@@ -185,7 +184,6 @@ Plan Detective 不调用 LLM 或 AI SDK。`analyze_estimated_plan` 只接受已�
 - Doris parser 只接受 Estimated `format: "text"`；保留 Distributed Plan / PLAN FRAGMENT / fragment-local operator tree，Sink→Exchange link 只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；`cardinality` 映射 `estimatedRows`，scan 使用中性 `scan`，Doris cost 与 `avgRowSize` 不映射 PostgreSQL cost / shared width。官方文档转录与 synthetic fixtures 不是真实 Doris capture。
 - DB2 LUW parser 只接受 DBX Agent JSON v1 Estimated Plan；需要 DBX 同连接 capability 明确为 true。Host capability 为 false 时返回 unsupported，并提示检查 DBX Desktop ≥ 0.6.38 / DB2 Agent ≥ 0.1.78 与当前环境；不会绕过 Host。`totalCost` / `firstRowCost`（timerons）、`ioCost`（page I/Os）、`cpuCost`（instructions）以原生精确字符串保留在 `engineSpecific.db2`，不映射为共享 `totalCost` / PostgreSQL cost；`rowCount` 是 producer stream 的估算输出基数，不代表扫描行数或实际行数。DB2 的通用规则 / Hotspot 明确停用；NLJOIN 的输入顺序不解释为 outer / inner。仅支持 LUW 证据范围，Db2 for z/OS / i 不支持；真实 DB2 / DBX Host E2E 尚未完成。
 - GaussDB/DWS parser 只接受 Estimated JSON；需要 DBX 同连接 capability 明确为 true，普通 GaussDB / M-JDBC / 旧 Host 均不据 parser 自动升级支持。原生 cost 放在 `engineSpecific.gaussdb` 展示，不进入 PostgreSQL cost attribution / cost findings；当前 fixtures 全为 synthetic，真实 GaussDB 9.1.1 与 Windows DBX Host GUI smoke 未运行。上游 DBX PR #12644 仍为 Open / Draft，运行时支持依赖其后续合入。
-- Plan Diff 的用户可见范围限于 **PostgreSQL ↔ PostgreSQL** 与 **Native MySQL ↔ Native MySQL** 的完整 JSON Estimated structured plan；OceanBase MySQL 不按 Native MySQL 处理。Actual、truncated、raw-only、分析失败与非 JSON format 不进入比较。缺失值保持未知、不当 0；未匹配或歧义节点不会被宣称为新增 / 消失；成本不计算差值、百分比或提速率。真实 DBX Desktop 端到端验收仍 **NOT VERIFIED**，Node / DOM 测试不等同于真实 Desktop 验收。计划快照历史已实现，但 Issue #72 的真实 DBX Desktop Storage 验收仍 **NOT VERIFIED**。AI SQL Rewrite 与自动调优未实现。
 - 当前 DBX 0.6.26 上游只从打开的 plugin-owned connection 发现 plugin tools；Plan Detective 没有数据库 connection provider，因而 `analyze_estimated_plan` 暂不能绑定普通 DBX 原生 Agent 连接。DBX `explain_query` 给模型的是 Markdown 表格文本，结构化 `explain_data` 只供 UI 使用；端到端交接需要上游提供普通 Agent connection tool binding 和可供后续 tool 消费的结构化 Estimated Plan 结果。插件不会用 Host API 重跑 EXPLAIN 绕过此限制。
 - Estimated Plan 反映的是优化器估算；Finding / Hotspot 是值得检查的规则提示，不是已确认的运行时性能故障。
 
@@ -214,14 +212,13 @@ DBX Connection
 
 ```bash
 npm ci --include=dev
-npx playwright install chromium # 首次运行真实 DOM 测试前安装；Linux CI 可加 --with-deps
 npm test
 npm run build
 dbx-plugin dev --path . --port 5190
 npm run package
 ```
 
-`npm test` 包含真实 Chromium DOM 回归（包括 DBX 的 `sandbox="allow-scripts"` iframe）；Host bridge 使用测试替身，不等于真实 DBX Desktop 验收。浏览器安装完成后，测试无需 DBX、数据库或网络。
+`npm test` 是纯离线测试，无需 DBX、数据库或网络；Host bridge 使用测试替身，不等于真实 DBX Desktop 验收。
 
 Node.js 仅作为开发 / CI 工具，不随插件包提供，也不是普通用户的安装后运行时依赖。`npm run package` 先构建静态 UI，再调用项目锁定版本的 DBX 官方 CLI 将 `assets/` 与 `ui/` 打成 universal frontend-only `.dbxp`；官方 CLI 能直接打包无 backend entrypoint 的插件，因此不再使用自有 ZIP packager。`ui/` 是必须入库的发布产物；`dist/` 是本地候选包目录，不入库。
 
@@ -243,7 +240,6 @@ manifest.json    DBX 插件清单
 - [v0.7.1 Release Notes](docs/RELEASE_NOTES_v0.7.1.md)：本版本变更、兼容性与验证边界。
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：架构边界、Host API 职责与数据链路。
 - [docs/PLAN_INPUT_AND_FIXTURES.md](docs/PLAN_INPUT_AND_FIXTURES.md)：RawPlanInput、parser、NormalizedPlan、Metrics、Rules、Findings、Hotspots 与 fixture 约定。
-- [docs/PLAN_DIFF.md](docs/PLAN_DIFF.md)：Issue #73 Estimated Plan Diff Core、展示报告契约、保守匹配、快照比较 UI 与验证边界。
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)：已确认决策、阶段划分与 Future 能力边界。
 - [docs/HOST_CAPABILITY_AUDIT.md](docs/HOST_CAPABILITY_AUDIT.md)：历史 Host 能力审计记录。
 - [DBX 插件开发指南](https://dbxio.com/en/docs/plugin-development)。

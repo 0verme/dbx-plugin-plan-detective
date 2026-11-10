@@ -2,7 +2,7 @@
 
 **Host Plan API 已合并（[t8y2/dbx#9692](https://github.com/t8y2/dbx/pull/9692)，merge `f909f85`）；本仓库已完成 Phase 1 MVP 真实闭环（Issue [#11](https://github.com/0verme/dbx-plugin-plan-detective/issues/11)）。**本文件记录已确认决策、当前阶段任务与路线约束。
 
-> 状态（2026-10-14）：Phase 0–3.6 与 Host Plan API 均已完成；#72 软件交付 PR #86–#89 已合并，快照历史与窗口内 baseline 已实现，但真实 DBX Desktop Storage 持久化、权限、重启及多窗口验收仍 **NOT VERIFIED**，Issue #72 保持 OPEN。Issue #73 Phase 73.1 已新增 PostgreSQL / Native MySQL 纯 Estimated Plan Diff Core；比较 UI、诊断关联、环境可比性提示和真实 Desktop 验收未完成，Issue #73 保持 OPEN。Actual Plan / AI 仍属 Future。
+> 状态（2026-11-09）：Phase 0–3.6 与 Host Plan API 均已完成；计划快照（#72）与 Estimated Plan Diff（#73）曾实现，已于 2026-11-09 整体移除（原因见 [../STATUS.md](../STATUS.md)，实现保留在 git 历史）。Actual Plan / AI 仍属 Future。
 
 ## 1. 已确认决策
 
@@ -217,7 +217,7 @@ Actual Plan / EXPLAIN ANALYZE
 | Phase 3.4 | Dameng Estimated Plan 原生文本结构化（`[cost, rows, bytes-per-row]` → 现有 IR / metrics / hotspots） | ✅ 已实现；1 个 official + 6 个 synthetic text fixture + golden；Dameng cost 保留在 `engineSpecific.dameng`，只用 rows 信号 |
 | Phase 3.5 | QuestDB Estimated EXPLAIN 文本结构化（相对缩进 tree / properties / scan pipeline） | ✅ 已实现并合并；PR [#56](https://github.com/0verme/dbx-plugin-plan-detective/pull/56) merge `62bef56`；3 个 official documentation transcription + 3 个 synthetic fixture + golden；rows / PostgreSQL cost 不推导 |
 | Phase 3.6 | Doris Estimated EXPLAIN text 结构化（Host / Plan contract → IR Gate → parser / normalizer / UI） | ✅ 已合并；Decision Gate `B — SMALL_IR_GAP`；1 official docs transcription + 4 synthetic + 5 golden；Feature PR [#59](https://github.com/0verme/dbx-plugin-plan-detective/pull/59) merge `5bb3115`，随 v0.6.6 发布；Real Doris `NOT AVAILABLE` / Host Smoke `NOT RUN` |
-| Phase 4 | Plan Diff / History | #72 快照历史 / baseline 已实现（Desktop acceptance 未验证）；#73 Phase73.1 纯 Diff Core 已实现（PG / Native MySQL），比较 UI 与其余 issue 验收仍待完成 |
+| Phase 4 | Plan Diff / History | ⛔ 已移除（2026-11-09）：#72 快照历史与 #73 Estimated Plan Diff 曾实现，产品上判定无用后整体移除；如需重做须先重新定义使用场景 |
 | Phase 5 | Actual Plan / EXPLAIN ANALYZE | Future，需独立 upstream proposal 与授权 / 安全审计 |
 
 > 以上阶段仅为方向约定，具体范围在启动时另开 Issue 确定。
@@ -261,7 +261,7 @@ QuestDB 样本已落地（Phase 3.5：3 个 official documentation transcription
 以下能力属于后续阶段或 Future，除当前任务明确启动的模块外不得顺手实现（需要单独 Issue / 任务）：
 
 - Host / Adapter 接入（`dbx-adapter`、Host API 调用、Execution Plan 扩展点集成）
-- Plan Diff UI / Host 接入 / 未授权的方言扩展（Issue #73 明确授权的纯 Diff Core 仅支持 PostgreSQL 与 Native MySQL，详见 [PLAN_DIFF.md](PLAN_DIFF.md)）
+- Plan Diff / 计划快照 / Host 接入 / 未授权的方言扩展（Plan Diff 与快照已移除，见 [../STATUS.md](../STATUS.md)）
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL
 - AI / LLM
 - Actual Plan / `EXPLAIN ANALYZE` / `host.plans:execute`（属于 Future，需独立 upstream proposal）

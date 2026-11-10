@@ -22,7 +22,7 @@ Metrics Engine
    │                  Finding Presentation → i18n
    └─► Hotspot Analysis → Hotspots
                               ↓
-                         Plan Diff / UI
+                              UI
 ```
 
 各段职责：
@@ -40,9 +40,9 @@ Metrics Engine
 | Rule Engine | 基于指标与计划结构产出确定性结论 | Plan Detective |
 | Findings | 结构化事实 + 兼容的结论 / Evidence（observation 语义，不是命令） | Plan Detective |
 | Finding Presentation / i18n | 将 facts 按 locale 表达为 summary / reasons / actions / caveats；不判断规则触发 | Plan Detective |
-| Plan Diff / UI | 计划对比、历史与呈现 | Plan Detective |
+| UI | 呈现（Plan Tree / Hotspots / Findings / Raw Plan） | Plan Detective |
 
-### 当前实现状态（2026-10-14）
+### 当前实现状态（2026-11-09）
 
 ```text
 已实现：DBX Host Plan API 接入（getPlanCapabilities / explainPlan，mode = estimated）
@@ -55,9 +55,8 @@ Metrics Engine
 已实现：Hotspot Analysis（NormalizedPlan + Metrics → 确定性注意力列表；PostgreSQL 代价归因边界（Metrics 共用）+ MySQL rows / cost_info 信号 + SQL Server rows 信号；DWS 原生 cost 不按 PostgreSQL 语义归因；DB2 专属规则 / Hotspot 暂不启用）
 已实现：Host 分析 UI（Connection Context / SQL Input / Plan Tree / Hotspots / Findings / Raw Plan）
 已实现：Fixture-driven 开发 UI（离线，不进入 Host 生产路径）
-已实现：计划快照历史与窗口内 baseline（Issue #72；真实 DBX Desktop Storage acceptance 仍 NOT VERIFIED）
-已实现（Core only）：Issue #73 Phase 73.1 纯 Estimated Plan Diff Core，限定 PostgreSQL / Native MySQL
-未实现：Actual Plan / EXPLAIN ANALYZE、Plan Diff 比较 UI / 诊断关联 / 环境可比性提示、Plan Canvas、AI 接入（模型 API / API Key / 聊天窗口 / 自动发送；本地的 AI prompt packaging 不在此列）
+已移除（2026-11-09）：计划快照历史（Issue #72）与 Estimated Plan Diff（Issue #73）；原因与范围见 [../STATUS.md](../STATUS.md)，实现保留在 git 历史
+未实现：Actual Plan / EXPLAIN ANALYZE、计划对比（Plan Diff）、Plan Canvas、AI 接入（模型 API / API Key / 聊天窗口 / 自动发送；本地的 AI prompt packaging 不在此列）
 ```
 
 v0.7.0 曾加入实验性 Node AI Tool sidecar；由于 DBX 当前无法把 plugin tool 绑定普通原生 Agent 连接，也未提供 structured Estimated Plan handoff，frontend-only 正式候选暂停其 manifest 注册和打包。AI Tool 源码 / contract / 单元测试保留在仓库，不影响 UI Host Plan API 与本地 AI Prompt 复制。复核证据及恢复 gate 见 [AI Tool 状态说明](./AI_TOOL_V0.7.0.md)。
@@ -150,8 +149,6 @@ registry 对每个 family 显式声明支持状态；DB2 Host request 与 GaussD
 - Rule Engine / Findings / Evidence
 - Finding Presentation / i18n（当前仅迁移 `large-sequential-scan`）
 - Raw Plan viewer、Plan Tree、Node Inspector
-- Plan Diff Core（Issue #73 Phase 73.1：纯函数、PostgreSQL / Native MySQL Estimated only）
-- Plan Diff UI / diagnostic association / tuning workflow（后续阶段）
 
 ## 4. Host Plan API 契约（已合并）
 
@@ -272,7 +269,7 @@ include = ["assets", "ui"]
 - SQL Rewrite / 自动调优 / 自动建索引 / 自动执行 SQL / SQL Benchmark
 - 数据库连接层 / Driver / 连接池 / 凭据 / SSH Tunnel / sidecar DB access
 - 通用 Query API / 多 SQL 对比 / Plan 历史库 / 云同步 / telemetry
-- Plan Diff 比较 UI / 诊断关联 / 环境可比性提示与自定义 Plan Canvas（当前已有独立的纯 Diff Core；计划快照历史已实现；当前 UI 仍只做嵌套行计划树）
+- 计划对比（Plan Diff）、计划快照历史与自定义 Plan Canvas（Plan Diff / 快照曾实现后已移除，见 [../STATUS.md](../STATUS.md)；当前 UI 仍只做嵌套行计划树）
 - AI / LLM 接入：模型 API / API Key / 聊天窗口 / 自动发送；不包含 #42 已授权的本地 AI prompt / context packaging
 - Doris Actual / ANALYZE / PROFILE、Pipeline DAG / runtime profile 解析（Doris Estimated parser 只处理官方 EXPLAIN 输出；无真实 Doris / Windows DBX smoke）
 - MariaDB / ADB MySQL 等其他 MySQL 兼容方言的自动归入；OceanBase MySQL 仅在 DBX `dbVersion` 提供 case-insensitive OceanBase 证据时识别，否则维持 Native MySQL 路由

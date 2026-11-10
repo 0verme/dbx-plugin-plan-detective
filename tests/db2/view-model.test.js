@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { analyzePlan } from "../../src/core/analyze.js";
-import { describeEstimatedPlanDiffSupport, diffEstimatedPlans } from "../../src/core/diff/estimated-plan-diff.js";
 import { flattenNodes } from "../../src/core/tree.js";
 import { buildNodeInspector, buildPlanSummary, buildTreeRows } from "../../src/lib/view-model.js";
-import { createPlanSnapshot, deserializePlanSnapshot, serializePlanSnapshot } from "../../src/lib/plan-snapshot.js";
 import { loadFixture } from "../helpers/fixtures.js";
 
 const fixture = await loadFixture({ database: "db2", mode: "estimated", name: "index-join-sort-aggregate.synthetic" });
@@ -53,35 +51,4 @@ test("DB2 Node Inspector shows relation/index names, predicates and native metri
   const indexScan = flattenNodes(analysis.normalized.root).find((entry) => entry.engineSpecific?.db2?.operatorId === "5");
   const indexFields = buildNodeInspector(indexScan, "en").groups.flatMap((group) => group.fields);
   assert.ok(indexFields.some((field) => field.label === "Index Name" && field.value === "APP.IDX_CUSTOMER_STATUS"));
-});
-
-test("DB2 snapshot raw JSON round-trips and remains analyzable without losing exact decimals", () => {
-  const snapshot = createPlanSnapshot({
-    session: {
-      status: "structured",
-      capturedAt: "2026-10-20T00:00:00.000Z",
-      source: { databaseName: "SAMPLE", schema: "APP" },
-      rawInput: fixture.input,
-      analysis: { status: "structured" },
-      hostResult: { truncated: false, rawPlan: fixture.plan },
-    },
-    title: "DB2 estimate",
-    note: "fixture round-trip",
-    producerVersion: "0.7.1",
-    snapshotId: "db2-snapshot-test",
-    now: new Date("2026-10-20T00:01:00.000Z"),
-  });
-  const restored = deserializePlanSnapshot(serializePlanSnapshot(snapshot));
-  assert.equal(restored.rawInput.database, "db2");
-  assert.deepEqual(restored.rawInput.plan, fixture.plan);
-  const replayed = analyzePlan(restored.rawInput);
-  const indexScan = flattenNodes(replayed.normalized.root).find((node) => node.engineSpecific?.db2?.operatorId === "5");
-  assert.equal(indexScan.engineSpecific.db2.totalCost, "0.0500000000000000000000001");
-});
-
-test("DB2 plans do not expand the existing Estimated Plan Diff support scope", () => {
-  assert.equal(describeEstimatedPlanDiffSupport(analysis).supported, false);
-  const comparison = diffEstimatedPlans(analysis, analysis);
-  assert.equal(comparison.status, "incompatible");
-  assert.equal(comparison.reasonCode, "UNSUPPORTED_DATABASE");
 });
