@@ -3,19 +3,19 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-11-10 |
-| 当前阶段 | **v0.7.2 Patch Release 准备中**；基于最新 `origin/main` `76069487f1cca8a620f994a55b799d1bdbe7ca28`，PR #98（DB2 LUW）与 PR #99（移除未发布的快照 / Diff 实验）均已合并；按用户指示继续创建正式 Release，发布资产仍须经 GitHub workflow 检查 |
+| 当前阶段 | **v0.7.2 已正式发布；DBX Store 自动同步已创建候选 PR #497，待 maintainer review / signing**。Tag `v0.7.2` 指向 merge commit `2cafa767e77fb81fe67ca6d0eefafc3fc69e14e7`；Release workflow 成功 |
 | 插件版本 | 正式版本 `0.7.1 → 0.7.2`；插件 ID、通用 DBX / Host API 要求和 `host.plans:read` 权限保持不变；`package.json` 没有版本字段 |
 | 验收边界 | 用户报告最新 `.dbxp` 已在真实 DBX 环境手工测试并正常运行；当前工作站没有 DBX Desktop，未重复实机测试，也不将此报告表述为真实 DB2 数据库端到端验证 |
 | 当前不做 | 不伪造数据库 E2E、不修改 DBX 上游或无关业务代码、不改写旧 Release / Tag、不绕过失败验证或 DBX Store 签名审核 |
 
-## v0.7.2 正式发布准备与验收产物追溯
+## v0.7.2 正式发布记录与验收产物追溯
 
-- **源码基线**：Release worktree 的父提交为最新 `origin/main` `76069487f1cca8a620f994a55b799d1bdbe7ca28`，包含已合并的 PR #98（DB2 LUW）与 PR #99（移除未发布快照 / Diff 实验）。Release 改动只更新版本 / 文档并提交重建的 UI 资源；不引入其他 worktree 的代码或未合并的包权限补丁。
+- **源码基线**：Release PR [#100](https://github.com/0verme/dbx-plugin-plan-detective/pull/100) 基于 `76069487f1cca8a620f994a55b799d1bdbe7ca28`，包含已合并的 PR #98（DB2 LUW）与 PR #99（移除未发布快照 / Diff 实验），于 2026-11-10 合并为 `2cafa767e77fb81fe67ca6d0eefafc3fc69e14e7`。改动只更新版本 / 文档并提交重建的 UI 资源；未引入其他 worktree 的代码或未合并的包权限补丁。
 - **用户验收报告**：本任务输入报告称最新 `.dbxp` 已在真实 DBX 环境手工测试并正常运行，但未提供被验收文件的 SHA-256。当前可追溯的最新留存候选为 `pr-99-final-package/dist/io.github.0verme.plan-detective-0.7.1-universal.dbxp`，大小 `115161` bytes、SHA-256 `a94312922fee93c2b259275731ecd8227a8238dcae53d60f5a55f2e33c5ec276`；sidecar 元数据的大小 / SHA 与包匹配。包内构建指纹 `sha256:90392afd01a5a63919fb797d12b8138bf0739d40eebdcc761c0bc328574a1231` 与其生成 worktree 的 `HEAD` `76069487f1cca8a620f994a55b799d1bdbe7ca28` 匹配，manifest 为 `0.7.1`。因此已将最新留存候选映射到合并源码基线；用户未提供文件 hash，故不声称已证明报告中的文件与该候选逐字节相同。
 - **未带入候选 worktree 私有改动**：上述候选 worktree 有未提交的 `scripts/package-plugin.mjs` 与对应包权限测试变更；它们不属于 `origin/main`，未复制到 Release worktree。其 UI bundle 的构建指纹匹配 `origin/main`，但本次正式包由固定 GitHub Release workflow 从合并源码重新构建。
-- **本轮验证**：锁文件依赖安装成功（在 `/tmp` 安装，临时链接供 worktree 使用）；`npm test` **1379/1379**；DB2 parser / fixtures / Host contract / view-model 与 DBX adapter 定向测试 **74/74**；`npm run build` 与官方 DBX CLI universal package preflight 通过。包结构为预期 6 项，metadata 与本地包一致；但本工作站 FUSE 文件系统把本地产物 `manifest.json` 的 ZIP mode 写为 `100000`，该本地 `.dbxp` 不作为发布产物。正式包由固定 `ubuntu-24.04` GitHub Release workflow 重建，并在发布后检查实际 ZIP 权限、签名状态与 metadata。
+- **Release workflow 与正式资产**：GitHub workflow [#42807758271](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/42807758271) 的 `Build universal` 与 `Publish plugin release assets` 均成功；官方 `.dbxp` 为 115166 bytes，SHA-256 `c2a7ea85866a580633f39542d9ad9f34714e730fe0fc439b85d5402d7bb31310`。下载核验确认 ZIP 共 6 项、所有 Unix mode 均为 `100644`、5 项 payload checksum 匹配，包内 manifest 为 `0.7.2` / `universal`，构建指纹匹配源码。`.artifact.json` 由官方 workflow 生成并保留在该 workflow artifact；其中 target / URL / size / SHA-256 与正式 Release 的 `release-candidates.json` 完全一致（该 sidecar 未单独作为 Release asset 上传）。Release body 与本目录 Release Notes 相同。
 - **依赖审计**：`npm audit --omit=dev` 为 0 vulnerabilities；完整审计报告 4 项仅开发依赖告警（3 low、1 high，含锁定的 Vite 7.3.6），未改动依赖锁文件；这些依赖不打入 `.dbxp`。
-- **DBX Store**：Store 当前 `automation/plugin-sources.json` 将本插件设为 `autoUpdate: true`；最近一次定时同步 Workflow 成功，但尚无 v0.7.2 Release，所以没有可同步的新版本 / 候选 PR，自动同步结果仍待实际发布后确认。
+- **DBX Store**：Store 当前 `automation/plugin-sources.json` 将本插件设为 `autoUpdate: true`。发布后的定时同步 Workflow [#42808843049](https://github.com/t8y2/dbx-store/actions/runs/42808843049) 成功，并自动创建候选 PR [#497](https://github.com/t8y2/dbx-store/pull/497)；PR 内容的 v0.7.2 URL / SHA-256 / size 与正式 Release 匹配。候选仍 unsigned、无 checks、等待 Store maintainer review 与受保护 signing workflow；未手动改动 Store、签名或合并。
 - **E2E 边界**：用户报告只作为 DBX 插件手工验收依据；本机未重复该 GUI 测试，也无真实 DB2 数据库验证。DB2 LUW 源码组件基线不是端到端兼容性认证。
 
 ## Issue #72 / #73 — 计划快照与 Estimated Plan Diff（已移除，2026-11-09）
