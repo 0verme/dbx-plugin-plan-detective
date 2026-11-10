@@ -19,6 +19,8 @@ export {
 export { analyzeRawPlan, describeParserSupport, getParser } from "./parsers/index.js";
 export { parsePostgresJsonPlan } from "./postgres/parse-json-plan.js";
 export { normalizePostgresPlan } from "./normalize/normalize-postgres.js";
+export { parseDb2JsonPlan, DB2_PLAN_LIMITS } from "./db2/parse-json-plan.js";
+export { normalizeDb2Plan } from "./normalize/normalize-db2.js";
 export { parseGaussdbJsonPlan } from "./gaussdb/parse-json-plan.js";
 export { normalizeGaussdbPlan } from "./normalize/normalize-gaussdb.js";
 export { parseMySqlJsonPlan } from "./mysql/parse-json-plan.js";

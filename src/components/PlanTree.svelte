@@ -110,10 +110,14 @@
         {/if}
 
         <span class="metric mono">
-          {row.estimatedRows === null ? "" : t("tree.rows", { value: formatNumber(row.estimatedRows) })}
+          {row.db2RowCount !== undefined
+            ? (row.db2RowCount === null ? "" : t("tree.db2Rows", { value: row.db2RowCount }))
+            : (row.estimatedRows === null ? "" : t("tree.rows", { value: formatNumber(row.estimatedRows) }))}
         </span>
         <span class="metric mono">
-          {row.totalCost === null ? "" : t(row.costLabel, { value: formatNumber(row.totalCost) })}
+          {row.db2TotalCost !== undefined
+            ? (row.db2TotalCost === null ? "" : t("tree.db2Cost", { value: row.db2TotalCost }))
+            : (row.totalCost === null ? "" : t(row.costLabel, { value: formatNumber(row.totalCost) }))}
         </span>
       </div>
     {/each}

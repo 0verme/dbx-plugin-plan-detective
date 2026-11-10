@@ -16,6 +16,7 @@ export const DAMENG_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "dameng");
 export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
 export const DORIS_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "doris");
 export const GAUSSDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "gaussdb");
+export const DB2_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "db2");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
@@ -32,9 +33,10 @@ export const FIXTURE_DIRS = Object.freeze({
   questdb: QUESTDB_FIXTURES_DIR,
   doris: DORIS_FIXTURES_DIR,
   gaussdb: GAUSSDB_FIXTURES_DIR,
+  db2: DB2_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "gaussdb"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "gaussdb", "db2"]);
 export const MODES = ["estimated", "actual"];
 /**
  * Modes each database has fixtures for. Every family except PostgreSQL supports
@@ -52,6 +54,7 @@ export const MODES_BY_DATABASE = Object.freeze({
   questdb: ["estimated"],
   doris: ["estimated"],
   gaussdb: ["estimated"],
+  db2: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic", "real"];
 
@@ -67,6 +70,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   questdb: ".plan.txt",
   doris: ".plan.txt",
   gaussdb: ".plan.json",
+  db2: ".plan.json",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -81,6 +85,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   questdb: "text",
   doris: "text",
   gaussdb: "json",
+  db2: "json",
 });
 
 const META_SUFFIX = ".meta.json";
@@ -202,7 +207,7 @@ export async function loadAllFixtures(database = "postgresql") {
  *
  * Convention (see docs/PLAN_INPUT_AND_FIXTURES.md):
  * - `database` must be a structured family the shared conventions cover
- *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oceanbase-mysql` / `oracle` / `dameng` / `questdb` / `doris` / `gaussdb`) and
+ *   (`postgresql` / `mysql` / `sqlserver` / `oceanbase-oracle` / `oceanbase-mysql` / `oracle` / `dameng` / `questdb` / `doris` / `gaussdb` / `db2`) and
  *   must match the fixture directory when known;
  * - `mode` must match the directory the fixture lives in, and each database
  *   only supports the modes `MODES_BY_DATABASE` lists;

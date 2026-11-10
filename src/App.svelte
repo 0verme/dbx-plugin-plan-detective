@@ -273,7 +273,7 @@
   const rows = $derived(activeAnalysis ? buildTreeRows(activeAnalysis.normalized.root) : []);
   const rowsById = $derived(indexRowsById(rows));
   const nodesById = $derived(activeAnalysis ? indexNodesById(activeAnalysis.normalized.root) : new Map());
-  const summary = $derived(activeAnalysis ? buildPlanSummary(activeAnalysis.metrics, locale) : null);
+  const summary = $derived(activeAnalysis ? buildPlanSummary(activeAnalysis.metrics, locale, activeAnalysis.normalized.database) : null);
   const findingViews = $derived(activeAnalysis ? buildFindingViews(activeAnalysis.findings, rowsById, locale) : []);
   const findingCounts = $derived(countFindingsBySeverity(activeAnalysis?.findings ?? []));
   const findingsByNodeRef = $derived(groupFindingsByNodeRef(activeAnalysis?.findings ?? []));

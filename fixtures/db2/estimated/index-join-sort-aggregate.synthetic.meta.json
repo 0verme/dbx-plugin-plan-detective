@@ -1,0 +1,26 @@
+{
+  "database": "db2",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic fixture: hand-authored DB2 LUW v1 stream graph to cover index/table scans, join, sort, aggregate and predicates; not a database capture.",
+    "reference": "https://github.com/t8y2/dbx/blob/main/apps/desktop/src/lib/diagram/db2ExplainPlan.ts"
+  },
+  "features": [
+    "IXSCAN and TBSCAN objects",
+    "join, sort and group-by operators",
+    "SARG and JOIN predicates",
+    "high precision timerons, page I/Os, instructions and stream cardinality"
+  ],
+  "expect": {
+    "rootNodeType": "DB2 Estimated Plan",
+    "hasActualFields": false,
+    "minDepth": 5,
+    "findingRuleIds": []
+  }
+}

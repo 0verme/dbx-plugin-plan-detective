@@ -1,0 +1,26 @@
+{
+  "database": "db2",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "official",
+    "detail": "Copied from the official DBX upstream desktop unit-test fixture. Its original DB2 capture provenance is not stated; this repository did not capture or independently verify a database plan.",
+    "reference": "https://github.com/t8y2/dbx/blob/main/apps/desktop/src/lib/__tests__/query/fixtures/db2-shared-temp-plan.json"
+  },
+  "features": [
+    "DB2 LUW Estimated JSON v1",
+    "DB2 native operator, stream and predicate rows",
+    "shared producer referenced by multiple consumers",
+    "exact decimal-string native metrics"
+  ],
+  "expect": {
+    "rootNodeType": "DB2 Estimated Plan",
+    "hasActualFields": false,
+    "minDepth": 5,
+    "findingRuleIds": []
+  }
+}

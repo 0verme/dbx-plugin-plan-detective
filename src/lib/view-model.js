@@ -51,24 +51,33 @@ const COST_ATTRIBUTION_NOTE_KEYS = Object.freeze([
 
 /**
  * @param {import("../core/metrics/compute-metrics.js").PlanMetrics} metrics
+ * @param {string} [locale]
+ * @param {string|null} [database] Enables explicit native semantics in display-only labels.
  * @returns {{
  *   rows: Array<{ key: string, label: string, hint: string, value: string|null }>,
  *   highlights: Array<{ key: string, label: string, value: string|null, detail: string|null, note: string|null, node: object|null }>,
  * }}
  */
-export function buildPlanSummary(metrics, locale = DEFAULT_LOCALE) {
+export function buildPlanSummary(metrics, locale = DEFAULT_LOCALE, database = null) {
   const { t } = createTranslator(locale);
-  return {
-    rows: SUMMARY_ROWS.map((row) => ({
+  const rows = SUMMARY_ROWS
+    .filter((row) => !(database === "db2" && row.key === "sequentialScanCount"))
+    .map((row) => ({
       ...row,
       label: t(`summary.rows.${row.key}.label`),
       hint: t(`summary.rows.${row.key}.hint`),
       value: formatNumber(metrics?.[row.key]),
-    })),
-    highlights: [
-      buildHighlight("largestEstimatedRows", t("summary.highlight.largestEstimatedRows"), metrics?.largestEstimatedRows, t),
-      buildHighestIncrementalCostHighlight(metrics, t),
-    ].filter((highlight) => highlight !== null),
+    }));
+  const largestRows = buildHighlight(
+    "largestEstimatedRows",
+    t(database === "db2" ? "summary.highlight.db2LargestStreamCardinality" : "summary.highlight.largestEstimatedRows"),
+    metrics?.largestEstimatedRows,
+    t,
+  );
+  if (database === "db2") largestRows.note = t("summary.highlight.db2StreamCardinalityNote");
+  return {
+    rows,
+    highlights: [largestRows, buildHighestIncrementalCostHighlight(metrics, t)].filter((highlight) => highlight !== null),
   };
 }
 
@@ -150,6 +159,7 @@ export function buildTreeRows(root) {
 
   /** @param {any} node @param {number} depth @param {string[]} ancestorIds */
   function visit(node, depth, ancestorIds) {
+    const db2 = node.engineSpecific?.db2;
     rows.push({
       id: node.id,
       parentId: ancestorIds.length === 0 ? null : ancestorIds[ancestorIds.length - 1],
@@ -164,6 +174,7 @@ export function buildTreeRows(root) {
       estimatedRows: node.estimatedRows,
       totalCost: node.totalCost ?? node.engineSpecific?.gaussdb?.totalCost ?? null,
       costLabel: node.engineSpecific?.gaussdb === undefined ? "tree.cost" : "tree.gaussdbCost",
+      ...(db2 === undefined ? {} : { db2TotalCost: db2.totalCost ?? null, db2RowCount: db2.rowCount ?? null }),
       label: nodeLabel(node),
     });
     for (const child of node.children) {
@@ -637,6 +648,7 @@ export function buildNodeInspector(node, locale = DEFAULT_LOCALE) {
  * @returns {Array<{ label: string, value: string }|null>}
  */
 function engineFields(engine) {
+  if (isPlainObject(engine.db2)) return db2EngineFields(engine.db2);
   if (isPlainObject(engine.questdb)) return questDbEngineFields(engine.questdb);
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
   if (isPlainObject(engine.sqlServer)) return sqlServerEngineFields(engine.sqlServer);
@@ -689,6 +701,80 @@ function formatQuestDbProperties(properties) {
     .filter((property) => isPlainObject(property) && typeof property.name === "string" && typeof property.value === "string")
     .map((property) => `${property.name}: ${property.value}`);
   return rows.length > 0 ? rows.join("\n") : null;
+}
+
+function db2EngineFields(db2) {
+  return [
+    field("Operator ID (DB2)", db2.operatorId),
+    field("Operator", db2.operatorType),
+    field("Total Cost (timerons)", db2.totalCost),
+    field("First Row Cost (timerons)", db2.firstRowCost),
+    field("I/O Cost (page I/Os)", db2.ioCost),
+    field("CPU Cost (instructions)", db2.cpuCost),
+    field("Stream Cardinality (estimated output rows)", db2.rowCount),
+    field("Objects", formatDb2Objects(db2.objects)),
+    field("Input Streams", formatDb2Streams(db2.inputStreams)),
+    field("Output Streams", formatDb2Streams(db2.outputStreams)),
+    field("Predicates", formatDb2Predicates(db2.predicates)),
+    field("Arguments", formatDb2Arguments(db2.arguments)),
+    field("Statement Metadata", formatRawValue(db2.statement)),
+    field("Shared Operator Reference", db2.referenceTo),
+  ];
+}
+
+/** @param {unknown} objects */
+function formatDb2Objects(objects) {
+  if (!Array.isArray(objects)) return null;
+  const values = objects
+    .filter((object) => isPlainObject(object) && typeof object.name === "string")
+    .map((object) => `${typeof object.schema === "string" ? `${object.schema}.` : ""}${object.name}`);
+  return values.length > 0 ? [...new Set(values)].join("\n") : null;
+}
+
+/** @param {unknown} streams */
+function formatDb2Streams(streams) {
+  if (!Array.isArray(streams)) return null;
+  const values = streams
+    .filter((stream) => isPlainObject(stream))
+    .map((stream) => {
+      const endpoints = [
+        typeof stream.sourceType === "string" && typeof stream.sourceId === "string" ? `${stream.sourceType}:${stream.sourceId}` : null,
+        typeof stream.targetType === "string" && typeof stream.targetId === "string" ? `${stream.targetType}:${stream.targetId}` : null,
+      ].filter(Boolean).join(" → ");
+      const details = [
+        typeof stream.id === "string" ? `#${stream.id}` : null,
+        endpoints || null,
+        typeof stream.rowCount === "string" ? `rowCount=${stream.rowCount}` : null,
+        typeof stream.objectName === "string" ? `object=${typeof stream.objectSchema === "string" ? `${stream.objectSchema}.` : ""}${stream.objectName}` : null,
+      ].filter(Boolean);
+      return details.join("; ");
+    })
+    .filter((value) => value.length > 0);
+  return values.length > 0 ? values.join("\n") : null;
+}
+
+/** @param {unknown} predicates */
+function formatDb2Predicates(predicates) {
+  if (!Array.isArray(predicates)) return null;
+  const values = predicates
+    .filter((predicate) => isPlainObject(predicate) && typeof predicate.text === "string")
+    .map((predicate) => `${typeof predicate.operatorId === "string" ? `operator ${predicate.operatorId}: ` : ""}${typeof predicate.howApplied === "string" ? `${predicate.howApplied}: ` : ""}${predicate.text}`);
+  return values.length > 0 ? values.join("\n") : null;
+}
+
+/** @param {unknown} argumentsList */
+function formatDb2Arguments(argumentsList) {
+  if (!Array.isArray(argumentsList)) return null;
+  const values = argumentsList
+    .filter((argument) => isPlainObject(argument))
+    .map((argument) => {
+      const description = [argument.type, argument.value]
+        .filter((value) => typeof value === "string" && value.length > 0)
+        .join(": ");
+      return `${typeof argument.operatorId === "string" ? `operator ${argument.operatorId}: ` : ""}${description}`;
+    })
+    .filter((value) => value.length > 0);
+  return values.length > 0 ? values.join("\n") : null;
 }
 
 function oceanBaseEngineFields(oceanBase) {
@@ -909,4 +995,8 @@ const INSPECTOR_FIELD_LABELS = new Set([
   "Query Cost", "Read Cost", "Eval Cost", "Prefix Cost", "Data Read Per Join", "Sort Cost", "Parallel Aware", "Async Capable",
   "Strategy", "Partial Mode", "Parent Relationship", "Subplan Name", "Hash Condition", "Merge Condition", "Join Filter",
   "Recheck Condition", "Presorted Keys", "DWS Streaming Type", "DWS Startup Cost", "DWS Total Cost",
+  "Operator ID (DB2)", "Total Cost (timerons)", "First Row Cost (timerons)", "I/O Cost (page I/Os)",
+  "CPU Cost (instructions)", "Stream Cardinality (estimated output rows)", "Objects", "Input Streams", "Output Streams",
+  "Arguments", "Statement Metadata",
+  "Shared Operator Reference",
 ]);
