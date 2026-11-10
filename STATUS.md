@@ -3,7 +3,7 @@
 | 项 | 值 |
 | --- | --- |
 | 最后更新 | 2026-11-10 |
-| 当前阶段 | **v0.7.2 已正式发布；DBX Store 自动同步已创建候选 PR #497，待 maintainer review / signing**。Tag `v0.7.2` 指向 merge commit `2cafa767e77fb81fe67ca6d0eefafc3fc69e14e7`；Release workflow 成功 |
+| 当前阶段 | **v0.7.2 已正式发布；DBX Store 自动同步已创建候选 PR #497，待 maintainer review / signing**。PR 校验状态为 `action_required`；Tag `v0.7.2` 指向 merge commit `2cafa767e77fb81fe67ca6d0eefafc3fc69e14e7`，Release workflow 成功 |
 | 插件版本 | 正式版本 `0.7.1 → 0.7.2`；插件 ID、通用 DBX / Host API 要求和 `host.plans:read` 权限保持不变；`package.json` 没有版本字段 |
 | 验收边界 | 用户报告最新 `.dbxp` 已在真实 DBX 环境手工测试并正常运行；当前工作站没有 DBX Desktop，未重复实机测试，也不将此报告表述为真实 DB2 数据库端到端验证 |
 | 当前不做 | 不伪造数据库 E2E、不修改 DBX 上游或无关业务代码、不改写旧 Release / Tag、不绕过失败验证或 DBX Store 签名审核 |
@@ -15,7 +15,7 @@
 - **未带入候选 worktree 私有改动**：上述候选 worktree 有未提交的 `scripts/package-plugin.mjs` 与对应包权限测试变更；它们不属于 `origin/main`，未复制到 Release worktree。其 UI bundle 的构建指纹匹配 `origin/main`，但本次正式包由固定 GitHub Release workflow 从合并源码重新构建。
 - **Release workflow 与正式资产**：GitHub workflow [#42807758271](https://github.com/0verme/dbx-plugin-plan-detective/actions/runs/42807758271) 的 `Build universal` 与 `Publish plugin release assets` 均成功；官方 `.dbxp` 为 115166 bytes，SHA-256 `c2a7ea85866a580633f39542d9ad9f34714e730fe0fc439b85d5402d7bb31310`。下载核验确认 ZIP 共 6 项、所有 Unix mode 均为 `100644`、5 项 payload checksum 匹配，包内 manifest 为 `0.7.2` / `universal`，构建指纹匹配源码。`.artifact.json` 由官方 workflow 生成；其 target / URL / size / SHA-256 与正式 Release 的 `release-candidates.json` 完全一致，并已将该原始 workflow sidecar 作为独立 Release asset 上传。Release body 与本目录 Release Notes 相同。
 - **依赖审计**：`npm audit --omit=dev` 为 0 vulnerabilities；完整审计报告 4 项仅开发依赖告警（3 low、1 high，含锁定的 Vite 7.3.6），未改动依赖锁文件；这些依赖不打入 `.dbxp`。
-- **DBX Store**：Store 当前 `automation/plugin-sources.json` 将本插件设为 `autoUpdate: true`。发布后的定时同步 Workflow [#42808843049](https://github.com/t8y2/dbx-store/actions/runs/42808843049) 成功，并自动创建候选 PR [#497](https://github.com/t8y2/dbx-store/pull/497)；PR 内容的 v0.7.2 URL / SHA-256 / size 与正式 Release 匹配。候选仍 unsigned、无 checks、等待 Store maintainer review 与受保护 signing workflow；未手动改动 Store、签名或合并。
+- **DBX Store**：Store 当前 `automation/plugin-sources.json` 将本插件设为 `autoUpdate: true`。发布后的定时同步 Workflow [#42808843049](https://github.com/t8y2/dbx-store/actions/runs/42808843049) 成功，并自动创建候选 PR [#497](https://github.com/t8y2/dbx-store/pull/497)；PR 内容的 v0.7.2 URL / SHA-256 / size 与正式 Release 匹配。候选仍 unsigned、PR open；其 `Validate catalog` workflow run [#42808930562](https://github.com/t8y2/dbx-store/actions/runs/42808930562) 为 `action_required`，等待 Store maintainer 授权 / review 并运行受保护 signing workflow；未手动改动 Store、签名或合并。
 - **E2E 边界**：用户报告只作为 DBX 插件手工验收依据；本机未重复该 GUI 测试，也无真实 DB2 数据库验证。DB2 LUW 源码组件基线不是端到端兼容性认证。
 
 ## Issue #72 / #73 — 计划快照与 Estimated Plan Diff（已移除，2026-11-09）
