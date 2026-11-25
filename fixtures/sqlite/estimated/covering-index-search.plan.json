@@ -1,0 +1,8 @@
+[
+  {
+    "id": 2,
+    "parent": 0,
+    "notused": 55,
+    "detail": "SEARCH pd_fix_orders USING COVERING INDEX idx_pd_fix_orders_customer_status (customer_id=?)"
+  }
+]

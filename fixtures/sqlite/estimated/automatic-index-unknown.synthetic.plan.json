@@ -1,0 +1,32 @@
+[
+  {
+    "id": 2,
+    "parent": 0,
+    "notused": 0,
+    "detail": "SEARCH pd_fix_customers AS c USING INTEGER PRIMARY KEY (rowid=?)"
+  },
+  {
+    "id": 5,
+    "parent": 0,
+    "notused": 0,
+    "detail": "SEARCH SUBQUERY 1 AS sub USING AUTOMATIC COVERING INDEX (customer_id=?)"
+  },
+  {
+    "id": 9,
+    "parent": 5,
+    "notused": 0,
+    "detail": "MULTI-INDEX OR"
+  },
+  {
+    "id": 12,
+    "parent": 9,
+    "notused": 0,
+    "detail": "FUTURE SQLITE STEP custom_hint"
+  },
+  {
+    "id": 18,
+    "parent": 0,
+    "notused": 0,
+    "detail": "USE TEMP B-TREE FOR GROUP BY"
+  }
+]

@@ -1,0 +1,27 @@
+{
+  "database": "sqlite",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "3.54.0",
+  "capturedAt": "2026-11-25",
+  "captureCommand": "EXPLAIN QUERY PLAN SELECT c.name, o.total FROM pd_fix_customers AS c JOIN pd_fix_orders AS o ON o.customer_id = c.id WHERE c.region = 'APAC' ORDER BY o.created_at DESC;",
+  "sql": "SELECT c.name, o.total FROM pd_fix_customers AS c JOIN pd_fix_orders AS o ON o.customer_id = c.id WHERE c.region = 'APAC' ORDER BY o.created_at DESC;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured from an in-memory SQLite 3.54.0 throwaway test database in the same structured row-array shape returned by DBX Host (t8y2/dbx#14885).",
+    "reference": "https://www.sqlite.org/eqp.html"
+  },
+  "features": [
+    "multiple top-level steps",
+    "JOIN",
+    "SEARCH USING INDEX",
+    "USE TEMP B-TREE FOR ORDER BY"
+  ],
+  "expect": {
+    "rootNodeType": "SQLite Query Plan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

@@ -15,6 +15,7 @@ import {
   DORIS_FIXTURES_DIR,
   GAUSSDB_FIXTURES_DIR,
   DB2_FIXTURES_DIR,
+  SQLITE_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   QUESTDB_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
@@ -135,6 +136,14 @@ test("fixtures/db2 has estimated DB2 LUW JSON plans and no actual directory", as
   await assert.rejects(readdir(path.join(DB2_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
   assert.deepEqual(MODES_BY_DATABASE.db2, ["estimated"]);
   assert.equal(planSuffixFor("db2"), ".plan.json");
+});
+
+test("fixtures/sqlite has estimated SQLite EQP JSON plans and no actual directory", async () => {
+  const entries = await readdir(path.join(SQLITE_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.json")), "fixtures/sqlite/estimated must contain .plan.json files");
+  await assert.rejects(readdir(path.join(SQLITE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.sqlite, ["estimated"]);
+  assert.equal(planSuffixFor("sqlite"), ".plan.json");
 });
 
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {

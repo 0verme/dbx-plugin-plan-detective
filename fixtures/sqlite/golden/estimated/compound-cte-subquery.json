@@ -1,0 +1,631 @@
+{
+  "parsed": {
+    "database": "sqlite",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "structural": true,
+      "structuralType": "query-plan",
+      "id": 0,
+      "parent": null,
+      "notused": null,
+      "detail": null,
+      "nodeType": "SQLite Query Plan",
+      "operation": "QUERY PLAN",
+      "recognized": true,
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "indexCondition": null,
+      "filter": null,
+      "accessStrategy": null,
+      "usingCoveringIndex": false,
+      "usingAutomaticIndex": false,
+      "tempBTreePurpose": null,
+      "children": [
+        {
+          "id": 1,
+          "parent": 0,
+          "notused": 0,
+          "detail": "COMPOUND QUERY",
+          "nodeType": "Compound Query",
+          "operation": "COMPOUND QUERY",
+          "recognized": true,
+          "relationName": null,
+          "alias": null,
+          "indexName": null,
+          "indexCondition": null,
+          "filter": null,
+          "accessStrategy": null,
+          "usingCoveringIndex": false,
+          "usingAutomaticIndex": false,
+          "tempBTreePurpose": null,
+          "children": [
+            {
+              "id": 2,
+              "parent": 1,
+              "notused": 0,
+              "detail": "LEFT-MOST SUBQUERY",
+              "nodeType": "Left-Most Subquery",
+              "operation": "LEFT-MOST SUBQUERY",
+              "recognized": true,
+              "relationName": null,
+              "alias": null,
+              "indexName": null,
+              "indexCondition": null,
+              "filter": null,
+              "accessStrategy": null,
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null,
+              "children": [
+                {
+                  "id": 5,
+                  "parent": 2,
+                  "notused": 0,
+                  "detail": "MATERIALIZE regional",
+                  "nodeType": "Materialize",
+                  "operation": "MATERIALIZE",
+                  "recognized": true,
+                  "relationName": "regional",
+                  "alias": null,
+                  "indexName": null,
+                  "indexCondition": null,
+                  "filter": null,
+                  "accessStrategy": null,
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null,
+                  "children": [
+                    {
+                      "id": 9,
+                      "parent": 5,
+                      "notused": 62,
+                      "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)",
+                      "nodeType": "Index Search",
+                      "operation": "SEARCH",
+                      "recognized": true,
+                      "relationName": "pd_fix_customers",
+                      "alias": null,
+                      "indexName": "idx_pd_fix_customers_region",
+                      "indexCondition": "region=?",
+                      "filter": null,
+                      "accessStrategy": "INDEX",
+                      "usingCoveringIndex": false,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                },
+                {
+                  "id": 23,
+                  "parent": 2,
+                  "notused": 49,
+                  "detail": "SCAN r",
+                  "nodeType": "Table Scan",
+                  "operation": "SCAN",
+                  "recognized": true,
+                  "relationName": "r",
+                  "alias": null,
+                  "indexName": null,
+                  "indexCondition": null,
+                  "filter": null,
+                  "accessStrategy": "TABLE SCAN",
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null,
+                  "children": [],
+                  "extra": {}
+                },
+                {
+                  "id": 27,
+                  "parent": 2,
+                  "notused": 0,
+                  "detail": "CORRELATED SCALAR SUBQUERY 2",
+                  "nodeType": "Correlated Scalar Subquery",
+                  "operation": "CORRELATED SCALAR SUBQUERY",
+                  "recognized": true,
+                  "relationName": null,
+                  "alias": null,
+                  "indexName": null,
+                  "indexCondition": null,
+                  "filter": null,
+                  "accessStrategy": null,
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null,
+                  "children": [
+                    {
+                      "id": 32,
+                      "parent": 27,
+                      "notused": 55,
+                      "detail": "SEARCH o USING COVERING INDEX idx_pd_fix_orders_customer_status (customer_id=?)",
+                      "nodeType": "Covering Index Search",
+                      "operation": "SEARCH",
+                      "recognized": true,
+                      "relationName": "o",
+                      "alias": null,
+                      "indexName": "idx_pd_fix_orders_customer_status",
+                      "indexCondition": "customer_id=?",
+                      "filter": null,
+                      "accessStrategy": "COVERING INDEX",
+                      "usingCoveringIndex": true,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null,
+                      "children": [],
+                      "extra": {}
+                    }
+                  ],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            },
+            {
+              "id": 47,
+              "parent": 1,
+              "notused": 0,
+              "detail": "UNION ALL",
+              "nodeType": "Union All",
+              "operation": "UNION ALL",
+              "recognized": true,
+              "relationName": null,
+              "alias": null,
+              "indexName": null,
+              "indexCondition": null,
+              "filter": null,
+              "accessStrategy": null,
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null,
+              "children": [
+                {
+                  "id": 50,
+                  "parent": 47,
+                  "notused": 62,
+                  "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)",
+                  "nodeType": "Index Search",
+                  "operation": "SEARCH",
+                  "recognized": true,
+                  "relationName": "pd_fix_customers",
+                  "alias": null,
+                  "indexName": "idx_pd_fix_customers_region",
+                  "indexCondition": "region=?",
+                  "filter": null,
+                  "accessStrategy": "INDEX",
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null,
+                  "children": [],
+                  "extra": {}
+                }
+              ],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "sqlite",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "SQLite Query Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "setop",
+          "nodeType": "Compound Query",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "subquery",
+              "nodeType": "Left-Most Subquery",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.0.0",
+                  "kind": "materialize",
+                  "nodeType": "Materialize",
+                  "relation": {
+                    "name": "regional",
+                    "alias": null,
+                    "indexName": null
+                  },
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.0.0",
+                      "kind": "index_scan",
+                      "nodeType": "Index Search",
+                      "relation": {
+                        "name": "pd_fix_customers",
+                        "alias": null,
+                        "indexName": "idx_pd_fix_customers_region"
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": "region=?",
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "sqlite",
+                        "sqlite": {
+                          "id": 9,
+                          "parent": 5,
+                          "notused": 62,
+                          "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)",
+                          "operation": "SEARCH",
+                          "accessStrategy": "INDEX",
+                          "usingCoveringIndex": false,
+                          "usingAutomaticIndex": false,
+                          "tempBTreePurpose": null
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "sqlite",
+                    "sqlite": {
+                      "id": 5,
+                      "parent": 2,
+                      "notused": 0,
+                      "detail": "MATERIALIZE regional",
+                      "operation": "MATERIALIZE",
+                      "accessStrategy": null,
+                      "usingCoveringIndex": false,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null
+                    },
+                    "extra": {}
+                  }
+                },
+                {
+                  "id": "0.0.0.1",
+                  "kind": "seq_scan",
+                  "nodeType": "Table Scan",
+                  "relation": {
+                    "name": "r",
+                    "alias": null,
+                    "indexName": null
+                  },
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "sqlite",
+                    "sqlite": {
+                      "id": 23,
+                      "parent": 2,
+                      "notused": 49,
+                      "detail": "SCAN r",
+                      "operation": "SCAN",
+                      "accessStrategy": "TABLE SCAN",
+                      "usingCoveringIndex": false,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null
+                    },
+                    "extra": {}
+                  }
+                },
+                {
+                  "id": "0.0.0.2",
+                  "kind": "subquery",
+                  "nodeType": "Correlated Scalar Subquery",
+                  "relation": null,
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [
+                    {
+                      "id": "0.0.0.2.0",
+                      "kind": "index_only_scan",
+                      "nodeType": "Covering Index Search",
+                      "relation": {
+                        "name": "o",
+                        "alias": null,
+                        "indexName": "idx_pd_fix_orders_customer_status"
+                      },
+                      "estimatedRows": null,
+                      "actualRows": null,
+                      "actualStartupTime": null,
+                      "actualTotalTime": null,
+                      "loops": null,
+                      "startupCost": null,
+                      "totalCost": null,
+                      "width": null,
+                      "filter": null,
+                      "joinType": null,
+                      "joinCondition": null,
+                      "indexCondition": "customer_id=?",
+                      "sortKeys": null,
+                      "groupKeys": null,
+                      "children": [],
+                      "engineSpecific": {
+                        "database": "sqlite",
+                        "sqlite": {
+                          "id": 32,
+                          "parent": 27,
+                          "notused": 55,
+                          "detail": "SEARCH o USING COVERING INDEX idx_pd_fix_orders_customer_status (customer_id=?)",
+                          "operation": "SEARCH",
+                          "accessStrategy": "COVERING INDEX",
+                          "usingCoveringIndex": true,
+                          "usingAutomaticIndex": false,
+                          "tempBTreePurpose": null
+                        },
+                        "extra": {}
+                      }
+                    }
+                  ],
+                  "engineSpecific": {
+                    "database": "sqlite",
+                    "sqlite": {
+                      "id": 27,
+                      "parent": 2,
+                      "notused": 0,
+                      "detail": "CORRELATED SCALAR SUBQUERY 2",
+                      "operation": "CORRELATED SCALAR SUBQUERY",
+                      "accessStrategy": null,
+                      "usingCoveringIndex": false,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "sqlite",
+                "sqlite": {
+                  "id": 2,
+                  "parent": 1,
+                  "notused": 0,
+                  "detail": "LEFT-MOST SUBQUERY",
+                  "operation": "LEFT-MOST SUBQUERY",
+                  "accessStrategy": null,
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null
+                },
+                "extra": {}
+              }
+            },
+            {
+              "id": "0.0.1",
+              "kind": "append",
+              "nodeType": "Union All",
+              "relation": null,
+              "estimatedRows": null,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [
+                {
+                  "id": "0.0.1.0",
+                  "kind": "index_scan",
+                  "nodeType": "Index Search",
+                  "relation": {
+                    "name": "pd_fix_customers",
+                    "alias": null,
+                    "indexName": "idx_pd_fix_customers_region"
+                  },
+                  "estimatedRows": null,
+                  "actualRows": null,
+                  "actualStartupTime": null,
+                  "actualTotalTime": null,
+                  "loops": null,
+                  "startupCost": null,
+                  "totalCost": null,
+                  "width": null,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "indexCondition": "region=?",
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "children": [],
+                  "engineSpecific": {
+                    "database": "sqlite",
+                    "sqlite": {
+                      "id": 50,
+                      "parent": 47,
+                      "notused": 62,
+                      "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)",
+                      "operation": "SEARCH",
+                      "accessStrategy": "INDEX",
+                      "usingCoveringIndex": false,
+                      "usingAutomaticIndex": false,
+                      "tempBTreePurpose": null
+                    },
+                    "extra": {}
+                  }
+                }
+              ],
+              "engineSpecific": {
+                "database": "sqlite",
+                "sqlite": {
+                  "id": 47,
+                  "parent": 1,
+                  "notused": 0,
+                  "detail": "UNION ALL",
+                  "operation": "UNION ALL",
+                  "accessStrategy": null,
+                  "usingCoveringIndex": false,
+                  "usingAutomaticIndex": false,
+                  "tempBTreePurpose": null
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "sqlite",
+            "sqlite": {
+              "id": 1,
+              "parent": 0,
+              "notused": 0,
+              "detail": "COMPOUND QUERY",
+              "operation": "COMPOUND QUERY",
+              "accessStrategy": null,
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlite",
+        "structural": true,
+        "sqlite": {
+          "structuralType": "query-plan",
+          "topLevelStepCount": 1
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 9,
+    "maxDepth": 4,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 4,
+    "sequentialScanCount": 1,
+    "indexScanCount": 3,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

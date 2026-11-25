@@ -1,0 +1,8 @@
+[
+  {
+    "id": 3,
+    "parent": 0,
+    "notused": 61,
+    "detail": "SEARCH pd_fix_orders USING INDEX idx_pd_fix_orders_customer_status (customer_id=? AND status=?)"
+  }
+]

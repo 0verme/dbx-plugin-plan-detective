@@ -56,6 +56,7 @@ const DATABASE_BY_DBX_DB_TYPE = Object.freeze({
   doris: "doris",
   dameng: "dameng",
   questdb: "questdb",
+  sqlite: "sqlite",
 });
 
 /**

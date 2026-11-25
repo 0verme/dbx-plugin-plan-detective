@@ -25,6 +25,7 @@ import { oceanBaseOracleParser } from "./oceanbase-oracle.js";
 import { oracleParser } from "./oracle.js";
 import { postgresParser } from "./postgres.js";
 import { questDbParser } from "./questdb.js";
+import { sqliteParser } from "./sqlite.js";
 import { sqlserverParser } from "./sqlserver.js";
 
 /**
@@ -44,6 +45,7 @@ const PARSERS = new Map([
   [damengParser.database, damengParser],
   [questDbParser.database, questDbParser],
   [dorisParser.database, dorisParser],
+  [sqliteParser.database, sqliteParser],
 ]);
 
 /**

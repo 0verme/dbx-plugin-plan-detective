@@ -34,7 +34,7 @@ import { PlanInputError } from "./errors.js";
  */
 
 /** Database families with a structured parser today. */
-export const STRUCTURED_DATABASES = ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"];
+export const STRUCTURED_DATABASES = ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "sqlite"];
 
 /**
  * Database families this contract accepts. These are parser families usable by
@@ -54,6 +54,7 @@ export const SUPPORTED_DATABASES = [
   "doris",
   "dameng",
   "questdb",
+  "sqlite",
 ];
 export const SUPPORTED_MODES = ["estimated", "actual"];
 export const SUPPORTED_FORMATS = ["json", "text", "xml"];

@@ -70,13 +70,17 @@ test("getParser returns a parser only for an implemented family", () => {
   assert.equal(gaussdb?.id, "gaussdb-dws-json");
   assert.deepEqual(gaussdb?.formats, ["json"]);
 
+  const sqlite = getParser("sqlite");
+  assert.equal(sqlite?.id, "sqlite");
+  assert.deepEqual(sqlite?.formats, ["json"]);
+
   for (const database of ["unknown-database"]) {
     assert.equal(getParser(database), null, `${database} must not claim a structured parser`);
   }
 });
 
 test("STRUCTURED_DATABASES lists exactly the families with a parser", () => {
-  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris"]);
+  assert.deepEqual(STRUCTURED_DATABASES, ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "sqlite"]);
 });
 
 test("describeParserSupport separates structured, unsupported-format and unknown families", () => {
@@ -161,6 +165,13 @@ test("describeParserSupport separates structured, unsupported-format and unknown
   assert.deepEqual(describeParserSupport("gaussdb", "text"), {
     structured: false,
     parser: "gaussdb-dws-json",
+    reasonCode: "UNSUPPORTED_FORMAT",
+  });
+
+  assert.deepEqual(describeParserSupport("sqlite", "json"), { structured: true, parser: "sqlite", reasonCode: null });
+  assert.deepEqual(describeParserSupport("sqlite", "text"), {
+    structured: false,
+    parser: "sqlite",
     reasonCode: "UNSUPPORTED_FORMAT",
   });
 

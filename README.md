@@ -16,6 +16,7 @@ DBX 的 SQL 执行计划分析插件。
 [![Dameng](https://img.shields.io/badge/Dameng-structured-0b6e99)](https://www.dameng.com/)
 [![QuestDB](https://img.shields.io/badge/QuestDB-structured-5f43e9)](https://questdb.com/)
 [![Apache Doris](https://img.shields.io/badge/Apache%20Doris-structured-4b86c6)](https://doris.apache.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-structured-003B57)](https://www.sqlite.org/)
 
 ## 插件简介
 
@@ -61,6 +62,7 @@ Locale precedence is **manual selection for this session > saved user preference
 - **Doris Estimated EXPLAIN text structured parser**：按 `Distributed Plan` → `PLAN FRAGMENT` → fragment-local operator tree 恢复结构；保留 Fragment / Sink / Exchange metadata、`cardinality → estimatedRows`、join / sort / aggregate normalization 与未知 operator / property。Sink → Exchange 跨 Fragment 关系只作为 metadata / evidence，不构造完整 DAG；generic structural wrapper 可 traversal，但不参与 operator metrics / rules / hotspots；Doris cost 不映射 PostgreSQL cost。
 - **DB2 LUW Estimated JSON v1 结构化解析**：按 `operators` / `streams` / `predicates` 建树，支持多个 root 与共享 producer 引用；保留精确十进制成本字符串（timerons、page I/Os、instructions）及 stream output cardinality，支持 TBSCAN / IXSCAN、表 / 索引对象与 predicate 展示。DB2 指标不进入 PostgreSQL 成本模型；目前不生成 DB2 专属 Finding / Hotspot，不把 stream cardinality 当作扫描行数，也不推断 NLJOIN outer / inner。
 - **GaussDB / Huawei DWS Estimated JSON 结构化解析**：已在真实 DWS 环境手工测试并使用。DBX Host 对当前连接确认 Estimated Plan 能力后，解析 JSON envelope 并保留未知子树；DWS 原生 cost 仅展示，不作为 PostgreSQL cost / elapsed time。仅声明已测试的 DWS 路径，不自动扩展为所有 GaussDB 产品或驱动均兼容。
+- **SQLite EXPLAIN QUERY PLAN 结构化解析**：支持 DBX Host 返回的 `EXPLAIN QUERY PLAN` 结构化 JSON 行数组（`id` / `parent` / `notused` / `detail`，[t8y2/dbx#14885](https://github.com/t8y2/dbx/pull/14885)），还原多顶层步骤与嵌套父子树，识别 `SCAN`、`SEARCH ... USING [COVERING|AUTOMATIC] INDEX`、`USING INTEGER PRIMARY KEY`、`USE TEMP B-TREE FOR ORDER BY/GROUP BY/DISTINCT`、复合查询与子查询；不捏造 PostgreSQL cost 或估算行数。
 - **Plan Tree 与 Plan Summary**：查看节点层级、估算行数、扫描 / Join / Sort 等基础指标。
 - **Hotspots 热点定位**：用确定性、engine-aware 的信号提示优先检查的节点，不生成综合评分。
 - **Hotspot 人话解释**：在保留原始 node label / statement / code / source / Evidence 的同时，按 `zh-CN` / `en` 输出自然语言摘要。
@@ -156,6 +158,7 @@ Plan Detective 通过 DBX Host Plan API 获取当前已打开连接的 Estimated
 | Doris | Structured (Estimated only) |
 | IBM Db2 LUW | Structured (Estimated JSON v1; real-environment manually tested; requires Host capability) |
 | GaussDB / Huawei DWS | Structured (Estimated JSON; real-environment manually tested; requires Host capability) |
+| SQLite | Structured (Estimated `EXPLAIN QUERY PLAN` JSON row array; requires DBX Host with `t8y2/dbx#14885`) |
 
 `Structured` 表示 Plan Detective 能将对应格式的执行计划解析为统一的计划树；不代表无条件支持该数据库全部版本与格式。**IBM Db2 LUW 与 Huawei DWS 已由维护者在真实数据库环境手工测试，并已投入使用**。这一结论基于实际使用反馈，不等同于仓库内每个 fixture 都来自真实数据库，也不代表自动化 E2E 矩阵覆盖全部环境。获取计划仍依赖 DBX Host 对同一连接报告 `supports.estimatedPlan = true`。DB2 仅声明 LUW 的 Agent JSON v1 格式，组件最低基线为 DBX Desktop ≥ 0.6.38 与 DB2 Agent ≥ 0.1.78；不声明支持 Db2 for z/OS / i，DB2 原生 Estimated 指标不参与通用 PostgreSQL cost Finding / Hotspot。DWS 仅声明已测试的 Huawei DWS Estimated JSON 路径，不凭 `dbType: "gaussdb"` 或版本字符串扩大到普通 GaussDB / M-JDBC。Fixture 来源及早期 Host 审计见 [GaussDB/DWS Host contract audit](docs/GAUSSDB_DWS_HOST_CONTRACT_AUDIT.md)，其中记录的历史阻塞状态不应视为当前运行状态。Oracle 仅声明支持 DBX 当前的 `TYPICAL +PREDICATE` 文本输出；Dameng、QuestDB 与 Doris 仅支持 Estimated 原生文本，不支持 Actual / ANALYZE / PROFILE。
 

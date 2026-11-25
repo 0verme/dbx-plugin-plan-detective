@@ -17,6 +17,7 @@ export const QUESTDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "questdb");
 export const DORIS_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "doris");
 export const GAUSSDB_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "gaussdb");
 export const DB2_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "db2");
+export const SQLITE_FIXTURES_DIR = path.join(REPO_ROOT, "fixtures", "sqlite");
 
 /**
  * Fixture roots by Plan Core database family. The default stays PostgreSQL so
@@ -34,9 +35,10 @@ export const FIXTURE_DIRS = Object.freeze({
   doris: DORIS_FIXTURES_DIR,
   gaussdb: GAUSSDB_FIXTURES_DIR,
   db2: DB2_FIXTURES_DIR,
+  sqlite: SQLITE_FIXTURES_DIR,
 });
 
-export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "gaussdb", "db2"]);
+export const FIXTURE_DATABASES = Object.freeze(["postgresql", "mysql", "sqlserver", "oceanbase-oracle", "oceanbase-mysql", "oracle", "dameng", "questdb", "doris", "gaussdb", "db2", "sqlite"]);
 export const MODES = ["estimated", "actual"];
 /**
  * Modes each database has fixtures for. Every family except PostgreSQL supports
@@ -55,6 +57,7 @@ export const MODES_BY_DATABASE = Object.freeze({
   doris: ["estimated"],
   gaussdb: ["estimated"],
   db2: ["estimated"],
+  sqlite: ["estimated"],
 });
 export const SOURCE_KINDS = ["official", "locally-generated", "synthetic", "real"];
 
@@ -71,6 +74,7 @@ const PLAN_SUFFIX_BY_DATABASE = Object.freeze({
   doris: ".plan.txt",
   gaussdb: ".plan.json",
   db2: ".plan.json",
+  sqlite: ".plan.json",
 });
 
 /** RawPlanInput format each fixture family commits. */
@@ -86,6 +90,7 @@ export const FORMAT_BY_DATABASE = Object.freeze({
   doris: "text",
   gaussdb: "json",
   db2: "json",
+  sqlite: "json",
 });
 
 const META_SUFFIX = ".meta.json";

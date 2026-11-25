@@ -648,6 +648,7 @@ export function buildNodeInspector(node, locale = DEFAULT_LOCALE) {
  * @returns {Array<{ label: string, value: string }|null>}
  */
 function engineFields(engine) {
+  if (isPlainObject(engine.sqlite)) return sqliteEngineFields(engine.sqlite);
   if (isPlainObject(engine.db2)) return db2EngineFields(engine.db2);
   if (isPlainObject(engine.questdb)) return questDbEngineFields(engine.questdb);
   if (isPlainObject(engine.mysql)) return mysqlEngineFields(engine.mysql);
@@ -668,6 +669,28 @@ function engineFields(engine) {
     field("Join Filter", engine.joinFilter),
     field("Recheck Condition", engine.recheckCondition),
     field("Presorted Keys", formatRawValue(engine.presortedKeys)),
+  ];
+}
+
+/**
+ * SQLite `EXPLAIN QUERY PLAN` fields. SQLite EQP reports structural access paths
+ * without cost or row-count numbers.
+ *
+ * @param {Record<string, unknown>} sqlite
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function sqliteEngineFields(sqlite) {
+  return [
+    field("EQP Node ID (id)", formatNumber(sqlite.id)),
+    field("Parent Node ID (parent)", formatNumber(sqlite.parent)),
+    field("Operation", sqlite.operation),
+    field("Access Strategy", sqlite.accessStrategy),
+    flagField("Covering Index", sqlite.usingCoveringIndex),
+    flagField("Automatic Index", sqlite.usingAutomaticIndex),
+    field("Temp B-Tree Purpose", sqlite.tempBTreePurpose),
+    field("Not Used (notused)", formatNumber(sqlite.notused)),
+    field("Detail", sqlite.detail),
+    field("Top-Level Steps", formatNumber(sqlite.topLevelStepCount)),
   ];
 }
 
@@ -999,4 +1022,6 @@ const INSPECTOR_FIELD_LABELS = new Set([
   "CPU Cost (instructions)", "Stream Cardinality (estimated output rows)", "Objects", "Input Streams", "Output Streams",
   "Arguments", "Statement Metadata",
   "Shared Operator Reference",
+  "EQP Node ID (id)", "Parent Node ID (parent)", "Operation", "Access Strategy",
+  "Covering Index", "Automatic Index", "Temp B-Tree Purpose", "Not Used (notused)", "Top-Level Steps",
 ]);

@@ -1,0 +1,28 @@
+{
+  "database": "sqlite",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic SQLite EXPLAIN QUERY PLAN fixture: exercises INTEGER PRIMARY KEY, AUTOMATIC COVERING INDEX, MULTI-INDEX OR, USE TEMP B-TREE FOR GROUP BY, and unknown future EQP detail retention.",
+    "reference": "https://www.sqlite.org/eqp.html"
+  },
+  "features": [
+    "USING INTEGER PRIMARY KEY",
+    "USING AUTOMATIC COVERING INDEX",
+    "USE TEMP B-TREE FOR GROUP BY",
+    "MULTI-INDEX OR",
+    "unknown EQP detail retention"
+  ],
+  "expect": {
+    "rootNodeType": "SQLite Query Plan",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}
