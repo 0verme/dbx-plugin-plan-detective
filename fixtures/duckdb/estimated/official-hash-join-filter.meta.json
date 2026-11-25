@@ -1,0 +1,28 @@
+{
+  "database": "duckdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "official",
+    "detail": "Transcribed from the official DuckDB EXPLAIN documentation example; not a local database capture and not executed locally.",
+    "reference": "https://duckdb.org/docs/stable/guides/meta/explain"
+  },
+  "features": [
+    "Physical Plan double-box header",
+    "PROJECTION",
+    "HASH_JOIN with right-wall branch connector",
+    "FILTER",
+    "SEQ_SCAN with wrapped Filters continuation and EC"
+  ],
+  "expect": {
+    "rootNodeType": "PROJECTION",
+    "hasActualFields": false,
+    "minDepth": 4,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

@@ -119,6 +119,7 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | `dbType: "questdb"` | `database: "questdb"` | structured（`format: "text"`，Estimated only；见 4.7） |
 | `dbType: "dameng"` | `database: "dameng"` | structured（`format: "text"`，Estimated only） |
 | `dbType: "sqlite"` | `database: "sqlite"` | structured（`format: "json"`，SQLite `EXPLAIN QUERY PLAN` 结构化行数组；见 4.11） |
+| `dbType: "duckdb"` | `database: "duckdb"` | structured（`format: "text"`，DuckDB `EXPLAIN` 盒型物理计划文本；见 4.12） |
 | （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径 |
 | `format` | 同名 `format` | `json` / `xml` / `text`；契约外值拒绝 |
 | `rawPlan` | `plan` | 原引用直传，不克隆 / 不重写 / 不 JSON.parse |
@@ -190,6 +191,7 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | DB2 LUW | `src/core/db2/parse-json-plan.js`（bounded Estimated JSON v1 graph parser） | `src/core/normalize/normalize-db2.js` | `src/core/parsers/db2.js` |
 | GaussDB / Huawei DWS | `src/core/gaussdb/parse-json-plan.js`（bounded Estimated-only entry；shared PG-family JSON walker） | `src/core/normalize/normalize-gaussdb.js` | `src/core/parsers/gaussdb.js` |
 | SQLite | `src/core/sqlite/parse-json-plan.js` | `src/core/normalize/normalize-sqlite.js` | `src/core/parsers/sqlite.js` |
+| DuckDB | `src/core/duckdb/parse-text-plan.js` | `src/core/normalize/normalize-duckdb.js` | `src/core/parsers/duckdb.js` |
 
 ### 4.1 PostgreSQL
 
@@ -490,6 +492,14 @@ Host 负责运行 `EXPLAIN <source SQL>` 与只读边界，Plan Core 不创建�
 - **Detail classification & fail-soft**：识别 `SCAN`（表扫描、全索引扫描 `SCAN ... USING [COVERING] INDEX`、子查询扫描、虚拟表扫描、常量行）、`SEARCH`（`USING INDEX`、`USING COVERING INDEX`、`USING INTEGER PRIMARY KEY`、`USING AUTOMATIC [COVERING] INDEX`）、`USE TEMP B-TREE FOR ORDER BY / GROUP BY / DISTINCT`、`COMPOUND QUERY`、`LEFT-MOST SUBQUERY`、`UNION` / `UNION ALL` / `INTERSECT` / `EXCEPT`、`MATERIALIZE`、`CO-ROUTINE`、`[CORRELATED] SCALAR / LIST / EXISTS SUBQUERY`、`MULTI-INDEX OR`、`BLOOM FILTER` 等常见描述；未知 `detail` 保留原始文本并归入 `kind: "unknown"` 与 `unknownNodeTypes`。
 - **Valuation boundary**：SQLite `EXPLAIN QUERY PLAN` 不报告估算行数或成本数值；`estimatedRows`、`startupCost`、`totalCost`、`width` 与所有 actual 字段保持 `null`，`costAttribution` 为 `{ engine: "sqlite", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }`，不伪造行数或代价阈值信号。
 - **Fixtures**：`fixtures/sqlite` 包含 5 个由本地内存 SQLite 3.54.0 真实采集的 `locally-generated` 样本与 1 个覆盖 edge case / 未知 detail 的 `.synthetic` 样本。Cloudflare D1 在上游仍保持 `supports_explain_plan = false`，不在 Phase 1 宣称支持。
+
+### 4.12 DuckDB Estimated EXPLAIN text
+
+实现：`src/core/duckdb/parse-text-plan.js`、`src/core/normalize/normalize-duckdb.js` 与 `src/core/parsers/duckdb.js`。上游契约来自已合并的 [t8y2/dbx#14899](https://github.com/t8y2/dbx/pull/14899)：DBX Host 对 `dbType: "duckdb"` 生成并执行只读 `EXPLAIN <sql>`，返回 `format: "text"` 的原始盒型树文本（`rawPlan` 保留为字符串，不伪装成 JSON）。
+
+- **2D Box Tree parsing & fail-closed**：支持经典直角框（`┌───...───┐`、内部 `─ ─ ─` 分隔符、底边 `┬` 与右墙 `├────┐` 分支连线）以及新版圆角框（`╭─ Title ───╮`、下方 `├───┬───╮` / `╭───┴───╮` 水平路由总线）；自动识别并保留顶部的 `physical_plan` / `Physical Plan` 双层标题框。空文本、无算子框、多父节点、孤立未连接框、环或包含 `EXPLAIN_ANALYZE` / 运行时耗时指标的输入一律 fail-closed 抛出 `PlanParseError`。
+- **Metadata & valuation boundary**：从框内提取表名（`Table:` 或扫描框位置段）、折行 `Filters:`、`Join Type` / `Conditions`、`Projections`、`Order By`、`Groups` 以及估算基数（`EC: <n>` / `~<n> rows` → `estimatedRows`）。DuckDB 不报告 PostgreSQL 风格累计 cost，`startupCost`、`totalCost`、`width` 与所有 actual 字段保持 `null`，`costAttribution` 为 `{ engine: "duckdb", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }`。`SEQ_SCAN` / `TABLE_SCAN` 映射为 `seq_scan`（仅在 `EC` 达到阈值时触发行数信号，source 标为 `EC`），`PARQUET_SCAN` / `CSV_SCAN` 等外部/函数扫描映射为中性 `scan`。
+- **Fixtures**：`fixtures/duckdb` 包含 1 个来自 DuckDB 官方 `EXPLAIN` 文档的 `official` 转录样本与 4 个 `.synthetic` 样本。
 
 ## 5. NormalizedPlan
 

@@ -15,6 +15,7 @@ import { computeHotspots } from "../hotspots/compute-hotspots.js";
 import { db2Parser } from "./db2.js";
 import { damengParser } from "./dameng.js";
 import { dorisParser } from "./doris.js";
+import { duckdbParser } from "./duckdb.js";
 import { computeMetrics } from "../metrics/compute-metrics.js";
 import { gaussdbParser } from "./gaussdb.js";
 import { validateRawPlanInput } from "../raw-plan-input.js";
@@ -46,6 +47,7 @@ const PARSERS = new Map([
   [questDbParser.database, questDbParser],
   [dorisParser.database, dorisParser],
   [sqliteParser.database, sqliteParser],
+  [duckdbParser.database, duckdbParser],
 ]);
 
 /**

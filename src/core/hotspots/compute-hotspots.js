@@ -603,6 +603,7 @@ function estimatedRowsSource(database, sources) {
   if (database === "oceanbase-oracle" || database === "oceanbase-mysql") return "EST.ROWS";
   if (database === "oracle") return "Rows";
   if (database === "dameng") return "[cost, rows, bytes-per-row]";
+  if (database === "duckdb") return "EC";
   return "Plan Rows";
 }
 
@@ -710,6 +711,23 @@ function nodeSnapshot(node, database, cost) {
       bytesPerRow: dameng.bytesPerRow,
       detail: dameng.detail,
       predicates: dameng.predicates,
+    };
+    for (const [key, value] of Object.entries(engineValues)) {
+      if (value !== null && value !== undefined) evidence[key] = value;
+    }
+    return evidence;
+  }
+
+  if (database === "duckdb") {
+    const duckdb = node.engineSpecific?.duckdb ?? {};
+    const engineValues = {
+      operator: duckdb.operator,
+      table: duckdb.table,
+      estimatedCardinality: duckdb.estimatedCardinality,
+      filter: duckdb.filter,
+      joinType: duckdb.joinType,
+      joinCondition: duckdb.joinCondition,
+      projections: duckdb.projections,
     };
     for (const [key, value] of Object.entries(engineValues)) {
       if (value !== null && value !== undefined) evidence[key] = value;

@@ -1,0 +1,28 @@
+{
+  "database": "duckdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic DuckDB EXPLAIN fixture: modern rounded-corner box renderer with inline box title, routing bus line, ~N rows cardinality, HASH_GROUP_BY, and PARQUET_SCAN.",
+    "reference": "https://duckdb.org/docs/stable/guides/meta/explain"
+  },
+  "features": [
+    "rounded box borders with inline title",
+    "horizontal routing bus line",
+    "~N rows estimated cardinality",
+    "HASH_GROUP_BY",
+    "PARQUET_SCAN neutral scan"
+  ],
+  "expect": {
+    "rootNodeType": "Hash Group By",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

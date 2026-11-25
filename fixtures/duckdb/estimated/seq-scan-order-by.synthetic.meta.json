@@ -1,0 +1,27 @@
+{
+  "database": "duckdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic DuckDB EXPLAIN fixture: models the physical_plan prefix and ORDER_BY over SEQ_SCAN shape tested by t8y2/dbx#14899.",
+    "reference": "https://github.com/t8y2/dbx/pull/14899"
+  },
+  "features": [
+    "physical_plan header line",
+    "PROJECTION",
+    "ORDER_BY",
+    "SEQ_SCAN with Table: property and EC"
+  ],
+  "expect": {
+    "rootNodeType": "PROJECTION",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

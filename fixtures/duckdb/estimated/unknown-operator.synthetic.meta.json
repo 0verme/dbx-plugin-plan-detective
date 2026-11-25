@@ -1,0 +1,26 @@
+{
+  "database": "duckdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic DuckDB EXPLAIN fixture: exercises unknown operator retention and INDEX_SCAN mapping.",
+    "reference": "https://duckdb.org/docs/stable/guides/meta/explain"
+  },
+  "features": [
+    "unknown DuckDB operator retention",
+    "INDEX_SCAN",
+    "custom key-value property retention"
+  ],
+  "expect": {
+    "rootNodeType": "FUTURE_DUCK_OPERATOR",
+    "hasActualFields": false,
+    "minDepth": 2,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

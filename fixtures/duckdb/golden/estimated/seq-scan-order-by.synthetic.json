@@ -1,0 +1,332 @@
+{
+  "parsed": {
+    "database": "duckdb",
+    "format": "text",
+    "mode": "estimated",
+    "planHeader": "physical_plan",
+    "root": {
+      "nodeType": "PROJECTION",
+      "operator": "PROJECTION",
+      "table": null,
+      "estimatedRows": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "projections": [
+        "id"
+      ],
+      "sortKeys": null,
+      "groupKeys": null,
+      "properties": [],
+      "sections": [
+        [
+          "PROJECTION"
+        ],
+        [
+          "id"
+        ]
+      ],
+      "box": {
+        "topRow": 1,
+        "bottomRow": 5,
+        "leftCol": 0,
+        "rightCol": 28
+      },
+      "children": [
+        {
+          "nodeType": "ORDER_BY",
+          "operator": "ORDER_BY",
+          "table": null,
+          "estimatedRows": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "projections": null,
+          "sortKeys": [
+            "category_id ASC"
+          ],
+          "groupKeys": null,
+          "properties": [],
+          "sections": [
+            [
+              "ORDER_BY"
+            ],
+            [
+              "category_id ASC"
+            ]
+          ],
+          "box": {
+            "topRow": 6,
+            "bottomRow": 10,
+            "leftCol": 0,
+            "rightCol": 28
+          },
+          "children": [
+            {
+              "nodeType": "SEQ_SCAN",
+              "operator": "SEQ_SCAN",
+              "table": "plan_example",
+              "estimatedRows": 2,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "projections": [
+                "id",
+                "category_id"
+              ],
+              "sortKeys": null,
+              "groupKeys": null,
+              "properties": [
+                {
+                  "name": "Table",
+                  "value": "plan_example"
+                },
+                {
+                  "name": "EC",
+                  "value": "2"
+                }
+              ],
+              "sections": [
+                [
+                  "SEQ_SCAN"
+                ],
+                [
+                  "Table: plan_example"
+                ],
+                [
+                  "id",
+                  "category_id"
+                ],
+                [
+                  "EC: 2"
+                ]
+              ],
+              "box": {
+                "topRow": 11,
+                "bottomRow": 20,
+                "leftCol": 0,
+                "rightCol": 28
+              },
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "duckdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "project",
+      "nodeType": "PROJECTION",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "sort",
+          "nodeType": "ORDER_BY",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": [
+            "category_id ASC"
+          ],
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "SEQ_SCAN",
+              "relation": {
+                "name": "plan_example",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 2,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "duckdb",
+                "duckdb": {
+                  "operator": "SEQ_SCAN",
+                  "nodeType": "SEQ_SCAN",
+                  "table": "plan_example",
+                  "estimatedCardinality": 2,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "projections": [
+                    "id",
+                    "category_id"
+                  ],
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "properties": [
+                    {
+                      "name": "Table",
+                      "value": "plan_example"
+                    },
+                    {
+                      "name": "EC",
+                      "value": "2"
+                    }
+                  ],
+                  "sections": [
+                    [
+                      "SEQ_SCAN"
+                    ],
+                    [
+                      "Table: plan_example"
+                    ],
+                    [
+                      "id",
+                      "category_id"
+                    ],
+                    [
+                      "EC: 2"
+                    ]
+                  ]
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "duckdb",
+            "duckdb": {
+              "operator": "ORDER_BY",
+              "nodeType": "ORDER_BY",
+              "table": null,
+              "estimatedCardinality": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "projections": null,
+              "sortKeys": [
+                "category_id ASC"
+              ],
+              "groupKeys": null,
+              "properties": [],
+              "sections": [
+                [
+                  "ORDER_BY"
+                ],
+                [
+                  "category_id ASC"
+                ]
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "duckdb",
+        "duckdb": {
+          "operator": "PROJECTION",
+          "nodeType": "PROJECTION",
+          "table": null,
+          "estimatedCardinality": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "projections": [
+            "id"
+          ],
+          "sortKeys": null,
+          "groupKeys": null,
+          "properties": [],
+          "sections": [
+            [
+              "PROJECTION"
+            ],
+            [
+              "id"
+            ]
+          ],
+          "planHeader": "physical_plan"
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0.0",
+      "kind": "seq_scan",
+      "nodeType": "SEQ_SCAN",
+      "relation": "plan_example",
+      "estimatedRows": 2
+    },
+    "costAttribution": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}
