@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "parent": 0,
+    "notused": 0,
+    "detail": "COMPOUND QUERY"
+  },
+  {
+    "id": 2,
+    "parent": 1,
+    "notused": 0,
+    "detail": "LEFT-MOST SUBQUERY"
+  },
+  {
+    "id": 5,
+    "parent": 2,
+    "notused": 0,
+    "detail": "MATERIALIZE regional"
+  },
+  {
+    "id": 9,
+    "parent": 5,
+    "notused": 62,
+    "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)"
+  },
+  {
+    "id": 23,
+    "parent": 2,
+    "notused": 49,
+    "detail": "SCAN r"
+  },
+  {
+    "id": 27,
+    "parent": 2,
+    "notused": 0,
+    "detail": "CORRELATED SCALAR SUBQUERY 2"
+  },
+  {
+    "id": 32,
+    "parent": 27,
+    "notused": 55,
+    "detail": "SEARCH o USING COVERING INDEX idx_pd_fix_orders_customer_status (customer_id=?)"
+  },
+  {
+    "id": 47,
+    "parent": 1,
+    "notused": 0,
+    "detail": "UNION ALL"
+  },
+  {
+    "id": 50,
+    "parent": 47,
+    "notused": 62,
+    "detail": "SEARCH pd_fix_customers USING INDEX idx_pd_fix_customers_region (region=?)"
+  }
+]

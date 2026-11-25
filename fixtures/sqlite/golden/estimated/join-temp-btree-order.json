@@ -1,0 +1,273 @@
+{
+  "parsed": {
+    "database": "sqlite",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "structural": true,
+      "structuralType": "query-plan",
+      "id": 0,
+      "parent": null,
+      "notused": null,
+      "detail": null,
+      "nodeType": "SQLite Query Plan",
+      "operation": "QUERY PLAN",
+      "recognized": true,
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "indexCondition": null,
+      "filter": null,
+      "accessStrategy": null,
+      "usingCoveringIndex": false,
+      "usingAutomaticIndex": false,
+      "tempBTreePurpose": null,
+      "children": [
+        {
+          "id": 6,
+          "parent": 0,
+          "notused": 62,
+          "detail": "SEARCH c USING INDEX idx_pd_fix_customers_region (region=?)",
+          "nodeType": "Index Search",
+          "operation": "SEARCH",
+          "recognized": true,
+          "relationName": "c",
+          "alias": null,
+          "indexName": "idx_pd_fix_customers_region",
+          "indexCondition": "region=?",
+          "filter": null,
+          "accessStrategy": "INDEX",
+          "usingCoveringIndex": false,
+          "usingAutomaticIndex": false,
+          "tempBTreePurpose": null,
+          "children": [],
+          "extra": {}
+        },
+        {
+          "id": 11,
+          "parent": 0,
+          "notused": 62,
+          "detail": "SEARCH o USING INDEX idx_pd_fix_orders_customer_status (customer_id=?)",
+          "nodeType": "Index Search",
+          "operation": "SEARCH",
+          "recognized": true,
+          "relationName": "o",
+          "alias": null,
+          "indexName": "idx_pd_fix_orders_customer_status",
+          "indexCondition": "customer_id=?",
+          "filter": null,
+          "accessStrategy": "INDEX",
+          "usingCoveringIndex": false,
+          "usingAutomaticIndex": false,
+          "tempBTreePurpose": null,
+          "children": [],
+          "extra": {}
+        },
+        {
+          "id": 23,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY",
+          "nodeType": "Temp B-Tree (ORDER BY)",
+          "operation": "USE TEMP B-TREE",
+          "recognized": true,
+          "relationName": null,
+          "alias": null,
+          "indexName": null,
+          "indexCondition": null,
+          "filter": null,
+          "accessStrategy": null,
+          "usingCoveringIndex": false,
+          "usingAutomaticIndex": false,
+          "tempBTreePurpose": "ORDER BY",
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "sqlite",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "SQLite Query Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "Index Search",
+          "relation": {
+            "name": "c",
+            "alias": null,
+            "indexName": "idx_pd_fix_customers_region"
+          },
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": "region=?",
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlite",
+            "sqlite": {
+              "id": 6,
+              "parent": 0,
+              "notused": 62,
+              "detail": "SEARCH c USING INDEX idx_pd_fix_customers_region (region=?)",
+              "operation": "SEARCH",
+              "accessStrategy": "INDEX",
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null
+            },
+            "extra": {}
+          }
+        },
+        {
+          "id": "0.1",
+          "kind": "index_scan",
+          "nodeType": "Index Search",
+          "relation": {
+            "name": "o",
+            "alias": null,
+            "indexName": "idx_pd_fix_orders_customer_status"
+          },
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": "customer_id=?",
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlite",
+            "sqlite": {
+              "id": 11,
+              "parent": 0,
+              "notused": 62,
+              "detail": "SEARCH o USING INDEX idx_pd_fix_orders_customer_status (customer_id=?)",
+              "operation": "SEARCH",
+              "accessStrategy": "INDEX",
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null
+            },
+            "extra": {}
+          }
+        },
+        {
+          "id": "0.2",
+          "kind": "sort",
+          "nodeType": "Temp B-Tree (ORDER BY)",
+          "relation": null,
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlite",
+            "sqlite": {
+              "id": 23,
+              "parent": 0,
+              "notused": 0,
+              "detail": "USE TEMP B-TREE FOR ORDER BY",
+              "operation": "USE TEMP B-TREE",
+              "accessStrategy": null,
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": "ORDER BY"
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlite",
+        "structural": true,
+        "sqlite": {
+          "structuralType": "query-plan",
+          "topLevelStepCount": 3
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 3,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 2,
+    "sequentialScanCount": 0,
+    "indexScanCount": 2,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 1,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

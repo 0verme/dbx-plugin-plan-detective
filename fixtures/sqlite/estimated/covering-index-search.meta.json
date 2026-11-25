@@ -1,0 +1,26 @@
+{
+  "database": "sqlite",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "3.54.0",
+  "capturedAt": "2026-11-25",
+  "captureCommand": "EXPLAIN QUERY PLAN SELECT customer_id, status FROM pd_fix_orders WHERE customer_id = 42;",
+  "sql": "SELECT customer_id, status FROM pd_fix_orders WHERE customer_id = 42;",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured from an in-memory SQLite 3.54.0 throwaway test database in the same structured row-array shape returned by DBX Host (t8y2/dbx#14885).",
+    "reference": "https://www.sqlite.org/eqp.html"
+  },
+  "features": [
+    "SEARCH",
+    "USING COVERING INDEX",
+    "index-only lookup"
+  ],
+  "expect": {
+    "rootNodeType": "SQLite Query Plan",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

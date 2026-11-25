@@ -1,0 +1,157 @@
+{
+  "parsed": {
+    "database": "sqlite",
+    "format": "json",
+    "mode": "estimated",
+    "root": {
+      "structural": true,
+      "structuralType": "query-plan",
+      "id": 0,
+      "parent": null,
+      "notused": null,
+      "detail": null,
+      "nodeType": "SQLite Query Plan",
+      "operation": "QUERY PLAN",
+      "recognized": true,
+      "relationName": null,
+      "alias": null,
+      "indexName": null,
+      "indexCondition": null,
+      "filter": null,
+      "accessStrategy": null,
+      "usingCoveringIndex": false,
+      "usingAutomaticIndex": false,
+      "tempBTreePurpose": null,
+      "children": [
+        {
+          "id": 2,
+          "parent": 0,
+          "notused": 216,
+          "detail": "SCAN pd_fix_orders",
+          "nodeType": "Table Scan",
+          "operation": "SCAN",
+          "recognized": true,
+          "relationName": "pd_fix_orders",
+          "alias": null,
+          "indexName": null,
+          "indexCondition": null,
+          "filter": null,
+          "accessStrategy": "TABLE SCAN",
+          "usingCoveringIndex": false,
+          "usingAutomaticIndex": false,
+          "tempBTreePurpose": null,
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "sqlite",
+    "mode": "estimated",
+    "format": "json",
+    "root": {
+      "id": "0",
+      "kind": "structural",
+      "nodeType": "SQLite Query Plan",
+      "relation": null,
+      "estimatedRows": null,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "seq_scan",
+          "nodeType": "Table Scan",
+          "relation": {
+            "name": "pd_fix_orders",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": null,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "sqlite",
+            "sqlite": {
+              "id": 2,
+              "parent": 0,
+              "notused": 216,
+              "detail": "SCAN pd_fix_orders",
+              "operation": "SCAN",
+              "accessStrategy": "TABLE SCAN",
+              "usingCoveringIndex": false,
+              "usingAutomaticIndex": false,
+              "tempBTreePurpose": null
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "sqlite",
+        "structural": true,
+        "sqlite": {
+          "structuralType": "query-plan",
+          "topLevelStepCount": 1
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": null,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": null,
+    "costAttribution": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "sqlite",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

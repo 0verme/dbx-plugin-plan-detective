@@ -118,6 +118,7 @@ adaptDbxEstimatedPlanResponse(response, options?): RawPlanInput
 | `dbType: "gaussdb"` | `database: "gaussdb"` | 只有同连接 `getPlanCapabilities` 报告 `dbType: "gaussdb"` 且 `supports.estimatedPlan === true` 时 structured；不根据 dbType / dbVersion 单独判断 DWS；见 4.9 |
 | `dbType: "questdb"` | `database: "questdb"` | structured（`format: "text"`，Estimated only；见 4.7） |
 | `dbType: "dameng"` | `database: "dameng"` | structured（`format: "text"`，Estimated only） |
+| `dbType: "sqlite"` | `database: "sqlite"` | structured（`format: "json"`，SQLite `EXPLAIN QUERY PLAN` 结构化行数组；见 4.11） |
 | （响应无 `mode`） | `mode: "estimated"` | 一期 Estimated only；无 actual 路径 |
 | `format` | 同名 `format` | `json` / `xml` / `text`；契约外值拒绝 |
 | `rawPlan` | `plan` | 原引用直传，不克隆 / 不重写 / 不 JSON.parse |
@@ -188,6 +189,7 @@ JSON 没有 `undefined`，因此用 `null` 表示"不可用"，语义为：原�
 | Doris | `src/core/doris/parse-text-plan.js` | `src/core/normalize/normalize-doris.js` | `src/core/parsers/doris.js` |
 | DB2 LUW | `src/core/db2/parse-json-plan.js`（bounded Estimated JSON v1 graph parser） | `src/core/normalize/normalize-db2.js` | `src/core/parsers/db2.js` |
 | GaussDB / Huawei DWS | `src/core/gaussdb/parse-json-plan.js`（bounded Estimated-only entry；shared PG-family JSON walker） | `src/core/normalize/normalize-gaussdb.js` | `src/core/parsers/gaussdb.js` |
+| SQLite | `src/core/sqlite/parse-json-plan.js` | `src/core/normalize/normalize-sqlite.js` | `src/core/parsers/sqlite.js` |
 
 ### 4.1 PostgreSQL
 
@@ -479,6 +481,15 @@ Host 负责运行 `EXPLAIN <source SQL>` 与只读边界，Plan Core 不创建�
 - **Diagnostics / Diff**：DB2 本轮不启用通用 Rules / Hotspots，不依据 output cardinality 诊断扫描量，不推断 NLJOIN outer/inner，也不产生 DB2 自有阈值。Plan snapshot 可保存完整 DB2 JSON envelope，但 Plan Diff **不扩展**：可比较范围仍严格为 PostgreSQL ↔ PostgreSQL 与 Native MySQL ↔ Native MySQL。
 - **Bounds**：JSON 计划最大 5 MiB、2,000 operators、10,000 streams/details、128 层及 5,000 展示节点；Host 仍先执行自己的 plan byte / truncation gate。大小和图不变量错误返回稳定 parse error，不用部分树继续分析。
 - **Fixture provenance**：`fixtures/db2/estimated/shared-temp-plan.json` 来自 DBX upstream desktop unit-test fixture，但 upstream 没有说明原始 DB2 capture 来源，本仓库未独立验证；其他两个 `.synthetic` 样本为手工构造。它们只验证离线 parser / UI contract，不是 DB2 server / Agent 实测证据。
+
+### 4.11 SQLite Estimated EXPLAIN QUERY PLAN JSON
+
+实现：`src/core/sqlite/parse-json-plan.js`、`src/core/normalize/normalize-sqlite.js` 与 `src/core/parsers/sqlite.js`。上游契约来自已合并的 [t8y2/dbx#14885](https://github.com/t8y2/dbx/pull/14885)（审计记录见 [SQLITE_D1_HOST_CONTRACT_AUDIT.md](SQLITE_D1_HOST_CONTRACT_AUDIT.md)）：DBX Host 对 `dbType: "sqlite"` 执行只读 `EXPLAIN QUERY PLAN <sql>`，并将结果序列化为 `format: "json"` 的结构化行数组 `[{ id, parent, notused, detail }, ...]`。
+
+- **Tree reconstruction & fail-closed**：`parent === 0` 的行作为顶层步骤挂入 `SQLite Query Plan` structural root（`engineSpecific.structural: true`），`parent > 0` 的行按输入顺序挂入对应 `id` 的父节点；支持多个顶层步骤（如多表 JOIN + `USE TEMP B-TREE FOR ORDER BY`）、非连续 `id` 与多层复合查询 / CTE / 子查询嵌套。空数组、非正整数 `id`、负 `parent`、重复 `id`、悬空 `parent`、自环 / 有向环及超出 20,000 行 / 512 层上限的输入一律抛 `PlanParseError`。
+- **Detail classification & fail-soft**：识别 `SCAN`（表扫描、全索引扫描 `SCAN ... USING [COVERING] INDEX`、子查询扫描、虚拟表扫描、常量行）、`SEARCH`（`USING INDEX`、`USING COVERING INDEX`、`USING INTEGER PRIMARY KEY`、`USING AUTOMATIC [COVERING] INDEX`）、`USE TEMP B-TREE FOR ORDER BY / GROUP BY / DISTINCT`、`COMPOUND QUERY`、`LEFT-MOST SUBQUERY`、`UNION` / `UNION ALL` / `INTERSECT` / `EXCEPT`、`MATERIALIZE`、`CO-ROUTINE`、`[CORRELATED] SCALAR / LIST / EXISTS SUBQUERY`、`MULTI-INDEX OR`、`BLOOM FILTER` 等常见描述；未知 `detail` 保留原始文本并归入 `kind: "unknown"` 与 `unknownNodeTypes`。
+- **Valuation boundary**：SQLite `EXPLAIN QUERY PLAN` 不报告估算行数或成本数值；`estimatedRows`、`startupCost`、`totalCost`、`width` 与所有 actual 字段保持 `null`，`costAttribution` 为 `{ engine: "sqlite", status: "not-applicable", reason: "NOT_POSTGRES_COST_MODEL" }`，不伪造行数或代价阈值信号。
+- **Fixtures**：`fixtures/sqlite` 包含 5 个由本地内存 SQLite 3.54.0 真实采集的 `locally-generated` 样本与 1 个覆盖 edge case / 未知 detail 的 `.synthetic` 样本。Cloudflare D1 在上游仍保持 `supports_explain_plan = false`，不在 Phase 1 宣称支持。
 
 ## 5. NormalizedPlan
 

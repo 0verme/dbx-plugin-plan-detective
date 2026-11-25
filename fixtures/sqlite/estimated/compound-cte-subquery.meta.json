@@ -1,0 +1,29 @@
+{
+  "database": "sqlite",
+  "mode": "estimated",
+  "format": "json",
+  "databaseVersion": "3.54.0",
+  "capturedAt": "2026-11-25",
+  "captureCommand": "EXPLAIN QUERY PLAN WITH regional AS MATERIALIZED (SELECT id, name FROM pd_fix_customers WHERE region = 'APAC') SELECT r.name, (SELECT COUNT(*) FROM pd_fix_orders AS o WHERE o.customer_id = r.id) AS order_count FROM regional AS r UNION ALL SELECT name, 0 FROM pd_fix_customers WHERE region = 'EMEA';",
+  "sql": "WITH regional AS MATERIALIZED (SELECT id, name FROM pd_fix_customers WHERE region = 'APAC') SELECT r.name, (SELECT COUNT(*) FROM pd_fix_orders AS o WHERE o.customer_id = r.id) AS order_count FROM regional AS r UNION ALL SELECT name, 0 FROM pd_fix_customers WHERE region = 'EMEA';",
+  "source": {
+    "kind": "locally-generated",
+    "detail": "locally generated test fixture: captured from an in-memory SQLite 3.54.0 throwaway test database in the same structured row-array shape returned by DBX Host (t8y2/dbx#14885).",
+    "reference": "https://www.sqlite.org/eqp.html"
+  },
+  "features": [
+    "COMPOUND QUERY",
+    "LEFT-MOST SUBQUERY",
+    "MATERIALIZE CTE",
+    "CORRELATED SCALAR SUBQUERY",
+    "UNION ALL",
+    "multi-level parent-child tree"
+  ],
+  "expect": {
+    "rootNodeType": "SQLite Query Plan",
+    "hasActualFields": false,
+    "minDepth": 3,
+    "findingRuleIds": [],
+    "hotspotNodeRefs": []
+  }
+}

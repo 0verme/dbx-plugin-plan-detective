@@ -113,6 +113,7 @@ test("maps every dbType the merged host contract can return", () => {
     ["doris", "doris"],
     ["dameng", "dameng"],
     ["questdb", "questdb"],
+    ["sqlite", "sqlite"],
   ];
 
   for (const [dbType, database] of cases) {
@@ -268,15 +269,15 @@ test("malformed responses fail closed with INVALID_DBX_PLAN_RESPONSE", () => {
 test("a dbType the merged contract cannot return fails closed with UNSUPPORTED_DB_TYPE", () => {
   // `postgresql` is Plan Core's family name, not DBX's dbType vocabulary; the
   // rest are dialects without a host estimated-plan path.
-  for (const dbType of ["sqlite", "postgresql", "MYSQL", "gaussdb", "redis", "unknown-db"]) {
+  for (const dbType of ["cloudflare-d1", "postgresql", "MYSQL", "gaussdb", "redis", "unknown-db"]) {
     assertAdapterError(`dbType ${dbType}`, () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType })), "UNSUPPORTED_DB_TYPE");
   }
 
   assert.throws(
-    () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "sqlite" })),
+    () => adaptDbxEstimatedPlanResponse(dbxResponse({ dbType: "cloudflare-d1" })),
     (error) => {
       assert.equal(error.code, "UNSUPPORTED_DB_TYPE");
-      assert.match(error.message, /sqlite/);
+      assert.match(error.message, /cloudflare-d1/);
       return true;
     },
   );

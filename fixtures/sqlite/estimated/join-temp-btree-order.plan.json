@@ -1,0 +1,20 @@
+[
+  {
+    "id": 6,
+    "parent": 0,
+    "notused": 62,
+    "detail": "SEARCH c USING INDEX idx_pd_fix_customers_region (region=?)"
+  },
+  {
+    "id": 11,
+    "parent": 0,
+    "notused": 62,
+    "detail": "SEARCH o USING INDEX idx_pd_fix_orders_customer_status (customer_id=?)"
+  },
+  {
+    "id": 23,
+    "parent": 0,
+    "notused": 0,
+    "detail": "USE TEMP B-TREE FOR ORDER BY"
+  }
+]
