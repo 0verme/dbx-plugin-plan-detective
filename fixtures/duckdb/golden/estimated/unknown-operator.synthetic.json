@@ -1,0 +1,248 @@
+{
+  "parsed": {
+    "database": "duckdb",
+    "format": "text",
+    "mode": "estimated",
+    "planHeader": null,
+    "root": {
+      "nodeType": "FUTURE_DUCK_OPERATOR",
+      "operator": "FUTURE_DUCK_OPERATOR",
+      "table": null,
+      "estimatedRows": 10,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "projections": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "properties": [
+        {
+          "name": "CustomMode",
+          "value": "fast"
+        },
+        {
+          "name": "EC",
+          "value": "10"
+        }
+      ],
+      "sections": [
+        [
+          "FUTURE_DUCK_OPERATOR"
+        ],
+        [
+          "CustomMode: fast",
+          "EC: 10"
+        ]
+      ],
+      "box": {
+        "topRow": 0,
+        "bottomRow": 5,
+        "leftCol": 0,
+        "rightCol": 28
+      },
+      "children": [
+        {
+          "nodeType": "INDEX_SCAN",
+          "operator": "INDEX_SCAN",
+          "table": "accounts",
+          "estimatedRows": 10,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "projections": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "properties": [
+            {
+              "name": "Table",
+              "value": "accounts"
+            },
+            {
+              "name": "EC",
+              "value": "10"
+            }
+          ],
+          "sections": [
+            [
+              "INDEX_SCAN"
+            ],
+            [
+              "Table: accounts",
+              "EC: 10"
+            ]
+          ],
+          "box": {
+            "topRow": 6,
+            "bottomRow": 11,
+            "leftCol": 0,
+            "rightCol": 28
+          },
+          "children": [],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "duckdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "unknown",
+      "nodeType": "FUTURE_DUCK_OPERATOR",
+      "relation": null,
+      "estimatedRows": 10,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "index_scan",
+          "nodeType": "INDEX_SCAN",
+          "relation": {
+            "name": "accounts",
+            "alias": null,
+            "indexName": null
+          },
+          "estimatedRows": 10,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [],
+          "engineSpecific": {
+            "database": "duckdb",
+            "duckdb": {
+              "operator": "INDEX_SCAN",
+              "nodeType": "INDEX_SCAN",
+              "table": "accounts",
+              "estimatedCardinality": 10,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "projections": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "properties": [
+                {
+                  "name": "Table",
+                  "value": "accounts"
+                },
+                {
+                  "name": "EC",
+                  "value": "10"
+                }
+              ],
+              "sections": [
+                [
+                  "INDEX_SCAN"
+                ],
+                [
+                  "Table: accounts",
+                  "EC: 10"
+                ]
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "duckdb",
+        "duckdb": {
+          "operator": "FUTURE_DUCK_OPERATOR",
+          "nodeType": "FUTURE_DUCK_OPERATOR",
+          "table": null,
+          "estimatedCardinality": 10,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "projections": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "properties": [
+            {
+              "name": "CustomMode",
+              "value": "fast"
+            },
+            {
+              "name": "EC",
+              "value": "10"
+            }
+          ],
+          "sections": [
+            [
+              "FUTURE_DUCK_OPERATOR"
+            ],
+            [
+              "CustomMode: fast",
+              "EC: 10"
+            ]
+          ]
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": [
+      "FUTURE_DUCK_OPERATOR"
+    ]
+  },
+  "metrics": {
+    "nodeCount": 2,
+    "maxDepth": 2,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 10,
+    "scanCount": 1,
+    "sequentialScanCount": 0,
+    "indexScanCount": 1,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 1,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "unknown",
+      "nodeType": "FUTURE_DUCK_OPERATOR",
+      "relation": null,
+      "estimatedRows": 10
+    },
+    "costAttribution": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

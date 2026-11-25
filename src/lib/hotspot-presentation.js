@@ -58,6 +58,7 @@ const ENGINE_COST_NOTE_KEYS = Object.freeze({
   "questdb:NOT_POSTGRES_COST_MODEL": "hotspot.cost.questdbCostModel",
   "doris:NOT_POSTGRES_COST_MODEL": "hotspot.cost.dorisCostModel",
   "sqlite:NOT_POSTGRES_COST_MODEL": "hotspot.cost.sqliteCostModel",
+  "duckdb:NOT_POSTGRES_COST_MODEL": "hotspot.cost.duckdbCostModel",
 });
 
 /**

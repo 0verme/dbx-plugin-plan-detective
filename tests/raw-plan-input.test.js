@@ -41,7 +41,7 @@ test("reports every contract violation in a single error", () => {
 });
 
 test("accepts parser families independently of runtime Host capability", () => {
-  for (const database of ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oracle", "oceanbase-oracle", "oceanbase-mysql", "doris", "dameng", "questdb", "sqlite"]) {
+  for (const database of ["postgresql", "db2", "gaussdb", "mysql", "sqlserver", "oracle", "oceanbase-oracle", "oceanbase-mysql", "doris", "dameng", "questdb", "sqlite", "duckdb"]) {
     assert.deepEqual(validateRawPlanInput({ database, mode: "estimated", format: "json", plan: [] }), [], database);
   }
 

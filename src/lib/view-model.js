@@ -648,6 +648,7 @@ export function buildNodeInspector(node, locale = DEFAULT_LOCALE) {
  * @returns {Array<{ label: string, value: string }|null>}
  */
 function engineFields(engine) {
+  if (isPlainObject(engine.duckdb)) return duckdbEngineFields(engine.duckdb);
   if (isPlainObject(engine.sqlite)) return sqliteEngineFields(engine.sqlite);
   if (isPlainObject(engine.db2)) return db2EngineFields(engine.db2);
   if (isPlainObject(engine.questdb)) return questDbEngineFields(engine.questdb);
@@ -691,6 +692,28 @@ function sqliteEngineFields(sqlite) {
     field("Not Used (notused)", formatNumber(sqlite.notused)),
     field("Detail", sqlite.detail),
     field("Top-Level Steps", formatNumber(sqlite.topLevelStepCount)),
+  ];
+}
+
+/**
+ * DuckDB `EXPLAIN` physical operator box fields.
+ *
+ * @param {Record<string, unknown>} duckdb
+ * @returns {Array<{ label: string, value: string }|null>}
+ */
+function duckdbEngineFields(duckdb) {
+  return [
+    field("Operator", duckdb.operator),
+    field("Relation", duckdb.table),
+    field("Estimated Cardinality (EC)", formatNumber(duckdb.estimatedCardinality)),
+    field("Filter", duckdb.filter),
+    field("Join Type", duckdb.joinType),
+    field("Join Condition", duckdb.joinCondition),
+    field("Projections", formatRawValue(duckdb.projections)),
+    field("Sort Keys", formatRawValue(duckdb.sortKeys)),
+    field("Group Keys", formatRawValue(duckdb.groupKeys)),
+    field("Properties", formatQuestDbProperties(duckdb.properties)),
+    field("Plan Header", duckdb.planHeader),
   ];
 }
 
@@ -1024,4 +1047,5 @@ const INSPECTOR_FIELD_LABELS = new Set([
   "Shared Operator Reference",
   "EQP Node ID (id)", "Parent Node ID (parent)", "Operation", "Access Strategy",
   "Covering Index", "Automatic Index", "Temp B-Tree Purpose", "Not Used (notused)", "Top-Level Steps",
+  "Estimated Cardinality (EC)", "Projections", "Plan Header",
 ]);

@@ -1,0 +1,239 @@
+{
+  "parsed": {
+    "database": "duckdb",
+    "format": "text",
+    "mode": "estimated",
+    "planHeader": null,
+    "root": {
+      "nodeType": "SEQ_SCAN",
+      "operator": "SEQ_SCAN",
+      "table": "pd_fix_events",
+      "estimatedRows": 150000,
+      "filter": "status=1",
+      "joinType": null,
+      "joinCondition": null,
+      "projections": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "properties": [
+        {
+          "name": "Table",
+          "value": "pd_fix_events"
+        },
+        {
+          "name": "Filters",
+          "value": "status=1"
+        },
+        {
+          "name": "EC",
+          "value": "150000"
+        }
+      ],
+      "sections": [
+        [
+          "SEQ_SCAN"
+        ],
+        [
+          "Table: pd_fix_events"
+        ],
+        [
+          "Filters: status=1"
+        ],
+        [
+          "EC: 150000"
+        ]
+      ],
+      "box": {
+        "topRow": 0,
+        "bottomRow": 8,
+        "leftCol": 0,
+        "rightCol": 28
+      },
+      "children": [],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "duckdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "seq_scan",
+      "nodeType": "SEQ_SCAN",
+      "relation": {
+        "name": "pd_fix_events",
+        "alias": null,
+        "indexName": null
+      },
+      "estimatedRows": 150000,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": "status=1",
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": null,
+      "children": [],
+      "engineSpecific": {
+        "database": "duckdb",
+        "duckdb": {
+          "operator": "SEQ_SCAN",
+          "nodeType": "SEQ_SCAN",
+          "table": "pd_fix_events",
+          "estimatedCardinality": 150000,
+          "filter": "status=1",
+          "joinType": null,
+          "joinCondition": null,
+          "projections": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "properties": [
+            {
+              "name": "Table",
+              "value": "pd_fix_events"
+            },
+            {
+              "name": "Filters",
+              "value": "status=1"
+            },
+            {
+              "name": "EC",
+              "value": "150000"
+            }
+          ],
+          "sections": [
+            [
+              "SEQ_SCAN"
+            ],
+            [
+              "Table: pd_fix_events"
+            ],
+            [
+              "Filters: status=1"
+            ],
+            [
+              "EC: 150000"
+            ]
+          ]
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 1,
+    "maxDepth": 1,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 150000,
+    "scanCount": 1,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 0,
+    "sortCount": 0,
+    "aggregateCount": 0,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0",
+      "kind": "seq_scan",
+      "nodeType": "SEQ_SCAN",
+      "relation": "pd_fix_events",
+      "estimatedRows": 150000
+    },
+    "costAttribution": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [
+    {
+      "id": "large-sequential-scan:0",
+      "ruleId": "large-sequential-scan",
+      "severity": "high",
+      "title": "Large sequential scan",
+      "summary": "SEQ_SCAN on pd_fix_events with a filter is estimated to read 150000 rows and this plan does not report a cost estimate for this node. Worth checking filter selectivity and available indexes before treating the scan as a problem.",
+      "nodeRef": "0",
+      "facts": {
+        "database": "duckdb",
+        "mode": "estimated",
+        "runtimeVerified": false,
+        "nodeType": "SEQ_SCAN",
+        "relation": "pd_fix_events",
+        "estimatedRows": 150000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "accessType": null,
+        "hasFilter": true
+      },
+      "evidence": {
+        "nodeId": "0",
+        "nodeType": "SEQ_SCAN",
+        "relation": "pd_fix_events",
+        "estimatedRows": 150000,
+        "estimatedTotalCost": null,
+        "incrementalCost": null,
+        "filter": "status=1",
+        "thresholds": {
+          "warningEstimatedRows": 10000,
+          "highEstimatedRows": 100000,
+          "warningIncrementalCost": 10000,
+          "highIncrementalCost": 100000
+        }
+      }
+    }
+  ],
+  "hotspots": {
+    "cost": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": [
+      {
+        "id": "hotspot:0",
+        "nodeId": "0",
+        "nodeType": "SEQ_SCAN",
+        "kind": "seq_scan",
+        "relation": "pd_fix_events",
+        "level": "high",
+        "reasons": [
+          {
+            "code": "large-sequential-scan",
+            "level": "high",
+            "statement": "SEQ_SCAN on pd_fix_events is estimated to return 150000 rows.",
+            "source": "EC",
+            "evidence": {
+              "estimatedRows": 150000,
+              "thresholds": {
+                "warningEstimatedRows": 10000,
+                "highEstimatedRows": 100000
+              }
+            }
+          }
+        ],
+        "evidence": {
+          "nodeId": "0",
+          "nodeType": "SEQ_SCAN",
+          "kind": "seq_scan",
+          "relation": "pd_fix_events",
+          "estimatedRows": 150000,
+          "operator": "SEQ_SCAN",
+          "table": "pd_fix_events",
+          "estimatedCardinality": 150000,
+          "filter": "status=1"
+        },
+        "estimateOnly": true
+      }
+    ]
+  }
+}

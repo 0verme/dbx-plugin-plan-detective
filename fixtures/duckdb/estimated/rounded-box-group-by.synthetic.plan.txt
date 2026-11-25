@@ -1,0 +1,17 @@
+╭─ Hash Group By ───────────╮
+│ Groups: region            │
+│ Aggregates: count_star()  │
+│ ~12 rows                  │
+╰─────────────┬─────────────╯
+╭─────────────┴─────────────╮
+│         HASH_JOIN         │
+│ Join Type: INNER          │
+│ Conditions: c.id = o.cid  │
+│ ~240 rows                 │
+╰─────────────┬─────────────╯
+              ├─────────────────────────────╮
+╭─────────────┴─────────────╮ ╭─────────────┴─────────────╮
+│         SEQ_SCAN          │ │       PARQUET_SCAN        │
+│ Table: customers          │ │ Table: orders.parquet     │
+│ ~50 rows                  │ │ ~240 rows                 │
+╰───────────────────────────╯ ╰───────────────────────────╯

@@ -1,0 +1,450 @@
+{
+  "parsed": {
+    "database": "duckdb",
+    "format": "text",
+    "mode": "estimated",
+    "planHeader": null,
+    "root": {
+      "nodeType": "Hash Group By",
+      "operator": "HASH_GROUP_BY",
+      "table": null,
+      "estimatedRows": 12,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "projections": null,
+      "sortKeys": null,
+      "groupKeys": [
+        "region"
+      ],
+      "properties": [
+        {
+          "name": "Groups",
+          "value": "region"
+        },
+        {
+          "name": "Aggregates",
+          "value": "count_star()"
+        },
+        {
+          "name": "EC",
+          "value": "12"
+        }
+      ],
+      "sections": [
+        [
+          "Groups: region",
+          "Aggregates: count_star()",
+          "~12 rows"
+        ]
+      ],
+      "box": {
+        "topRow": 0,
+        "bottomRow": 4,
+        "leftCol": 0,
+        "rightCol": 28
+      },
+      "children": [
+        {
+          "nodeType": "HASH_JOIN",
+          "operator": "HASH_JOIN",
+          "table": null,
+          "estimatedRows": 240,
+          "filter": null,
+          "joinType": "INNER",
+          "joinCondition": "c.id = o.cid",
+          "projections": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "properties": [
+            {
+              "name": "Join Type",
+              "value": "INNER"
+            },
+            {
+              "name": "Conditions",
+              "value": "c.id = o.cid"
+            },
+            {
+              "name": "EC",
+              "value": "240"
+            }
+          ],
+          "sections": [
+            [
+              "HASH_JOIN",
+              "Join Type: INNER",
+              "Conditions: c.id = o.cid",
+              "~240 rows"
+            ]
+          ],
+          "box": {
+            "topRow": 5,
+            "bottomRow": 10,
+            "leftCol": 0,
+            "rightCol": 28
+          },
+          "children": [
+            {
+              "nodeType": "SEQ_SCAN",
+              "operator": "SEQ_SCAN",
+              "table": "customers",
+              "estimatedRows": 50,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "projections": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "properties": [
+                {
+                  "name": "Table",
+                  "value": "customers"
+                },
+                {
+                  "name": "EC",
+                  "value": "50"
+                }
+              ],
+              "sections": [
+                [
+                  "SEQ_SCAN",
+                  "Table: customers",
+                  "~50 rows"
+                ]
+              ],
+              "box": {
+                "topRow": 12,
+                "bottomRow": 16,
+                "leftCol": 0,
+                "rightCol": 28
+              },
+              "children": [],
+              "extra": {}
+            },
+            {
+              "nodeType": "PARQUET_SCAN",
+              "operator": "PARQUET_SCAN",
+              "table": "orders.parquet",
+              "estimatedRows": 240,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "projections": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "properties": [
+                {
+                  "name": "Table",
+                  "value": "orders.parquet"
+                },
+                {
+                  "name": "EC",
+                  "value": "240"
+                }
+              ],
+              "sections": [
+                [
+                  "PARQUET_SCAN",
+                  "Table: orders.parquet",
+                  "~240 rows"
+                ]
+              ],
+              "box": {
+                "topRow": 12,
+                "bottomRow": 16,
+                "leftCol": 30,
+                "rightCol": 58
+              },
+              "children": [],
+              "extra": {}
+            }
+          ],
+          "extra": {}
+        }
+      ],
+      "extra": {}
+    }
+  },
+  "normalized": {
+    "database": "duckdb",
+    "mode": "estimated",
+    "format": "text",
+    "root": {
+      "id": "0",
+      "kind": "aggregate",
+      "nodeType": "Hash Group By",
+      "relation": null,
+      "estimatedRows": 12,
+      "actualRows": null,
+      "actualStartupTime": null,
+      "actualTotalTime": null,
+      "loops": null,
+      "startupCost": null,
+      "totalCost": null,
+      "width": null,
+      "filter": null,
+      "joinType": null,
+      "joinCondition": null,
+      "indexCondition": null,
+      "sortKeys": null,
+      "groupKeys": [
+        "region"
+      ],
+      "children": [
+        {
+          "id": "0.0",
+          "kind": "hash_join",
+          "nodeType": "HASH_JOIN",
+          "relation": null,
+          "estimatedRows": 240,
+          "actualRows": null,
+          "actualStartupTime": null,
+          "actualTotalTime": null,
+          "loops": null,
+          "startupCost": null,
+          "totalCost": null,
+          "width": null,
+          "filter": null,
+          "joinType": "INNER",
+          "joinCondition": "c.id = o.cid",
+          "indexCondition": null,
+          "sortKeys": null,
+          "groupKeys": null,
+          "children": [
+            {
+              "id": "0.0.0",
+              "kind": "seq_scan",
+              "nodeType": "SEQ_SCAN",
+              "relation": {
+                "name": "customers",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 50,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "duckdb",
+                "duckdb": {
+                  "operator": "SEQ_SCAN",
+                  "nodeType": "SEQ_SCAN",
+                  "table": "customers",
+                  "estimatedCardinality": 50,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "projections": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "properties": [
+                    {
+                      "name": "Table",
+                      "value": "customers"
+                    },
+                    {
+                      "name": "EC",
+                      "value": "50"
+                    }
+                  ],
+                  "sections": [
+                    [
+                      "SEQ_SCAN",
+                      "Table: customers",
+                      "~50 rows"
+                    ]
+                  ]
+                },
+                "extra": {}
+              }
+            },
+            {
+              "id": "0.0.1",
+              "kind": "scan",
+              "nodeType": "PARQUET_SCAN",
+              "relation": {
+                "name": "orders.parquet",
+                "alias": null,
+                "indexName": null
+              },
+              "estimatedRows": 240,
+              "actualRows": null,
+              "actualStartupTime": null,
+              "actualTotalTime": null,
+              "loops": null,
+              "startupCost": null,
+              "totalCost": null,
+              "width": null,
+              "filter": null,
+              "joinType": null,
+              "joinCondition": null,
+              "indexCondition": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "children": [],
+              "engineSpecific": {
+                "database": "duckdb",
+                "duckdb": {
+                  "operator": "PARQUET_SCAN",
+                  "nodeType": "PARQUET_SCAN",
+                  "table": "orders.parquet",
+                  "estimatedCardinality": 240,
+                  "filter": null,
+                  "joinType": null,
+                  "joinCondition": null,
+                  "projections": null,
+                  "sortKeys": null,
+                  "groupKeys": null,
+                  "properties": [
+                    {
+                      "name": "Table",
+                      "value": "orders.parquet"
+                    },
+                    {
+                      "name": "EC",
+                      "value": "240"
+                    }
+                  ],
+                  "sections": [
+                    [
+                      "PARQUET_SCAN",
+                      "Table: orders.parquet",
+                      "~240 rows"
+                    ]
+                  ]
+                },
+                "extra": {}
+              }
+            }
+          ],
+          "engineSpecific": {
+            "database": "duckdb",
+            "duckdb": {
+              "operator": "HASH_JOIN",
+              "nodeType": "HASH_JOIN",
+              "table": null,
+              "estimatedCardinality": 240,
+              "filter": null,
+              "joinType": "INNER",
+              "joinCondition": "c.id = o.cid",
+              "projections": null,
+              "sortKeys": null,
+              "groupKeys": null,
+              "properties": [
+                {
+                  "name": "Join Type",
+                  "value": "INNER"
+                },
+                {
+                  "name": "Conditions",
+                  "value": "c.id = o.cid"
+                },
+                {
+                  "name": "EC",
+                  "value": "240"
+                }
+              ],
+              "sections": [
+                [
+                  "HASH_JOIN",
+                  "Join Type: INNER",
+                  "Conditions: c.id = o.cid",
+                  "~240 rows"
+                ]
+              ]
+            },
+            "extra": {}
+          }
+        }
+      ],
+      "engineSpecific": {
+        "database": "duckdb",
+        "duckdb": {
+          "operator": "HASH_GROUP_BY",
+          "nodeType": "Hash Group By",
+          "table": null,
+          "estimatedCardinality": 12,
+          "filter": null,
+          "joinType": null,
+          "joinCondition": null,
+          "projections": null,
+          "sortKeys": null,
+          "groupKeys": [
+            "region"
+          ],
+          "properties": [
+            {
+              "name": "Groups",
+              "value": "region"
+            },
+            {
+              "name": "Aggregates",
+              "value": "count_star()"
+            },
+            {
+              "name": "EC",
+              "value": "12"
+            }
+          ],
+          "sections": [
+            [
+              "Groups: region",
+              "Aggregates: count_star()",
+              "~12 rows"
+            ]
+          ]
+        },
+        "extra": {}
+      }
+    },
+    "unknownNodeTypes": []
+  },
+  "metrics": {
+    "nodeCount": 4,
+    "maxDepth": 3,
+    "totalEstimatedCost": null,
+    "rootEstimatedRows": 12,
+    "scanCount": 2,
+    "sequentialScanCount": 1,
+    "indexScanCount": 0,
+    "bitmapScanCount": 0,
+    "joinCount": 1,
+    "sortCount": 0,
+    "aggregateCount": 1,
+    "unknownNodeTypeCount": 0,
+    "largestEstimatedRows": {
+      "nodeId": "0.0",
+      "kind": "hash_join",
+      "nodeType": "HASH_JOIN",
+      "relation": null,
+      "estimatedRows": 240
+    },
+    "costAttribution": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "highestIncrementalCost": null
+  },
+  "findings": [],
+  "hotspots": {
+    "cost": {
+      "engine": "duckdb",
+      "status": "not-applicable",
+      "reason": "NOT_POSTGRES_COST_MODEL"
+    },
+    "items": []
+  }
+}

@@ -16,6 +16,7 @@ import {
   GAUSSDB_FIXTURES_DIR,
   DB2_FIXTURES_DIR,
   SQLITE_FIXTURES_DIR,
+  DUCKDB_FIXTURES_DIR,
   POSTGRES_FIXTURES_DIR,
   QUESTDB_FIXTURES_DIR,
   SQLSERVER_FIXTURES_DIR,
@@ -144,6 +145,14 @@ test("fixtures/sqlite has estimated SQLite EQP JSON plans and no actual director
   await assert.rejects(readdir(path.join(SQLITE_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
   assert.deepEqual(MODES_BY_DATABASE.sqlite, ["estimated"]);
   assert.equal(planSuffixFor("sqlite"), ".plan.json");
+});
+
+test("fixtures/duckdb has estimated DuckDB EXPLAIN text plans and no actual directory", async () => {
+  const entries = await readdir(path.join(DUCKDB_FIXTURES_DIR, "estimated"));
+  assert.ok(entries.some((entry) => entry.endsWith(".plan.txt")), "fixtures/duckdb/estimated must contain .plan.txt files");
+  await assert.rejects(readdir(path.join(DUCKDB_FIXTURES_DIR, "actual")), (error) => error.code === "ENOENT");
+  assert.deepEqual(MODES_BY_DATABASE.duckdb, ["estimated"]);
+  assert.equal(planSuffixFor("duckdb"), ".plan.txt");
 });
 
 test("every plan file has exactly one metadata sidecar in every fixture root", async () => {

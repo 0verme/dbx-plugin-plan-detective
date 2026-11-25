@@ -39,6 +39,8 @@ export { parseDorisTextPlan, tokenizeDorisPlan } from "./doris/parse-text-plan.j
 export { normalizeDorisPlan } from "./normalize/normalize-doris.js";
 export { parseSqliteJsonPlan, parseSqliteDetail, SQLITE_PLAN_LIMITS } from "./sqlite/parse-json-plan.js";
 export { normalizeSqlitePlan } from "./normalize/normalize-sqlite.js";
+export { parseDuckDbTextPlan, DUCKDB_PLAN_LIMITS } from "./duckdb/parse-text-plan.js";
+export { normalizeDuckDbPlan } from "./normalize/normalize-duckdb.js";
 export { computeMetrics } from "./metrics/compute-metrics.js";
 export { computeHotspots } from "./hotspots/compute-hotspots.js";
 export { HOTSPOT } from "./hotspots/thresholds.js";

@@ -1,0 +1,30 @@
+{
+  "database": "duckdb",
+  "mode": "estimated",
+  "format": "text",
+  "databaseVersion": null,
+  "capturedAt": null,
+  "captureCommand": null,
+  "sql": null,
+  "source": {
+    "kind": "synthetic",
+    "detail": "synthetic DuckDB EXPLAIN fixture: high-EC SEQ_SCAN exercising row-based large-sequential-scan observation and hotspot without cost attribution.",
+    "reference": "https://duckdb.org/docs/stable/guides/meta/explain"
+  },
+  "features": [
+    "SEQ_SCAN with large EC",
+    "large-sequential-scan finding and hotspot",
+    "costAttribution not-applicable"
+  ],
+  "expect": {
+    "rootNodeType": "SEQ_SCAN",
+    "hasActualFields": false,
+    "minDepth": 1,
+    "findingRuleIds": [
+      "large-sequential-scan"
+    ],
+    "hotspotNodeRefs": [
+      "0"
+    ]
+  }
+}

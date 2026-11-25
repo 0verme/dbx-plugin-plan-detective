@@ -114,6 +114,7 @@ test("maps every dbType the merged host contract can return", () => {
     ["dameng", "dameng"],
     ["questdb", "questdb"],
     ["sqlite", "sqlite"],
+    ["duckdb", "duckdb"],
   ];
 
   for (const [dbType, database] of cases) {
